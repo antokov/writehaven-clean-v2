@@ -1,0 +1,5 @@
+.two-col{display:grid;grid-template-columns:280px 1fr;gap:12px}
+.left{background:#0f1520;border:1px solid #1f2940;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:14px;min-height:520px}
+.right{background:#0f1520;border:1px solid #1f2940;border-radius:12px;padding:12px;min-height:520px}
+.section-title{font-weight:700;margin-bottom:6px}
+.editor{display:flex;flex-direction:column}

@@ -1,0 +1,31 @@
+:root { --bg:#0b0f14; --panel:#121821; --card:#151c27; --text:#e5eef7; --muted:#9fb1c6; --accent:#5aa2ff; --danger:#ff6b6b; }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial}
+.container{max-width:1200px;margin:0 auto;padding:24px}
+.appbar{position:sticky;top:0;background:#0d131c;border-bottom:1px solid #1f2940;padding:12px 24px;z-index:10}
+.brand{color:var(--text);text-decoration:none;font-weight:700}
+h1{margin:12px 0 16px}
+.row{display:flex;gap:8px;align-items:center;margin-bottom:16px}
+input,textarea{background:#0e141d;border:1px solid #1f2940;color:var(--text);padding:8px 10px;border-radius:8px;width:100%}
+button{background:var(--accent);border:none;color:white;padding:10px 14px;border-radius:10px;cursor:pointer}
+button.btn{background:#20304a}
+button.btn.danger{background:var(--danger)}
+button.small{padding:6px 10px;font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid #1f2940;border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.card-title{font-weight:700}
+.card-actions{display:flex;gap:8px;margin-top:8px}
+.card-body{color:var(--muted)}
+.tabs{display:flex;gap:8px;margin-bottom:12px}
+.tabs button{background:#182235}
+.tabs button.active{background:var(--accent)}
+.empty{opacity:.7;padding:16px;background:#0f1520;border:1px dashed #24324f;border-radius:12px}
+.preview{padding:8px;background:#0f1520;border:1px solid #1f2940;border-radius:12px}
+.preview h2{margin:18px 0 6px}
+.preview h3{margin:12px 0 4px}
+.list{list-style:none;padding:0;margin:8px 0 0;display:flex;flex-direction:column;gap:6px}
+.list li{padding:8px;border-radius:8px;background:#0f1520;border:1px solid #23314f;cursor:pointer}
+.list li.active{background:#20304a}
+.title-input{font-size:18px;font-weight:700;margin-bottom:8px}
+.content-input{min-height:420px;line-height:1.55}
+.appbar a.brand{letter-spacing:.3px}
