@@ -20,9 +20,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY backend/requirements.txt ./requirements.txt
 RUN python -m pip install --upgrade pip setuptools wheel \
  && pip --version \
- && echo "------ requirements.txt ------" && cat requirements.txt && echo "-----------------------------" \
- && pip install -r requirements.txt \
- && pip install gunicorn
+ && pip install -r requirements.txt
+
 
 # App Code + Frontend Build
 COPY backend ./
