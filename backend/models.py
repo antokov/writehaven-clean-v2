@@ -1,5 +1,9 @@
 from sqlalchemy import func
-from .extensions import db
+# backend/models.py
+try:
+    from backend.extensions import db   # wenn als Paket gestartet (python -m backend.app)
+except ImportError:
+    from extensions import db           # wenn im Container aus /app gestartet
 
 class Project(db.Model):
     __tablename__ = "project"
