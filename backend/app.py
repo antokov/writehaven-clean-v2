@@ -28,6 +28,7 @@ def create_app():
     app = Flask(__name__, static_folder="static", static_url_path="")
     app.config["SQLALCHEMY_DATABASE_URI"] = get_database_uri()
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True, "pool_recycle": 300}
     app.json.sort_keys = False
 
     CORS(app, resources={r"/api/*": {"origins": "*"}})
@@ -53,7 +54,12 @@ def create_app():
     # -------------------- Health --------------------
     @app.get("/api/health")
     def health():
-        return ok({"status": "ok"})
+        try:
+            db.session.execute(db.text("SELECT 1"))
+            return ok({"status": "ok", "db": "ok"})
+        except Exception as e:
+            return ok({"status": "degraded", "db": "error", "detail": str(e)} , 500)
+
 
     # -------------------- Projects --------------------
     @app.get("/api/projects")
