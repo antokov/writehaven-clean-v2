@@ -6,29 +6,29 @@ RUN npm ci
 COPY frontend ./
 RUN npm run build
 
-# ----- Stage 2: Backend + Static ausliefern -----
-FROM python:3.11-slim AS api
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+# ---------- Stage 2: Backend + Static ----------
+FROM python:3.11-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
 WORKDIR /app
 
-# System deps (psycopg optional)
+# system deps (für mögliche wheels/builds)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential curl && rm -rf /var/lib/apt/lists/*
+    build-essential curl gcc \
+    && rm -rf /var/lib/apt/lists/*
 
-# Python deps
+# requirements installieren (mit modernem pip)
 COPY backend/requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt && pip install --no-cache-dir gunicorn
+RUN python -m pip install --upgrade pip setuptools wheel \
+ && pip --version \
+ && echo "------ requirements.txt ------" && cat requirements.txt && echo "-----------------------------" \
+ && pip install -r requirements.txt \
+ && pip install gunicorn
 
-# App Code
+# App Code + Frontend Build
 COPY backend ./
-# Frontend Build als Static ins Backend packen
 COPY --from=web /app/frontend/dist ./static
 
-# Prod Env
-ENV PORT=8080 \
-    FLASK_ENV=production
-
+ENV PORT=8080 FLASK_ENV=production
 EXPOSE 8080
-# Gunicorn startet die App Factory
 CMD ["gunicorn", "-w", "3", "-b", "0.0.0.0:8080", "app:create_app()"]
+
