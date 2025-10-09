@@ -3,31 +3,44 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import App from './App.jsx'
 import Dashboard from './pages/Dashboard.jsx'
+import ProjectLayout from './pages/ProjectLayout.jsx'   // <— neu
 import ProjectView from './pages/ProjectView.jsx'
+import Characters from './pages/Characters.jsx'         // <— neu
+import World from './pages/World.jsx'                   // <— neu
+
 import './styles.css'
 import './layout-2col.css'
 import './projectview.css'
+import './nav.css'                                      // <— neu
 
-import axios from "axios";
+import axios from 'axios'
 
-// Wenn VITE_API_BASE_URL gesetzt ist, leite /api/... ans Backend um.
-// In Dev (ohne ENV) bleibt /api/... für den Vite-Proxy bestehen.
-const API_BASE = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "");
-axios.interceptors.request.use((cfg) => {
-  if (API_BASE && cfg.url?.startsWith("/api")) {
-    cfg.url = API_BASE + cfg.url; // z.B. https://.../api/projects
-  }
-  return cfg;
-});
-
+// (dein Interceptor bleibt gleich)
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '')
+function joinUrl(base, path){ if(!base) return path; const p=('/'+String(path||'')).replace(/\/{2,}/g,'/'); return base+p }
+axios.interceptors.request.use(cfg=>{
+  const url = cfg.url || ''
+  if(/^https?:\/\//i.test(url)) return cfg
+  const startsWithApi = url.startsWith('/api') || url.startsWith('api')
+  if(API_BASE && startsWithApi){ cfg.url = joinUrl(API_BASE, url.replace(/^\/?api/, '/api')) }
+  return cfg
+})
 
 createRoot(document.getElementById('root')).render(
-  <BrowserRouter>
-    <Routes>
-      <Route path="/" element={<App />}>
-        <Route index element={<Dashboard />} />
-        <Route path="project/:id" element={<ProjectView />} />
-      </Route>
-    </Routes>
-  </BrowserRouter>
+  <React.StrictMode>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<App />}>
+          <Route index element={<Dashboard />} />
+          {/* Projekt-Layout mit Tabs + Unterseiten */}
+          <Route path="project/:id" element={<ProjectLayout />}>
+            <Route index element={<ProjectView />} />        {/* Schreiben */}
+            <Route path="characters" element={<Characters />} />
+            <Route path="world" element={<World />} />
+            {/* <Route path="preview" element={<Preview />} /> */}
+          </Route>
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  </React.StrictMode>
 )

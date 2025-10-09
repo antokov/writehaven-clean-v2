@@ -1,0 +1,28 @@
+:root{ --header-h: 56px; }
+
+.site-header{
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  min-height: var(--header-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+  padding: .6rem .9rem;
+}
+
+.brand{
+  display:flex; align-items:center; gap:.55rem;
+  font-weight:700; color: var(--text); text-decoration:none;
+}
+.brand-icon{
+  display:inline-flex; width:28px; height:28px;
+  background:#0f1823; border:1px solid var(--border);
+  border-radius:8px; align-items:center; justify-content:center;
+}
+.brand-name{ letter-spacing:.2px; }
+
+.header-actions .btn{ margin-left:.4rem; }

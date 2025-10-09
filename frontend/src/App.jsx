@@ -1,15 +1,12 @@
 import React from 'react'
-import { Outlet, Link } from 'react-router-dom'
+import { Outlet } from 'react-router-dom'
+import SiteHeader from './components/SiteHeader.jsx'
 
-export default function App(){
+export default function App() {
   return (
-    <div>
-      <header className="appbar">
-        <Link to="/" className="brand">Writehaven</Link>
-      </header>
-      <main className="container">
-        <Outlet />
-      </main>
+    <div className="app-root">
+      <SiteHeader />
+      <Outlet />
     </div>
   )
 }
