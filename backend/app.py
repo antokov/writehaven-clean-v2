@@ -13,8 +13,11 @@ except ImportError:
 
 # -------------------- DB Helpers --------------------
 def make_sqlite_uri():
-    path = os.path.abspath(os.path.join(os.path.dirname(__file__), "app.db"))
+    # auf /tmp legen (App Runner ist hier sicher beschreibbar)
+    path = os.getenv("SQLITE_PATH", "/tmp/app.db")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     return "sqlite:///" + path.replace("\\", "/")
+
 
 def get_database_uri():
     uri = os.getenv("DATABASE_URL")
@@ -24,7 +27,7 @@ def get_database_uri():
 
 
 # -------------------- App Factory --------------------
-def create_app():
+def create_app(): 
     app = Flask(__name__, static_folder="static", static_url_path="")
     app.config["SQLALCHEMY_DATABASE_URI"] = get_database_uri()
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False

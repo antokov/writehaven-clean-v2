@@ -1,4 +1,4 @@
-﻿<!-- Generated 2025-10-09 10:44:09 -->
+﻿<!-- Generated 2025-10-09 15:39:52 -->
 # writehaven-clean-v2 - Code Snapshot
 
 ## Projektstruktur
@@ -8,11 +8,15 @@ Volumeseriennummer : D072-BBC6
 C:.
 |   .gitattributes
 |   .gitignore
-|   befehle.txt
+|   Dockerfile
 |   make-snapshot.ps1
 |   README.md
 |   snapshot.md
 |   
++---.github
+|   \---workflows
+|           deploy.yml
+|           
 +---.vs
 |   |   slnx.sqlite
 |   |   VSWorkspaceState.json
@@ -20,10 +24,10 @@ C:.
 |   \---writehaven-clean-v2
 |       +---FileContentIndex
 |       |       129d9367-f519-4bcb-b922-4dbf8c652a82.vsidx
+|       |       1a1b6ce5-e4e1-4119-9d8d-b70c5a2b250f.vsidx
 |       |       3a653f83-e9c9-4e9e-b9f4-ed61c5422e7a.vsidx
 |       |       43ec08c0-5819-47c3-92f8-72bc03c53e24.vsidx
-|       |       5bcef0d7-5e28-430d-b8f1-205201bde965.vsidx
-|       |       bf6cb1ea-93b8-49c8-b73d-5925da0ffbdf.vsidx
+|       |       a5e5db86-f7c9-4401-ba6e-c6978d34c76d.vsidx
 |       |       
 |       \---v17
 |               DocumentLayout.backup.json
@@ -34,7 +38,6 @@ C:.
 |   |   .env.example
 |   |   app.db
 |   |   app.py
-|   |   Dockerfile
 |   |   extensions.py
 |   |   models.py
 |   |   requirements.txt
@@ -6815,6 +6818,7 @@ C:.
     |           
     \---src
         |   App.jsx
+        |   header.css
         |   layout-2col.css
         |   main.jsx
         |   nav.css
@@ -6822,6 +6826,7 @@ C:.
         |   styles.css
         |   
         +---components
+        |       SiteHeader.jsx
         |       TopNav.jsx
         |       
         \---pages
@@ -6834,6 +6839,99 @@ C:.
 ```
 
 ## Dateien
+
+### `.github\workflows\deploy.yml`
+```yaml
+name: Build & Deploy to App Runner
+
+on:
+  push:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Show repo layout (sanity check)
+        run: |
+          pwd
+          echo "Branch: $GITHUB_REF_NAME"
+          ls -la
+          echo "---- backend ----"
+          ls -la backend || true
+          echo "---- frontend ----"
+          ls -la frontend || true
+          test -f Dockerfile || (echo "Dockerfile fehlt im Repo-Root!" && exit 1)
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Verify identity & basic permissions
+        run: |
+          set -euxo pipefail
+          aws sts get-caller-identity
+          aws ecr describe-registry
+
+      - id: login-ecr
+        name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Ensure ECR repository exists
+        run: |
+          aws ecr describe-repositories --repository-names "$ECR_REPOSITORY" \
+          || aws ecr create-repository --repository-name "$ECR_REPOSITORY"
+
+      - name: Build image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          set -euxo pipefail
+          IMAGE="$REGISTRY/$ECR_REPOSITORY"
+          TAG="${GITHUB_SHA::7}"
+          echo "Building $IMAGE:$TAG"
+          docker build --progress=plain -t "$IMAGE:$TAG" -t "$IMAGE:latest" .
+
+      - name: Push image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          set -euxo pipefail
+          IMAGE="$REGISTRY/$ECR_REPOSITORY"
+          TAG="${GITHUB_SHA::7}"
+          docker push "$IMAGE:$TAG"
+          docker push "$IMAGE:latest"
+
+      - name: Update App Runner to new image
+        env:
+          SERVICE_ARN: ${{ secrets.APP_RUNNER_SERVICE_ARN }}
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          set -euxo pipefail
+          TAG="${GITHUB_SHA::7}"
+          IMAGE_URI="$REGISTRY/$ECR_REPOSITORY:$TAG"
+          echo "Updating $SERVICE_ARN to $IMAGE_URI"
+          aws apprunner update-service \
+            --service-arn "$SERVICE_ARN" \
+            --source-configuration ImageRepository="{ImageIdentifier=\"$IMAGE_URI\",ImageRepositoryType=\"ECR\",ImageConfiguration={Port=\"8080\"}}"
+
+```
 
 ### `.vs\VSWorkspaceState.json`
 ```json
@@ -6968,6 +7066,7 @@ from .app import create_app
 import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from sqlalchemy.exc import IntegrityError
 
 try:
     from backend.extensions import db
@@ -6976,9 +7075,14 @@ except ImportError:
     from extensions import db
     from models import Project, Chapter, Scene, Character, WorldNode
 
+
+# -------------------- DB Helpers --------------------
 def make_sqlite_uri():
-    path = os.path.abspath(os.path.join(os.path.dirname(__file__), "app.db"))
+    # auf /tmp legen (App Runner ist hier sicher beschreibbar)
+    path = os.getenv("SQLITE_PATH", "/tmp/app.db")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     return "sqlite:///" + path.replace("\\", "/")
+
 
 def get_database_uri():
     uri = os.getenv("DATABASE_URL")
@@ -6986,16 +7090,28 @@ def get_database_uri():
         uri = uri.replace("postgres://", "postgresql+psycopg://", 1)
     return uri or make_sqlite_uri()
 
+
+# -------------------- App Factory --------------------
 def create_app():
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder="static", static_url_path="")
     app.config["SQLALCHEMY_DATABASE_URI"] = get_database_uri()
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True, "pool_recycle": 300}
     app.json.sort_keys = False
 
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    ALLOWED_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "*").split(",")]
+
+    CORS(
+        app,
+        resources={r"/api/*": {"origins": ALLOWED_ORIGINS}},
+        supports_credentials=False,
+        allow_headers=["Content-Type", "Authorization"],
+        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    )    
     db.init_app(app)
 
     with app.app_context():
+        # SQLite: Foreign Keys einschalten
         if app.config["SQLALCHEMY_DATABASE_URI"].startswith("sqlite"):
             from sqlalchemy import event
             from sqlalchemy.engine import Engine
@@ -7006,34 +7122,53 @@ def create_app():
                 cur.close()
         db.create_all()
 
+    # --------------- Small helpers ---------------
     def ok(data, status=200): return jsonify(data), status
-    def not_found(): return ok({"error":"not_found"}, 404)
+    def not_found(): return ok({"error": "not_found"}, 404)
+    def bad_request(msg="bad_request"): return ok({"error": msg}, 400)
 
+    # -------------------- Health --------------------
     @app.get("/api/health")
-    def health(): return ok({"status":"ok"})
+    def health():
+        try:
+            db.session.execute(db.text("SELECT 1"))
+            return ok({"status": "ok", "db": "ok"})
+        except Exception as e:
+            return ok({"status": "degraded", "db": "error", "detail": str(e)} , 500)
 
+
+    # -------------------- Projects --------------------
     @app.get("/api/projects")
     def list_projects():
-        rows = Project.query.order_by(Project.updated_at.desc()).all()
-        return ok([{"id": p.id, "title": p.title, "description": p.description} for p in rows])
+        rows = Project.query.order_by(Project.updated_at.desc()).all() if hasattr(Project, "updated_at") \
+            else Project.query.order_by(Project.id.desc()).all()
+        return ok([{
+            "id": p.id,
+            "title": p.title,
+            "description": p.description
+        } for p in rows])
 
     @app.post("/api/projects")
     def create_project():
         data = request.get_json() or {}
-        p = Project(title=data.get("title") or "Neues Projekt", description=data.get("description",""))
-        db.session.add(p); db.session.commit()
+        p = Project(title=data.get("title") or "Neues Projekt",
+                    description=data.get("description", ""))
+        db.session.add(p)
+        db.session.commit()
         return ok({"id": p.id, "title": p.title, "description": p.description}, 201)
 
     @app.get("/api/projects/<int:pid>")
     def get_project(pid):
         p = Project.query.get(pid)
-        if not p: return not_found()
+        if not p:
+            return not_found()
         return ok({"id": p.id, "title": p.title, "description": p.description})
 
     @app.put("/api/projects/<int:pid>")
     def update_project(pid):
         p = Project.query.get(pid)
-        if not p: return not_found()
+        if not p:
+            return not_found()
         data = request.get_json() or {}
         p.title = data.get("title", p.title)
         p.description = data.get("description", p.description)
@@ -7043,34 +7178,36 @@ def create_app():
     @app.delete("/api/projects/<int:pid>")
     def delete_project(pid):
         p = Project.query.get(pid)
-        if not p: return not_found()
-        db.session.delete(p); db.session.commit()
+        if not p:
+            return not_found()
+        db.session.delete(p)
+        db.session.commit()
         return ok({"ok": True})
 
+    # -------------------- Chapters --------------------
     @app.get("/api/projects/<int:pid>/chapters")
     def list_chapters(pid):
-        rows = Chapter.query.filter_by(project_id=pid).order_by(Chapter.order_index.asc(), Chapter.id.asc()).all()
-        return ok([{"id": c.id, "project_id": c.project_id, "title": c.title, "order_index": c.order_index, "content": c.content} for c in rows])
+        rows = Chapter.query.filter_by(project_id=pid)\
+            .order_by(Chapter.order_index.asc(), Chapter.id.asc()).all()
+        return ok([{
+            "id": c.id,
+            "project_id": c.project_id,
+            "title": c.title,
+            "order_index": c.order_index,
+            "content": getattr(c, "content", None)
+        } for c in rows])
 
     @app.post("/api/projects/<int:pid>/chapters")
     def create_chapter(pid):
-        # Parent-Check: Projekt muss existieren, sonst 404
         proj = Project.query.get(pid)
         if not proj:
             return not_found()
-
         data = request.get_json() or {}
         title = (data.get("title") or "Neues Kapitel").strip()
         order_index = int(data.get("order_index", 0))
-
-        c = Chapter(
-            project_id=pid,
-            title=title,
-            order_index=order_index
-        )
+        c = Chapter(project_id=pid, title=title, order_index=order_index)
         db.session.add(c)
         db.session.commit()
-
         return ok({
             "id": c.id,
             "title": c.title,
@@ -7078,56 +7215,79 @@ def create_app():
             "project_id": c.project_id
         }, 201)
 
-
     @app.get("/api/chapters/<int:cid>")
     def get_chapter(cid):
         c = Chapter.query.get(cid)
-        if not c: return not_found()
-        return ok({"id": c.id, "project_id": c.project_id, "title": c.title, "order_index": c.order_index, "content": c.content})
+        if not c:
+            return not_found()
+        return ok({
+            "id": c.id,
+            "project_id": c.project_id,
+            "title": c.title,
+            "order_index": c.order_index,
+            "content": getattr(c, "content", None)
+        })
 
     @app.put("/api/chapters/<int:cid>")
     def update_chapter(cid):
         c = Chapter.query.get(cid)
-        if not c: return not_found()
+        if not c:
+            return not_found()
         data = request.get_json() or {}
-        c.title = data.get("title", c.title)
-        c.order_index = int(data.get("order_index", c.order_index))
-        c.content = data.get("content", c.content)
+        title = data.get("title")
+        if title is not None:
+            c.title = title.strip()
+        if "order_index" in data:
+            c.order_index = int(data.get("order_index") or 0)
         db.session.commit()
-        return ok({"id": c.id, "project_id": c.project_id, "title": c.title, "order_index": c.order_index, "content": c.content})
+        return ok({
+            "id": c.id,
+            "title": c.title,
+            "order_index": c.order_index,
+            "project_id": c.project_id
+        })
 
     @app.delete("/api/chapters/<int:cid>")
     def delete_chapter(cid):
         c = Chapter.query.get(cid)
-        if not c: return not_found()
-        db.session.delete(c); db.session.commit()
+        if not c:
+            return not_found()
+        db.session.delete(c)
+        db.session.commit()
         return ok({"ok": True})
 
+    # -------------------- Scenes --------------------
     @app.get("/api/chapters/<int:cid>/scenes")
     def list_scenes(cid):
-        rows = Scene.query.filter_by(chapter_id=cid).order_by(Scene.order_index.asc(), Scene.id.asc()).all()
-        return ok([{"id": s.id, "chapter_id": s.chapter_id, "title": s.title, "order_index": s.order_index, "content": s.content} for s in rows])
+        rows = Scene.query.filter_by(chapter_id=cid)\
+            .order_by(Scene.order_index.asc(), Scene.id.asc()).all()
+        return ok([{
+            "id": s.id,
+            "chapter_id": s.chapter_id,
+            "title": s.title,
+            "order_index": s.order_index,
+            "content": s.content
+        } for s in rows])
 
     @app.post("/api/chapters/<int:cid>/scenes")
     def create_scene(cid):
-        # Parent-Check: Kapitel muss existieren, sonst 404
         chap = Chapter.query.get(cid)
         if not chap:
-            return not_found()
+            return not_found()  # 404 wenn Kapitel fehlt
 
         data = request.get_json() or {}
         title = (data.get("title") or "Neue Szene").strip()
         order_index = int(data.get("order_index", 0))
         content = data.get("content", "") or ""
 
-        s = Scene(
-            chapter_id=cid,
-            title=title,
-            order_index=order_index,
-            content=content
-        )
-        db.session.add(s)
-        db.session.commit()
+        s = Scene(chapter_id=cid, title=title,
+                  order_index=order_index, content=content)
+        try:
+            db.session.add(s)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            return bad_request("Database integrity error while creating scene.")
 
         return ok({
             "id": s.id,
@@ -7137,99 +7297,201 @@ def create_app():
             "content": s.content
         }, 201)
 
-
     @app.get("/api/scenes/<int:sid>")
     def get_scene(sid):
         s = Scene.query.get(sid)
-        if not s: return not_found()
-        return ok({"id": s.id, "chapter_id": s.chapter_id, "title": s.title, "order_index": s.order_index, "content": s.content})
+        if not s:
+            return not_found()
+        return ok({
+            "id": s.id,
+            "chapter_id": s.chapter_id,
+            "title": s.title,
+            "order_index": s.order_index,
+            "content": s.content
+        })
 
     @app.put("/api/scenes/<int:sid>")
     def update_scene(sid):
         s = Scene.query.get(sid)
-        if not s: return not_found()
+        if not s:
+            return not_found()
         data = request.get_json() or {}
-        s.title = data.get("title", s.title)
-        s.order_index = int(data.get("order_index", s.order_index))
-        s.content = data.get("content", s.content)
+        title = data.get("title")
+        content = data.get("content")
+        if title is not None:
+            s.title = title.strip()
+        if content is not None:
+            s.content = content
         db.session.commit()
-        return ok({"id": s.id, "chapter_id": s.chapter_id, "title": s.title, "order_index": s.order_index, "content": s.content})
+        return ok({
+            "id": s.id,
+            "title": s.title,
+            "order_index": s.order_index,
+            "chapter_id": s.chapter_id,
+            "content": s.content
+        })
 
     @app.delete("/api/scenes/<int:sid>")
     def delete_scene(sid):
         s = Scene.query.get(sid)
-        if not s: return not_found()
-        db.session.delete(s); db.session.commit()
+        if not s:
+            return not_found()
+        db.session.delete(s)
+        db.session.commit()
         return ok({"ok": True})
 
+    # -------------------- Characters --------------------
     @app.get("/api/projects/<int:pid>/characters")
     def list_characters(pid):
         rows = Character.query.filter_by(project_id=pid).order_by(Character.id.asc()).all()
-        return ok([{"id": c.id, "project_id": c.project_id, "name": c.name, "summary": c.summary, "avatar_url": c.avatar_url} for c in rows])
+        return ok([{
+            "id": c.id,
+            "project_id": c.project_id,
+            "name": c.name,
+            "summary": c.summary,
+            "avatar_url": c.avatar_url
+        } for c in rows])
 
     @app.post("/api/projects/<int:pid>/characters")
     def create_character(pid):
         data = request.get_json() or {}
-        c = Character(project_id=pid, name=data.get("name") or "Neue Figur", summary=data.get("summary",""), avatar_url=data.get("avatar_url",""))
-        db.session.add(c); db.session.commit()
-        return ok({"id": c.id, "project_id": c.project_id, "name": c.name, "summary": c.summary, "avatar_url": c.avatar_url}, 201)
+        c = Character(project_id=pid,
+                      name=data.get("name") or "Neue Figur",
+                      summary=data.get("summary", ""),
+                      avatar_url=data.get("avatar_url", ""))
+        db.session.add(c)
+        db.session.commit()
+        return ok({
+            "id": c.id,
+            "project_id": c.project_id,
+            "name": c.name,
+            "summary": c.summary,
+            "avatar_url": c.avatar_url
+        }, 201)
 
     @app.get("/api/characters/<int:cid>")
     def get_character(cid):
         c = Character.query.get(cid)
-        if not c: return not_found()
-        return ok({"id": c.id, "project_id": c.project_id, "name": c.name, "summary": c.summary, "avatar_url": c.avatar_url})
+        if not c:
+            return not_found()
+        return ok({
+            "id": c.id,
+            "project_id": c.project_id,
+            "name": c.name,
+            "summary": c.summary,
+            "avatar_url": c.avatar_url
+        })
 
     @app.put("/api/characters/<int:cid>")
     def update_character(cid):
         c = Character.query.get(cid)
-        if not c: return not_found()
+        if not c:
+            return not_found()
         data = request.get_json() or {}
         c.name = data.get("name", c.name)
         c.summary = data.get("summary", c.summary)
         c.avatar_url = data.get("avatar_url", c.avatar_url)
         db.session.commit()
-        return ok({"id": c.id, "project_id": c.project_id, "name": c.name, "summary": c.summary, "avatar_url": c.avatar_url})
+        return ok({
+            "id": c.id,
+            "project_id": c.project_id,
+            "name": c.name,
+            "summary": c.summary,
+            "avatar_url": c.avatar_url
+        })
 
     @app.delete("/api/characters/<int:cid>")
     def delete_character(cid):
         c = Character.query.get(cid)
-        if not c: return not_found()
-        db.session.delete(c); db.session.commit()
+        if not c:
+            return not_found()
+        db.session.delete(c)
+        db.session.commit()
         return ok({"ok": True})
 
+    # -------------------- World --------------------
     @app.get("/api/projects/<int:pid>/world")
     def list_world(pid):
         rows = WorldNode.query.filter_by(project_id=pid).order_by(WorldNode.id.asc()).all()
-        return ok([{"id": w.id, "project_id": w.project_id, "title": w.title, "kind": w.kind, "summary": w.summary, "icon": w.icon} for w in rows])
+        return ok([{
+            "id": w.id,
+            "project_id": w.project_id,
+            "title": w.title,
+            "kind": w.kind,
+            "summary": w.summary,
+            "icon": w.icon
+        } for w in rows])
 
     @app.post("/api/projects/<int:pid>/world")
     def create_world(pid):
         data = request.get_json() or {}
-        wnode = WorldNode(project_id=pid, title=data.get("title") or "Neues Element", kind=data.get("kind","Ort"), summary=data.get("summary",""), icon=data.get("icon","🏰"))
-        db.session.add(wnode); db.session.commit()
-        return ok({"id": wnode.id, "project_id": wnode.project_id, "title": wnode.title, "kind": wnode.kind, "summary": wnode.summary, "icon": wnode.icon}, 201)
+        wnode = WorldNode(project_id=pid,
+                          title=data.get("title") or "Neues Element",
+                          kind=data.get("kind", "Ort"),
+                          summary=data.get("summary", ""),
+                          icon=data.get("icon", "🏰"))
+        db.session.add(wnode)
+        db.session.commit()
+        return ok({
+            "id": wnode.id,
+            "project_id": wnode.project_id,
+            "title": wnode.title,
+            "kind": wnode.kind,
+            "summary": wnode.summary,
+            "icon": wnode.icon
+        }, 201)
 
     @app.put("/api/world/<int:w_id>")
     def update_world(w_id):
         wnode = WorldNode.query.get(w_id)
-        if not wnode: return not_found()
+        if not wnode:
+            return not_found()
         data = request.get_json() or {}
         wnode.title = data.get("title", wnode.title)
         wnode.kind = data.get("kind", wnode.kind)
         wnode.summary = data.get("summary", wnode.summary)
         wnode.icon = data.get("icon", wnode.icon)
         db.session.commit()
-        return ok({"id": wnode.id, "project_id": wnode.project_id, "title": wnode.title, "kind": wnode.kind, "summary": wnode.summary, "icon": wnode.icon})
+        return ok({
+            "id": wnode.id,
+            "project_id": wnode.project_id,
+            "title": wnode.title,
+            "kind": wnode.kind,
+            "summary": wnode.summary,
+            "icon": wnode.icon
+        })
 
     @app.delete("/api/world/<int:w_id>")
     def delete_world(w_id):
         wnode = WorldNode.query.get(w_id)
-        if not wnode: return not_found()
-        db.session.delete(wnode); db.session.commit()
+        if not wnode:
+            return not_found()
+        db.session.delete(wnode)
+        db.session.commit()
         return ok({"ok": True})
 
+    # (Optional) globaler Integrity-Handler
+    @app.errorhandler(IntegrityError)
+    def handle_integrity(e):
+        db.session.rollback()
+        return bad_request("Database integrity error.")
+
+    # ---- SPA-Fallback: liefert index.html / Assets, NICHT für /api/... ----
+    @app.route("/", defaults={"path": ""})
+    @app.route("/<path:path>")
+    def spa(path):
+        # API nicht intercepten
+        if path.startswith("api/"):
+            return not_found()
+        # vorhandene Datei direkt liefern
+        file_path = os.path.join(app.static_folder, path)
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            return app.send_static_file(path)
+        # ansonsten immer index.html (Client Routing)
+        return app.send_static_file("index.html")
+
     return app
+
 
 if __name__ == "__main__":
     app = create_app()
@@ -7308,13 +7570,12 @@ class WorldNode(db.Model):
 
 ### `backend\requirements.txt`
 ```text
-flask==3.0.3
-flask-cors==4.0.1
-flask-sqlalchemy==3.1.1
+Flask==3.0.0
+Flask-Cors==4.0.0
+Flask-SQLAlchemy==3.1.1
 SQLAlchemy==2.0.32
-psycopg[binary]==3.2.1
-gunicorn==22.0.0
-python-dotenv==1.0.1
+psycopg[binary]==3.1.19  # Postgres client v3 as binary
+gunicorn==21.2.0
 
 ```
 
@@ -7328,14 +7589,6 @@ except ImportError:
 
 app = create_app()
 
-```
-
-### `befehle.txt`
-```text
-Snapshop: 
-
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-.\make-snapshot.ps1 -OutFile snapshot.md -MaxKB 200
 ```
 
 ### `frontend\index.html`
@@ -7384,18 +7637,42 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 ### `frontend\src\App.jsx`
 ```jsx
 import React from 'react'
-import { Outlet, Link } from 'react-router-dom'
+import { Outlet } from 'react-router-dom'
+import SiteHeader from './components/SiteHeader.jsx'
 
-export default function App(){
+export default function App() {
   return (
-    <div>
-      <header className="appbar">
-        <Link to="/" className="brand">Writehaven</Link>
-      </header>
-      <main className="container">
-        <Outlet />
-      </main>
+    <div className="app-root">
+      <SiteHeader />
+      <Outlet />
     </div>
+  )
+}
+
+```
+
+### `frontend\src\components\SiteHeader.jsx`
+```jsx
+import React from 'react'
+import { Link } from 'react-router-dom'
+
+export default function SiteHeader() {
+  return (
+    <header className="site-header">
+      <Link to="/" className="brand" aria-label="Writehaven Home">
+        <span className="brand-icon" aria-hidden="true">
+          {/* kleines Feder-Icon (inline SVG), ersetzbar durch <img src="/logo.svg" /> */}
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M21 4a1 1 0 0 0-1.41 0l-2.34 2.34 2.41 2.41L22 6.41A1 1 0 0 0 21 4zM15.85 6.56l-9.7 9.7a2 2 0 0 0-.5.86l-1 3.07a.75.75 0 0 0 .94.94l3.07-1c.33-.11.63-.3.86-.53l9.7-9.7-2.37-2.34z"></path>
+          </svg>
+        </span>
+        <span className="brand-name">Writehaven</span>
+      </Link>
+
+      <div className="header-actions">
+        {/* Platz f�r Buttons (Profil, Settings, etc.) */}
+      </div>
+    </header>
   )
 }
 
@@ -7408,25 +7685,50 @@ import { NavLink, useParams } from 'react-router-dom'
 
 export default function TopNav(){
   const { id } = useParams()
+  if (!id) return null            // nur auf Projektseiten anzeigen
   const base = `/project/${id}`
-
   return (
     <div className="tabs">
-      <NavLink end to={base} className="tab">
-        Schreiben
-      </NavLink>
-      <NavLink to={`${base}/characters`} className="tab">
-        Charaktere
-      </NavLink>
-      <NavLink to={`${base}/world`} className="tab">
-        Welt
-      </NavLink>
-      {/* Optional:
+      <NavLink end to={base} className="tab">Schreiben</NavLink>
+      <NavLink to={`${base}/characters`} className="tab">Charaktere</NavLink>
+      <NavLink to={`${base}/world`} className="tab">Welt</NavLink>
       <NavLink to={`${base}/preview`} className="tab">Vorschau</NavLink>
-      */}
     </div>
   )
 }
+
+```
+
+### `frontend\src\header.css`
+```css
+:root{ --header-h: 56px; }
+
+.site-header{
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  min-height: var(--header-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+  padding: .6rem .9rem;
+}
+
+.brand{
+  display:flex; align-items:center; gap:.55rem;
+  font-weight:700; color: var(--text); text-decoration:none;
+}
+.brand-icon{
+  display:inline-flex; width:28px; height:28px;
+  background:#0f1823; border:1px solid var(--border);
+  border-radius:8px; align-items:center; justify-content:center;
+}
+.brand-name{ letter-spacing:.2px; }
+
+.header-actions .btn{ margin-left:.4rem; }
 
 ```
 
@@ -7526,6 +7828,8 @@ createRoot(document.getElementById('root')).render(
 
 ### `frontend\src\nav.css`
 ```css
+:root{ --header-h: 56px; }
+
 .tabs{
   display:flex; gap:.4rem;
   background: var(--bg-2);
@@ -7534,8 +7838,8 @@ createRoot(document.getElementById('root')).render(
   padding:.45rem;
   margin:.75rem .9rem 0 .9rem;
   position: sticky;
-  top: 0;
-  z-index: 3;
+  top: var(--header-h);        /* sitzt direkt unter dem Header */
+  z-index: 40;
 }
 .tab{
   display:inline-flex; align-items:center;
@@ -7670,6 +7974,24 @@ export default function Dashboard(){
 
 ### `frontend\src\pages\ProjectLayout.jsx`
 ```jsx
+import React from 'react'
+import { Outlet } from 'react-router-dom'
+import TopNav from '../components/TopNav.jsx'
+
+function ProjectLayout() {
+  return (
+    <>
+      <TopNav />
+      <Outlet />
+    </>
+  )
+}
+
+// Default-Export (wichtig f�r: import ProjectLayout from '...'):
+export default ProjectLayout
+// Optional zus�tzlich als Named-Export:
+export { ProjectLayout }
+
 ```
 
 ### `frontend\src\pages\ProjectView.jsx`
