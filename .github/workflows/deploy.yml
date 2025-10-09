@@ -1,0 +1,48 @@
+name: Build & Deploy to App Runner
+
+on:
+  push:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Ensure ECR repository exists
+        run: |
+          aws ecr describe-repositories --repository-names "${{ secrets.ECR_REPOSITORY }}" \
+          || aws ecr create-repository --repository-name "${{ secrets.ECR_REPOSITORY }}"
+
+      - name: Build image
+        run: |
+          IMAGE="${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}"
+          TAG="${GITHUB_SHA::7}"
+          docker build -t "$IMAGE:$TAG" -t "$IMAGE:latest" .
+
+      - name: Push image
+        run: |
+          IMAGE="${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}"
+          TAG="${GITHUB_SHA::7}"
+          docker push "$IMAGE:$TAG"
+          docker push "$IMAGE:latest"
+
+      # App Runner zieht das neue 'latest' Bild.
+      # start-deployment ändert KEINE Env Vars/Ports etc.
+      - name: Trigger App Runner deployment
+        env:
+          SERVICE_ARN: ${{ secrets.APP_RUNNER_SERVICE_ARN }}
+        run: |
+          aws apprunner start-deployment --service-arn "$SERVICE_ARN"
