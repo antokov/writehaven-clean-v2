@@ -1,41 +1,35 @@
-# ---------- Stage 1: Frontend bauen ----------
+# ----- Stage 1: Frontend bauen -----
 FROM node:20-alpine AS web
 WORKDIR /app/frontend
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 COPY frontend/package*.json ./
 RUN npm ci
-COPY frontend/ ./
-# (optional) ARG VITE_API_BASE_URL
-# ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-RUN npm run build
+COPY frontend ./
+RUN npm run build  # erzeugt frontend/dist
 
 # ---------- Stage 2: Backend + Static ----------
 FROM python:3.11-slim
-
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PYTHONPATH=/app \
-    PORT=8080
-
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
 WORKDIR /app
 
-# nur was nötig ist (psycopg wheels -> gcc reicht)
-RUN apt-get update && apt-get install -y --no-install-recommends gcc \
-    && rm -rf /var/lib/apt/lists/*
+# System-Deps (für Wheels/psycopg)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential gcc \
+ && rm -rf /var/lib/apt/lists/*
 
-# Dependencies
-COPY backend/requirements.txt ./requirements.txt
+# Requirements installieren
+COPY backend/requirements.txt ./backend/requirements.txt
 RUN python -m pip install --upgrade pip setuptools wheel \
- && pip install --no-cache-dir -r requirements.txt
+ && pip install -r backend/requirements.txt
 
-# App-Code
-COPY backend/ /app/backend
+# App-Code + Static aus Stage 1
+COPY backend ./backend
+# WICHTIG: nach backend/static kopieren (Flask static_folder="static" relativ zum Paket)
+COPY --from=web /app/frontend/dist ./backend/static
 
-# gebaute Frontend-Dateien als Flask-Static bereitstellen
-COPY --from=web /app/frontend/dist /app/backend/static
-
+ENV PORT=8080
 EXPOSE 8080
 
-# Robuster Default-Start (App Runner darf das überschreiben)
-# Shell-Form, damit ${PORT} / ${WEB_CONCURRENCY} expandieren
-CMD gunicorn backend.app:create_app --factory -b 0.0.0.0:${PORT:-8080} -w ${WEB_CONCURRENCY:-3} --timeout 60
+# Robust & simpel: starte das exportierte WSGI-Objekt aus backend/wsgi.py
+CMD ["gunicorn", "-k", "gthread", "-w", "2", "-b", "0.0.0.0:8080", "backend.wsgi:app"]
