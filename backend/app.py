@@ -55,25 +55,32 @@ def create_app():
     # DB init
     db.init_app(app)
 
+
+
     with app.app_context():
-        # SQLite: Foreign Keys aktivieren
+        # SQLite-FK nur wenn wirklich SQLite
         if app.config["SQLALCHEMY_DATABASE_URI"].startswith("sqlite"):
             from sqlalchemy import event
             from sqlalchemy.engine import Engine
-
             @event.listens_for(Engine, "connect")
             def _set_sqlite_pragma(dbapi_connection, connection_record):
                 cur = dbapi_connection.cursor()
                 cur.execute("PRAGMA foreign_keys=ON")
                 cur.close()
 
-        # Robust starten: DB-Fehler nicht crashen lassen
         try:
-            db.create_all(checkfirst=True)
-            app.logger.info("Using DB: %s", db.engine.url.render_as_string(hide_password=True))
+            # WICHTIG: checkfirst hier über das Metadata-Objekt aufrufen
+            db.Model.metadata.create_all(bind=db.engine, checkfirst=True)
 
+            # zum Verifizieren, welche DB tatsächlich benutzt wird
+            try:
+                app.logger.info("Using DB: %s",
+                    db.engine.url.render_as_string(hide_password=True))
+            except Exception:
+                pass
         except Exception:
             app.logger.exception("DB init failed; service continues without DB")
+
 
     # --------------- Small helpers ---------------
     def ok(data, status=200):
