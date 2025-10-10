@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
@@ -15,7 +15,7 @@ except ImportError:
 
 # -------------------- DB Helpers --------------------
 def make_sqlite_uri() -> str:
-    # Fallback: /tmp ist in App Runner beschreibbar
+    # Fallback: /tmp ist in Containern beschreibbar
     path = os.getenv("SQLITE_PATH", "/tmp/app.db")
     os.makedirs(os.path.dirname(path), exist_ok=True)
     return "sqlite:///" + path.replace("\\", "/")
@@ -31,6 +31,7 @@ def get_database_uri() -> str:
 
 # -------------------- App Factory --------------------
 def create_app():
+    # static_url_path="" -> Assets liegen unter "/"
     app = Flask(__name__, static_folder="static", static_url_path="")
     app.json.sort_keys = False
 
@@ -55,13 +56,12 @@ def create_app():
     # DB init
     db.init_app(app)
 
-
-
     with app.app_context():
         # SQLite-FK nur wenn wirklich SQLite
         if app.config["SQLALCHEMY_DATABASE_URI"].startswith("sqlite"):
             from sqlalchemy import event
             from sqlalchemy.engine import Engine
+
             @event.listens_for(Engine, "connect")
             def _set_sqlite_pragma(dbapi_connection, connection_record):
                 cur = dbapi_connection.cursor()
@@ -69,18 +69,49 @@ def create_app():
                 cur.close()
 
         try:
-            # WICHTIG: checkfirst hier über das Metadata-Objekt aufrufen
+            # checkfirst über das Metadata-Objekt
             db.Model.metadata.create_all(bind=db.engine, checkfirst=True)
 
-            # zum Verifizieren, welche DB tatsächlich benutzt wird
             try:
-                app.logger.info("Using DB: %s",
-                    db.engine.url.render_as_string(hide_password=True))
+                app.logger.info(
+                    "Using DB: %s",
+                    db.engine.url.render_as_string(hide_password=True),
+                )
             except Exception:
                 pass
         except Exception:
             app.logger.exception("DB init failed; service continues without DB")
 
+    # -------- SPA-Fallback (vor Routing/Static ausgeführt) --------
+    @app.before_request
+    def spa_fallback():
+        """
+        Liefert für Nicht-/api GET-Requests die index.html,
+        außer es existiert eine echte Datei im static-Ordner.
+        Damit funktionieren Deep-Links (Refresh) wie /project/2.
+        """
+        if request.method != "GET":
+            return None
+
+        p = request.path or "/"
+
+        # API & Health & Root normal behandeln
+        if p.startswith("/api") or p == "/":
+            return None
+
+        # echte Dateien/Assets durchlassen
+        rel = p.lstrip("/")
+        try:
+            if app.static_folder:
+                full = os.path.join(app.static_folder, rel)
+                if os.path.isfile(full):
+                    return None
+        except Exception:
+            # Bei Problemen einfach SPA ausliefern
+            pass
+
+        # ansonsten immer index.html (Client-Routing)
+        return send_from_directory(app.static_folder, "index.html")
 
     # --------------- Small helpers ---------------
     def ok(data, status=200):
@@ -92,14 +123,13 @@ def create_app():
     def bad_request(msg="bad_request"):
         return ok({"error": msg}, 400)
 
-    # -------------------- Health (für App Runner) --------------------
+    # -------------------- Health --------------------
     @app.get("/api/health")
     def health():
         try:
             db.session.execute(text("SELECT 1"))
             db_ok = "ok"
         except Exception as e:
-            # Wichtig: HTTP 200 beibehalten; Status im Body signalisieren
             db_ok = f"error: {e.__class__.__name__}: {e}"
         return jsonify({"status": "ok", "db": db_ok}), 200
 
@@ -502,20 +532,6 @@ def create_app():
     def handle_integrity(e):
         db.session.rollback()
         return bad_request("Database integrity error.")
-
-    # ---- SPA-Fallback: liefert index.html / Assets; NICHT für /api/... ----
-    @app.route("/", defaults={"path": ""})
-    @app.route("/<path:path>")
-    def spa(path):
-        # API nicht intercepten
-        if path.startswith("api/"):
-            return not_found()
-        # vorhandene Datei direkt liefern
-        file_path = os.path.join(app.static_folder, path)
-        if os.path.exists(file_path) and os.path.isfile(file_path):
-            return app.send_static_file(path)
-        # ansonsten immer index.html (Client Routing)
-        return app.send_static_file("index.html")
 
     return app
 
