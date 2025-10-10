@@ -69,7 +69,9 @@ def create_app():
 
         # Robust starten: DB-Fehler nicht crashen lassen
         try:
-            db.create_all()
+            db.create_all(checkfirst=True)
+            app.logger.info("Using DB: %s", db.engine.url.render_as_string(hide_password=True))
+
         except Exception:
             app.logger.exception("DB init failed; service continues without DB")
 
