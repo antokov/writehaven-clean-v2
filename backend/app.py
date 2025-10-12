@@ -82,24 +82,34 @@ def create_app():
 
         # --- sehr kleine "Migration": character.profile_json nachrüsten ---
         try:
-            # SQLite- und Postgres-kompatibler Check
-            ok = db.session.execute(
-                text("""
+            # Erst alle offenen Transaktionen zurückrollen
+            db.session.rollback()
+            
+            # Postgres-spezifischer Check
+            check_query = """
+                SELECT EXISTS (
+                    SELECT 1 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'character' 
+                    AND column_name = 'profile_json'
+                )
+            """
+            try:
+                has_column = db.session.execute(text(check_query)).scalar()
+            except Exception:
+                # Fallback für SQLite
+                has_column = db.session.execute(text("""
                     SELECT 1
                     FROM pragma_table_info('character')
                     WHERE name = 'profile_json'
-                """)
-            ).fetchone()
-        except Exception:
-            ok = None
+                """)).scalar()
 
-        if not ok:
-            try:
+            if not has_column:
                 db.session.execute(text("ALTER TABLE character ADD COLUMN profile_json TEXT DEFAULT '{}'"))
                 db.session.commit()
-            except (ProgrammingError, OperationalError, IntegrityError):
-                db.session.rollback()
-                # Falls Spalte bereits existiert oder DB-Typ es anders erfordert -> ignorieren
+        except Exception as e:
+            db.session.rollback()
+            print(f"Migration error (can be ignored if column exists): {str(e)}")
 
     # ---------- SPA fallback (für Deep Links) ----------
     @app.before_request
