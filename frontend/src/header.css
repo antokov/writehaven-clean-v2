@@ -1,28 +1,53 @@
 :root{ --header-h: 56px; }
 
+/* --- Site Header (dunkel, exakte Höhe) ---------------------------------- */
 .site-header{
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  min-height: var(--header-h);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: .75rem;
-  background: var(--bg-2);
-  border-bottom: 1px solid var(--border);
-  padding: .6rem .9rem;
+  position: sticky; top: 0; z-index: 50;
+  height: var(--header-h);                 /* exakte Blockhöhe */
+  display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+  background: var(--nav-bg) !important;
+  background-image: none !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+
+  /* nur seitliches Padding – KEIN vertical padding */
+  padding-inline: .9rem;
+  padding-block: 0;
 }
 
+/* --- Brand --------------------------------------------------------------- */
 .brand{
   display:flex; align-items:center; gap:.55rem;
-  font-weight:700; color: var(--text); text-decoration:none;
+  font-weight:800; color:var(--nav-text); text-decoration:none;
 }
-.brand-icon{
-  display:inline-flex; width:28px; height:28px;
-  background:#0f1823; border:1px solid var(--border);
-  border-radius:8px; align-items:center; justify-content:center;
-}
-.brand-name{ letter-spacing:.2px; }
+.brand:focus-visible{ outline:2px solid var(--brand); outline-offset:3px; }
 
-.header-actions .btn{ margin-left:.4rem; }
+.brand-icon{ display:inline-flex; align-items:center; justify-content:center; }
+.brand-icon.natural{
+  width:auto; height:auto; padding:0; background:transparent;
+  border:0; box-shadow:none; overflow:visible;
+}
+.brand-icon.natural .brand-logo{
+  display:block; width:auto; height:auto;
+  max-height: calc(var(--header-h) - 18px); /* bleibt korrekt */
+  object-fit: contain; border-radius: 0;
+}
+.brand-name{ letter-spacing:.3px; font-size:15px; color: var(--nav-text); }
+
+/* --- Header Actions ------------------------------------------------------ */
+.header-actions{ display:flex; align-items:center; gap:.45rem; }
+.site-header .btn{
+  color: var(--nav-text);
+  border-color: color-mix(in oklab, var(--nav-bg) 70%, white 30%);
+  background: transparent;
+}
+.site-header .btn:hover{
+  background: rgba(255,255,255,.06);
+  border-color: color-mix(in oklab, var(--nav-bg) 55%, white 45%);
+}
+.site-header .btn.primary{
+  background: var(--brand); color:#04110a; border-color: transparent;
+}
+.site-header .btn.primary:hover{ background: var(--brand-600); color:#eafff1; }

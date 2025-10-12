@@ -1,40 +1,195 @@
-.side-group + .side-group{ margin-top: 1rem; }
-.side-head{ font-weight:700; margin-bottom:.4rem; }
+/* --- Tree (Kapitel & Szenen) ------------------------------------------- */
+.tree{ display:flex; flex-direction:column; gap:.5rem; }
+.tree-head{
+  display:flex; align-items:center; justify-content:space-between;
+  padding-bottom:.4rem; margin-bottom:.4rem;
+  border-bottom:1px solid var(--line);
+}
+.tree-title{ font-weight:800; font-size:1rem; }
 
-.side-list{
-  display:flex; flex-direction:column; gap:.35rem; margin-top:.5rem;
+/* Icon-Buttons subtil */
+.icon-btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:28px; height:28px;
+  border:1px solid transparent; border-radius:0;
+  background:transparent; color:var(--text);
+  cursor:pointer;
+  transition: background .16s ease, border-color .16s ease, color .16s ease;
+}
+.icon-btn:hover{ background:#f1f5f9; border-color:#e2e8f0; }
+.icon-btn.danger{ color:#b91c1c; }
+.icon-btn.danger:hover{ background:#fee2e2; border-color:#fca5a5; }
+.icon-btn.caret{ width:24px; height:24px; margin-right:.25rem; }
+
+.tree-list{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:.35rem; }
+.tree-scenes{ list-style:none; padding-left:22px; margin:.35rem 0 .25rem; display:flex; flex-direction:column; gap:.25rem; }
+.tree-empty{ color:var(--muted); font-size:.9rem; padding:.15rem 0 .35rem; }
+
+.tree-row{
+  display:flex; align-items:center; gap:.5rem;
+  padding:.35rem .45rem;
+  border:1px solid var(--line);
+  background: var(--panel-bg);
+  cursor:pointer;
+}
+.tree-row:hover{ background:#f8fafc; }
+.chapter-row{ font-weight:700; }
+.scene-row{ font-weight:600; }
+
+.tree-name{ flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.row-actions{ display:flex; align-items:center; gap:.25rem; }
+
+.tree-dot{
+  width:6px; height:6px; border-radius:999px;
+  background: color-mix(in oklab, var(--brand) 68%, #0f172a 32%);
+  display:inline-block;
 }
 
-/* Buttons statt Divs: zuverlässige Klick-Hitbox + Tastaturfokus */
-.side-item-btn{
-  width: 100%;
-  text-align: left;
-  background: #0c1219;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: .45rem .6rem;
-  cursor: pointer;
-  transition: .15s ease;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: inherit;
-}
-.side-item-btn:hover{ border-color:#2a3848; }
-.side-item-btn.active{
-  background: #0f1823;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(78,161,255,.15) inset;
-}
+.tree-chapter.active > .chapter-row{ border-color: var(--brand); }
+.tree-scene.active > .scene-row{ border-color: var(--brand); }
 
+/* --- Editor ------------------------------------------------------------- */
 .scene-title{
-  font-size: 1rem;
-  font-weight: 600;
-  margin-bottom: .6rem;
+  width:100%;
+  height:40px;
+  border:1px solid var(--line);
+  background:#fff; color:var(--text);
+  padding:8px 10px; box-sizing:border-box;
+  font-weight:700; margin-bottom:10px;
 }
 
 .scene-editor{
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  line-height: 1.55;
-  min-height: 360px;
+  flex: 1 1 auto;
+  min-height: 0;
+  width:100%;
+  resize:none;
+  border:1px solid var(--line);
+  background:#fff; color:var(--text);
+  padding:10px; box-sizing:border-box;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  line-height:1.55;
 }
+
+/* --- Empty state allgemein --------------------------------------------- */
+.empty-state{
+  height: 100%;
+  display:flex; flex-direction:column; align-items:center;
+  text-align:center; gap:.6rem;
+  padding-top: clamp(8vh, 14%, 22vh);
+  color: var(--muted);
+}
+.empty-title{
+  font-weight:800; font-size:1.1rem; letter-spacing:.2px; color: var(--text);
+}
+.empty-sub{ font-size:.95rem; }
+
+/* --- Kapitel-Überblick -------------------------------------------------- */
+.chapter-overview{
+  display:flex; flex-direction:column; gap: 14px;
+  height: 100%;
+  min-height: 0;
+}
+
+/* Kopf mit Kapitel-Titel + Meta */
+.chapter-head{
+  display:grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items:center;
+}
+.chapter-title-input{
+  height: 40px;
+  border:1px solid var(--line);
+  background:#fff; color:var(--text);
+  padding:8px 10px;
+  font-weight:800;
+}
+.chapter-meta{
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* Grid der Szenen – feste Kachelgröße */
+.scene-grid{
+  display:grid;
+  grid-auto-flow: row;
+  grid-template-columns: repeat(auto-fill, 340px); /* fixe Breite */
+  justify-content: start;
+  gap: 18px;
+}
+
+/* Kachel (fixe Größe) */
+.scene-card{
+  position: relative;
+  display:flex;
+  flex-direction:column;
+  gap:.5rem;
+  text-align:left;
+
+  width: 340px;        /* fix */
+  height: 190px;       /* fix */
+
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  padding: 16px 14px 18px;
+
+  cursor: pointer;
+  box-shadow: var(--shadow-1);
+  transition: transform .06s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease, color .18s ease;
+}
+.scene-card:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 3px 12px rgba(2,8,23,.06), 0 1px 2px rgba(2,8,23,.08);
+  border-color: #dbe4ee;
+}
+
+.scene-card-delete{
+  position:absolute;
+  top:6px; right:6px;
+  opacity: .92;
+}
+.scene-card-delete .icon-btn{
+  width:26px; height:26px; box-shadow:none;
+}
+.scene-card-delete .icon-btn:hover{ background:#fee2e2; border-color:#fecaca; }
+
+.scene-card-title{
+  font-weight: 800;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%;
+  padding-right: 28px; /* Platz für Delete-Icon */
+}
+
+.scene-card-preview{
+  color: var(--muted);
+  font-size: .95rem;
+  line-height: 1.45;
+  flex: 1 1 auto;            /* füllt die Karte bis zur fixen Höhe */
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* „Neue Szene“ als Kachel */
+.scene-card.add-card{
+  align-items:center;
+  justify-content:center;
+  color: var(--brand);
+  background: #f7fffa;
+  border: 2px dashed color-mix(in oklab, var(--brand) 35%, #86efac 65%);
+}
+.scene-card.add-card:hover{
+  background: #effcf3;
+  border-color: color-mix(in oklab, var(--brand) 55%, #86efac 45%);
+}
+
+/* Leerer Kapitel-Überblick mit mittigem CTA */
+.overview-empty{
+  height: 100%;
+  display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+  text-align:center; gap:.6rem;
+  padding-top: clamp(10vh, 18%, 26vh);
+  color: var(--muted);
+}
+.overview-empty .empty-title{ font-weight:800; font-size:1.1rem; color: var(--text); }
+.overview-empty .empty-sub{ font-size:.95rem; }
