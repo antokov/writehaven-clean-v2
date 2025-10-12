@@ -32,5 +32,4 @@ ENV PORT=8080
 EXPOSE 8080
 
 # Robust & simpel: starte das exportierte WSGI-Objekt aus backend/wsgi.py
-# First clean up any failed transactions
-CMD ["sh", "-c", "python -c 'from backend.db_cleanup import cleanup_transactions; cleanup_transactions()' && gunicorn -k gthread -w 2 -b 0.0.0.0:8080 backend.wsgi:app"]
+CMD ["gunicorn", "-k", "gthread", "-w", "2", "-b", "0.0.0.0:8080", "backend.wsgi:app"]

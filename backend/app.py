@@ -52,7 +52,11 @@ def create_app():
     # SQLAlchemy
     app.config["SQLALCHEMY_DATABASE_URI"] = get_database_uri()
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True, "pool_recycle": 1800}
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "pool_pre_ping": True,
+        "pool_recycle": 1800,
+        "isolation_level": "AUTOCOMMIT"  # Verhindert hängende Transaktionen
+    }
     
     # Serve index.html for all non-API routes
     @app.route('/', defaults={'path': ''})
