@@ -1,7 +1,6 @@
-# backend/wsgi.py
 try:
-    from backend.app import create_app   # Paket-Start
+    from backend.app import create_app
 except ImportError:
-    from app import create_app           # Container-Start (WORKDIR=/app)
+    from app import create_app
 
 app = create_app()

@@ -2,6 +2,7 @@ import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import App from './App.jsx'
+
 import Dashboard from './pages/Dashboard.jsx'
 import ProjectLayout from './pages/ProjectLayout.jsx'   // <— neu
 import ProjectView from './pages/ProjectView.jsx'
@@ -11,7 +12,11 @@ import World from './pages/World.jsx'                   // <— neu
 import './styles.css'
 import './layout-2col.css'
 import './projectview.css'
-import './nav.css'                                      // <— neu
+import './header.css'
+import './topnav.css'
+import './dashboard.css'   // <— NEU: Styles für Kacheln & Grid
+import "./characters.css";
+
 
 import axios from 'axios'
 

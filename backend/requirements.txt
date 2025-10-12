@@ -2,5 +2,5 @@ Flask==3.0.0
 Flask-Cors==4.0.0
 Flask-SQLAlchemy==3.1.1
 SQLAlchemy==2.0.32
-psycopg[binary]==3.1.19  # Postgres client v3 as binary
+psycopg[binary]==3.1.19
 gunicorn==21.2.0

@@ -13,7 +13,7 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
 WORKDIR /app
 
-# System-Deps (für Wheels/psycopg)
+# System-Deps (fï¿½r Wheels/psycopg)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential gcc \
  && rm -rf /var/lib/apt/lists/*
@@ -32,4 +32,5 @@ ENV PORT=8080
 EXPOSE 8080
 
 # Robust & simpel: starte das exportierte WSGI-Objekt aus backend/wsgi.py
-CMD ["gunicorn", "-k", "gthread", "-w", "2", "-b", "0.0.0.0:8080", "backend.wsgi:app"]
+# First clean up any failed transactions
+CMD ["sh", "-c", "python -c 'from backend.db_cleanup import cleanup_transactions; cleanup_transactions()' && gunicorn -k gthread -w 2 -b 0.0.0.0:8080 backend.wsgi:app"]
