@@ -53,6 +53,17 @@ def create_app():
     app.config["SQLALCHEMY_DATABASE_URI"] = get_database_uri()
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True, "pool_recycle": 1800}
+    
+    # Serve index.html for all non-API routes
+    @app.route('/', defaults={'path': ''})
+    @app.route('/<path:path>')
+    def serve(path):
+        if path.startswith('api/'):
+            return {"error": "Not Found"}, 404
+        try:
+            return send_from_directory('static', 'index.html')
+        except:
+            return send_from_directory('static', path)
 
     # CORS
     allowed = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "*").split(",")]
