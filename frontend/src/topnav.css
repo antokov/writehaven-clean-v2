@@ -1,0 +1,58 @@
+﻿/* --- TopNav: hell, zentriert, exakte Höhe -------------------------------- */
+:root{
+  --topnav-h: 52px;
+  --tab-indicator-h: 3px;
+}
+
+.tabs{
+  position: static;                 /* NICHT sticky */
+  z-index: 1;
+
+  height: var(--topnav-h);          /* exakte Blockhöhe */
+  display:flex; justify-content:center; align-items:center; gap:1.6rem;
+
+  /* nur seitliches Padding – KEIN vertical padding */
+  padding-inline: 1rem; 
+  padding-block: 0;
+
+  color: var(--text);
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  margin-top: 0;
+
+  border-bottom: 1px solid var(--line);   /* Linie unten */
+  overflow-x: clip;                       /* Subpixel-Artefakte vermeiden */
+}
+
+/* --- Text-Tabs mit Underline-Fill --------------------------------------- */
+.tabs .tab{
+  position: relative;
+  display:inline-flex; align-items:center;
+  height: 100%;
+  padding: 0 .2rem;                      /* nur Text-Abstand seitlich */
+  color: var(--muted);
+  text-decoration: none;
+  border:0 !important; background:transparent !important; border-radius:0 !important;
+  transition: color .2s ease;
+}
+.tabs .tab:hover{ color: var(--text); }
+
+.tabs .tab::after{
+  content:"";
+  position:absolute; left:0; right:0; bottom: 6px;  /* Unterstrich im Balken */
+  height: var(--tab-indicator-h);
+  background: var(--brand);
+  transform: scaleX(0);
+  transform-origin: 50% 50%;
+  transition: transform .5s cubic-bezier(.4,0,.2,1);
+}
+.tabs .tab:hover::after,
+.tabs .tab:focus-visible::after{ transform: scaleX(1); }
+
+.tabs .tab.active{ color: var(--text); }
+.tabs .tab.active::after{ transform: scaleX(1); }
+
+@media (prefers-reduced-motion: reduce){
+  .tabs .tab::after{ transition-duration: 0ms; }
+}
