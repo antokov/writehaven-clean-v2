@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import App from './App.jsx'
 
+import Landing from './pages/Landing.jsx'               // Landing Page
 import Dashboard from './pages/Dashboard.jsx'
 import ProjectLayout from './pages/ProjectLayout.jsx'   // <� neu
 import ProjectView from './pages/ProjectView.jsx'
@@ -18,6 +19,7 @@ import './topnav.css'
 import './dashboard.css'   // <� NEU: Styles f�r Kacheln & Grid
 import "./characters.css";
 import "./bookexport.css";
+import './landing.css';     // Landing Page Styles
 
 
 import axios from 'axios'
@@ -37,7 +39,11 @@ createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<App />}>
+        {/* Landing Page als Startseite */}
+        <Route path="/" element={<Landing />} />
+
+        {/* App mit Dashboard und Projekten */}
+        <Route path="/app" element={<App />}>
           <Route index element={<Dashboard />} />
           {/* Projekt-Layout mit Tabs + Unterseiten */}
           <Route path="project/:id" element={<ProjectLayout />}>

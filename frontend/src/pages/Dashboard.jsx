@@ -5,10 +5,15 @@ import axios from 'axios'
 // Bootstrap-Icons als React-SVGs (keine Fonts nötig)
 import { BsBoxArrowUpRight, BsPencil, BsTrash } from 'react-icons/bs'
 
+import ConfirmModal from '../components/ConfirmModal'
+import PromptModal from '../components/PromptModal'
+
 export default function Dashboard(){
   const [projects, setProjects] = useState([])
   const [title, setTitle] = useState('')
   const [loading, setLoading] = useState(true)
+  const [confirmModal, setConfirmModal] = useState(null)
+  const [promptModal, setPromptModal] = useState(null)
 
   async function load(){
     try {
@@ -36,26 +41,42 @@ export default function Dashboard(){
   }
 
   async function renameProject(p){
-    try {
-      const nt = prompt('Neuer Projektname', p.title)
-      if (nt == null) return
-      const r = await axios.put(`/api/projects/${p.id}`, { title: nt })
-      setProjects(projects.map(x => x.id===p.id ? r.data : x))
-    } catch (err) {
-      console.error('Rename project failed', err)
-      alert('Umbenennen fehlgeschlagen.')
-    }
+    setPromptModal({
+      title: 'Projekt umbenennen',
+      message: 'Gib einen neuen Namen für das Projekt ein:',
+      defaultValue: p.title,
+      onConfirm: async (newTitle) => {
+        setPromptModal(null)
+        try {
+          const r = await axios.put(`/api/projects/${p.id}`, { title: newTitle })
+          setProjects(projects.map(x => x.id===p.id ? r.data : x))
+        } catch (err) {
+          console.error('Rename project failed', err)
+          alert('Umbenennen fehlgeschlagen.')
+        }
+      },
+      onCancel: () => setPromptModal(null)
+    })
   }
 
   async function removeProject(p){
-    try {
-      if(!confirm('Projekt wirklich löschen?')) return
-      await axios.delete(`/api/projects/${p.id}`)
-      setProjects(projects.filter(x => x.id!==p.id))
-    } catch (err) {
-      console.error('Delete project failed', err)
-      alert('Löschen fehlgeschlagen.')
-    }
+    setConfirmModal({
+      title: 'Projekt löschen',
+      message: `Möchtest du das Projekt "${p.title}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`,
+      confirmText: 'Löschen',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModal(null)
+        try {
+          await axios.delete(`/api/projects/${p.id}`)
+          setProjects(projects.filter(x => x.id!==p.id))
+        } catch (err) {
+          console.error('Delete project failed', err)
+          alert('Löschen fehlgeschlagen.')
+        }
+      },
+      onCancel: () => setConfirmModal(null)
+    })
   }
 
   return (
@@ -86,7 +107,7 @@ export default function Dashboard(){
             {projects.map(p => (
               <article key={p.id} className="project-card">
                 {/* Cover links (2:3) */}
-                <Link to={`/project/${p.id}`} className="project-cover" aria-label={`${p.title} öffnen`}>
+                <Link to={`/app/project/${p.id}`} className="project-cover" aria-label={`${p.title} öffnen`}>
                   <div className="cover-art">
                     <span className="cover-letter">{(p.title || '?').slice(0,1).toUpperCase()}</span>
                   </div>
@@ -96,13 +117,13 @@ export default function Dashboard(){
                 <div className="project-body">
                   <div className="project-top">
                     <h3 className="project-title" title={p.title}>
-                      <Link to={`/project/${p.id}`}>{p.title}</Link>
+                      <Link to={`/app/project/${p.id}`}>{p.title}</Link>
                     </h3>
                   </div>
 
                   <div className="project-actions">
                     <div className="actions-left">
-                      <Link className="btn btn-primary-quiet" to={`/project/${p.id}`}>
+                      <Link className="btn btn-primary-quiet" to={`/app/project/${p.id}`}>
                         <BsBoxArrowUpRight className="icon" aria-hidden />
                         <span>Öffnen</span>
                       </Link>
@@ -124,6 +145,9 @@ export default function Dashboard(){
           </div>
         </>
       )}
+
+      {confirmModal && <ConfirmModal {...confirmModal} />}
+      {promptModal && <PromptModal {...promptModal} />}
     </div>
   )
 }

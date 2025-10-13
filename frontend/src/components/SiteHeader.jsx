@@ -5,7 +5,7 @@ import logoUrl from '../assets/logo.png'   // <— Pfad von components → asset
 export default function SiteHeader() {
   return (
     <header className="site-header">
-      <Link className="brand" to="/" aria-label="Zum Dashboard">
+      <Link className="brand" to="/app" aria-label="Zum Dashboard">
         <span className="brand-icon natural">
           <img className="brand-logo" src={logoUrl} alt="Writehaven" />
         </span>
