@@ -1,10 +1,106 @@
-﻿import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import axios from "axios";
 import { BsPlus, BsTrash } from "react-icons/bs";
-import { TbNetwork, TbTopologyStar3 } from "react-icons/tb"; // Icons
-import ForceGraph2D from "react-force-graph-2d";
+import { TbNetwork, TbTopologyStar3 } from "react-icons/tb";
 import { createPortal } from "react-dom";
+import axios from "axios";
+import ReactFlow, {
+  useNodesState,
+  useEdgesState,
+  Controls,
+  Background,
+  MarkerType,
+  Panel,
+} from "reactflow";
+import "reactflow/dist/style.css";
+
+// Relationship types and their reciprocal mappings
+const REL_TYPES = [
+  "Freundschaft",
+  "Familie",
+  "Feindschaft",
+  "Mentor",
+  "Schüler",
+  "Geschäftspartner",
+  "Konkurrenz",
+  "Liebesbeziehung"
+];
+
+const RECIPROCAL = {
+  "Freundschaft": "Freundschaft",
+  "Familie": "Familie",
+  "Feindschaft": "Feindschaft",
+  "Mentor": "Schüler",
+  "Schüler": "Mentor",
+  "Geschäftspartner": "Geschäftspartner",
+  "Konkurrenz": "Konkurrenz",
+  "Liebesbeziehung": "Liebesbeziehung"
+};
+
+/** Safely get a value from an object using a path string */
+function getPath(obj, path, defaultValue = undefined) {
+  const keys = path.split('.');
+  let result = obj;
+  for (const key of keys) {
+    if (result === undefined || result === null || typeof result !== 'object') {
+      return defaultValue;
+    }
+    result = result[key];
+  }
+  return result === undefined ? defaultValue : result;
+}
+
+/** Set a value in an object using a path string (returns new object) */
+function setPathIn(obj, path, val) {
+  const parts = path.split(".");
+  const next = { ...(obj || {}) };
+  let cur = next;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const k = parts[i];
+    cur[k] = { ...(cur[k] || {}) };
+    cur = cur[k];
+  }
+  cur[parts[parts.length - 1]] = val;
+  return next;
+}
+
+/** Remove duplicates from array based on key function */
+function uniqBy(arr, keyFn) {
+  const seen = new Set();
+  return arr.filter(item => {
+    const key = keyFn(item);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/** Get display name for character in list */
+function displayNameForList(ch, activeId, draftFullName) {
+  if (ch.id === activeId && draftFullName && draftFullName !== "Unbenannt") {
+    return draftFullName;
+  }
+  return ch.name || "Unbenannt";
+}
+
+/** Get reciprocal relation types for deletion */
+function counterpartTypesForDelete(type) {
+  const reciprocal = RECIPROCAL[type];
+  if (reciprocal === type) {
+    return [type];
+  }
+  return [reciprocal];
+}
+
+/** Name from profile */
+function fullNameFromProfile(profile) {
+  const firstName = getPath(profile, "basic.first_name", "").trim();
+  const lastName = getPath(profile, "basic.last_name", "").trim();
+  if (firstName && lastName) return `${firstName} ${lastName}`;
+  if (firstName) return firstName;
+  if (lastName) return lastName;
+  return "Unbenannt";
+}
 
 /** Tabs */
 const TABS = [
@@ -13,191 +109,9 @@ const TABS = [
   { key: "personality",  label: "Persönlichkeit" },
   { key: "relations",    label: "Hintergrund" },
   { key: "skills",       label: "Fähigkeiten" },
-  { key: "links",        label: "Beziehungen" }, // NEU
+  { key: "links",        label: "Beziehungen" },
   { key: "notes",        label: "Notizen" },
 ];
-
-// Visuelle Konstanten
-const LINK_CURVATURE = 0.25;
-const LABEL_FONT = "bold 10px system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
-
-/* ------------ Helpers ------------ */
-function getPath(obj, path, fallback = "") {
-  if (!obj) return fallback;
-  let cur = obj;
-  for (const p of path.split(".")) {
-    cur = cur?.[p];
-    if (cur == null) return fallback;
-  }
-  return cur ?? fallback;
-}
-function setPathIn(obj, path, val) {
-  const parts = path.split(".");
-  const next = { ...(obj || {}) };
-  let cur = next;
-  for (let i = 0; i < parts.length - 1; i++) {
-    const k = parts[i];
-    cur[k] = cur[k] ?? {};
-    cur = cur[k];
-  }
-  cur[parts[parts.length - 1]] = val;
-  return next;
-}
-function fullNameFromProfile(profile) {
-  const first = getPath(profile, "basic.first_name", "");
-  const last  = getPath(profile, "basic.last_name", "");
-  return [first, last].filter(Boolean).join(" ").trim();
-}
-
-/* ------------ Beziehungstypen ------------ */
-const REL_TYPES = [
-  "ist Vater von","ist Mutter von","ist Sohn von","ist Tochter von",
-  "ist Freund von","ist Feind von","ist Geschwister von","ist Mentor von",
-  "ist Schüler von","ist Ehepartner von","ist Vorgesetzter von","ist Untergebener von",
-  "ist Verbündeter von","ist Liebhaber von",
-];
-const RECIPROCAL = {
-  "ist Vater von": "ist Kind von",
-  "ist Mutter von": "ist Kind von",
-  "ist Sohn von": "ist Elternteil von",
-  "ist Tochter von": "ist Elternteil von",
-  "ist Freund von": "ist Freund von",
-  "ist Feind von": "ist Feind von",
-  "ist Geschwister von": "ist Geschwister von",
-  "ist Mentor von": "ist Schüler von",
-  "ist Schüler von": "ist Mentor von",
-  "ist Ehepartner von": "ist Ehepartner von",
-  "ist Vorgesetzter von": "ist Untergebener von",
-  "ist Untergebener von": "ist Vorgesetzter von",
-  "ist Verbündeter von": "ist Verbündeter von",
-  "ist Liebhaber von": "ist Liebhaber von",
-  "ist Elternteil von": "ist Kind von",
-  "ist Kind von": "ist Elternteil von",
-};
-function uniqBy(arr, keyFn) {
-  const seen = new Set();
-  const out = [];
-  for (const x of arr) {
-    const k = keyFn(x);
-    if (!seen.has(k)) { seen.add(k); out.push(x); }
-  }
-  return out;
-}
-function counterpartTypesForDelete(type) {
-  if (type === "ist Kind von")       return ["ist Vater von", "ist Mutter von", "ist Elternteil von"];
-  if (type === "ist Elternteil von") return ["ist Kind von"];
-  const t = RECIPROCAL[type] || type;
-  return [t];
-}
-function displayNameForList(item, activeId, draftFull) {
-  if (item.id === activeId && draftFull) return draftFull;
-  return item.name || "Neuer Charakter";
-}
-
-/* --------- Canvas-Geometrie (Bezier, Winkel, Pfeile) --------- */
-function controlPoint(sx, sy, tx, ty, curvature) {
-  const dx = tx - sx, dy = ty - sy;
-  const len = Math.hypot(dx, dy) || 1;
-  const mx = (sx + tx) / 2;
-  const my = (sy + ty) / 2;
-  const nx = -dy / len;
-  const ny =  dx / len;
-  return { cx: mx + nx * len * curvature, cy: my + ny * len * curvature };
-}
-function bezierPointAndAngle(sx, sy, cx, cy, tx, ty, t) {
-  const x = (1 - t) * (1 - t) * sx + 2 * (1 - t) * t * cx + t * t * tx;
-  const y = (1 - t) * (1 - t) * sy + 2 * (1 - t) * t * cy + t * t * ty;
-  const dx = 2 * (1 - t) * (cx - sx) + 2 * t * (tx - cx);
-  const dy = 2 * (1 - t) * (cy - sy) + 2 * t * (ty - cy);
-  let angle = Math.atan2(dy, dx);
-  if (angle > Math.PI / 2 || angle < -Math.PI / 2) angle += Math.PI; // Text nicht kopfüber
-  return { x, y, angle };
-}
-function drawArrowhead(ctx, x, y, angle, size = 6) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(angle);
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.lineTo(-size, 0.6 * size);
-  ctx.lineTo(-size, -0.6 * size);
-  ctx.closePath();
-  ctx.fillStyle = "rgba(100,116,139,.8)";
-  ctx.fill();
-  ctx.restore();
-}
-
-/* ------- Text ALONG quadratic Bezier (Label liegt exakt auf Linie) ------- */
-function quadCtrlPoint(sx, sy, tx, ty, curvature) {
-  return controlPoint(sx, sy, tx, ty, curvature);
-}
-function quadPoint(sx, sy, cx, cy, tx, ty, t) {
-  const x = (1 - t) * (1 - t) * sx + 2 * (1 - t) * t * cx + t * t * tx;
-  const y = (1 - t) * (1 - t) * sy + 2 * (1 - t) * t * cy + t * t * ty;
-  const dx = 2 * (1 - t) * (cx - sx) + 2 * t * (tx - cx);
-  const dy = 2 * (1 - t) * (cy - sy) + 2 * t * (ty - cy);
-  return { x, y, angle: Math.atan2(dy, dx) };
-}
-function drawTextAlongQuadratic(ctx, s, t, text, curvature, font = LABEL_FONT) {
-  if (!text) return;
-  const { cx, cy } = quadCtrlPoint(s.x, s.y, t.x, t.y, curvature);
-
-  // Arc-length Tabelle
-  const N = 80;
-  const Ts = new Array(N + 1).fill(0).map((_, i) => i / N);
-  const P  = Ts.map(tt => quadPoint(s.x, s.y, cx, cy, t.x, t.y, tt));
-  const Ls = [0];
-  for (let i = 1; i < P.length; i++) {
-    const d = Math.hypot(P[i].x - P[i-1].x, P[i].y - P[i-1].y);
-    Ls[i] = Ls[i-1] + d;
-  }
-  const total = Ls[Ls.length - 1];
-
-  ctx.save();
-  ctx.font = font;
-  const glyphs = [...text];
-  const widths = glyphs.map(g => ctx.measureText(g).width);
-  const textW = widths.reduce((a,b)=>a+b,0);
-
-  // mittig auf der Kurve starten
-  const startLen = Math.max(0, (total - textW) / 2);
-
-  const lenToT = (len) => {
-    let lo = 0, hi = Ls.length - 1;
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-      if (Ls[mid] < len) lo = mid + 1; else hi = mid;
-    }
-    const i = Math.min(Ls.length - 2, Math.max(1, lo));
-    const seg = Ls[i] - Ls[i-1] || 1;
-    const frac = (len - Ls[i-1]) / seg;
-    return Ts[i-1] + (Ts[i] - Ts[i-1]) * frac;
-  };
-
-  let curLen = startLen;
-  for (let i = 0; i < glyphs.length; i++) {
-    const midLen = curLen + widths[i] / 2;
-    const tt = lenToT(Math.min(total, Math.max(0, midLen)));
-    let { x, y, angle } = quadPoint(s.x, s.y, cx, cy, t.x, t.y, tt);
-    if (angle > Math.PI/2 || angle < -Math.PI/2) angle += Math.PI;
-
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(angle);
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = "rgba(255,255,255,.9)";
-    ctx.strokeText(glyphs[i], 0, 0);
-    ctx.fillStyle = "#0f172a";
-    ctx.fillText(glyphs[i], 0, 0);
-    ctx.restore();
-
-    curLen += widths[i];
-  }
-  ctx.restore();
-}
 
 /* ---------------- Modal ---------------- */
 function Modal({ open, onClose, title, children }) {
@@ -235,9 +149,9 @@ function Modal({ open, onClose, title, children }) {
 
 /* ---------------- Beziehungen UI ---------------- */
 function RelationEditor({ currentId, allCharacters, onAdd }) {
-  const [targetId, setTargetId] = React.useState("");
-  const [type, setType] = React.useState(REL_TYPES[0]);
-  const [note, setNote] = React.useState("");
+  const [targetId, setTargetId] = useState("");
+  const [type, setType] = useState(REL_TYPES[0]);
+  const [note, setNote] = useState("");
   const options = (allCharacters || []).filter(c => c.id !== currentId);
 
   return (
@@ -254,13 +168,17 @@ function RelationEditor({ currentId, allCharacters, onAdd }) {
     </div>
   );
 }
+
 function RelationList({ profile, allCharacters, onRemove }) {
   const links = getPath(profile, "links.connections", []) || [];
-  if (!links.length) return <div className="small muted">Keine Verbindungen</div>;
+  // Filtere Beziehungen zu gelöschten Charakteren heraus
+  const validLinks = links.filter(r => allCharacters.find(c => c.id === r.target_id));
+
+  if (!validLinks.length) return <div className="small muted">Keine Verbindungen</div>;
   const nameOf = (id) => (allCharacters.find(c=>c.id===id)?.name) || `#${id}`;
   return (
     <ul style={{listStyle:"none", padding:0, margin:0, display:"grid", gap:8}}>
-      {links.map((r, idx) => (
+      {validLinks.map((r, idx) => (
         <li key={idx} className="panel" style={{padding:"8px 10px"}}>
           <div style={{display:"flex", alignItems:"center", gap:12}}>
             <div style={{flex: "0 0 auto"}}>{r.type}</div>
@@ -274,177 +192,225 @@ function RelationList({ profile, allCharacters, onRemove }) {
   );
 }
 
-/* ------------- Graph Modal (Ego-Netz) ------------- */
-function RelationsGraphModal({ open, onClose, activeId, profile, allCharacters, onJumpToCharacter }) {
-  // Daten + Startlayout
-  const data = useMemo(() => {
-    const nodes = [];
-    const links = [];
-    const nameOf = (id) => allCharacters.find(c => c.id === id)?.name || `#${id}`;
+/* ------------- Graph Modal (Ego-Netz) mit ReactFlow ------------- */
+function RelationsGraphModal({ open, onClose, activeId, allCharacters, onJumpToCharacter }) {
+  const [graphData, setGraphData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-    // Ego fix bei (0,0) starten
-    nodes.push({ id: activeId, name: nameOf(activeId), ego: true, x: 0, y: 0, fx: 0, fy: 0 });
+  // Lade Beziehungen direkt aus der API
+  useEffect(() => {
+    if (!open || !activeId) return;
 
-    const rels = getPath(profile, "links.connections", []) || [];
-    rels.forEach((r) => {
-      if (!nodes.some(n => n.id === r.target_id)) {
-        nodes.push({ id: r.target_id, name: nameOf(r.target_id), ego: false });
+    async function loadRelations() {
+      setLoading(true);
+      try {
+        const response = await axios.get(`/api/characters/${activeId}`);
+        const charProfile = response.data?.profile || {};
+
+        console.log("Vollständiges Profil:", charProfile);
+        console.log("Links-Objekt:", charProfile.links);
+
+        // Versuche verschiedene mögliche Pfade
+        let rels = getPath(charProfile, "links.connections", []) || [];
+
+        if (rels.length === 0 && charProfile.links) {
+          // Fallback: Schaue ob links direkt ein Array ist
+          if (Array.isArray(charProfile.links)) {
+            rels = charProfile.links;
+          }
+        }
+
+        console.log("Gefundene Beziehungen:", rels);
+
+        // Filtere Beziehungen zu gelöschten Charakteren heraus
+        const validRels = rels.filter(r => allCharacters.find(c => c.id === r.target_id));
+        console.log("Valide Beziehungen (nach Filter):", validRels);
+
+        const nameOf = (id) => allCharacters.find(c => c.id === id)?.name || `#${id}`;
+        const nodes = [];
+        const edges = [];
+
+        // Center node (ego)
+        nodes.push({
+          id: String(activeId),
+          type: "default",
+          data: { label: nameOf(activeId) },
+          position: { x: 0, y: 0 },
+          style: {
+            background: "#22c55e",
+            color: "#ffffff",
+            border: "2px solid #15803d",
+            borderRadius: 8,
+            padding: "8px 16px",
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: "pointer",
+          },
+        });
+
+        const radius = 300;
+        const angleStep = (2 * Math.PI) / Math.max(validRels.length, 1);
+
+        validRels.forEach((r, i) => {
+          const angle = i * angleStep;
+          const x = radius * Math.cos(angle);
+          const y = radius * Math.sin(angle);
+
+          // Add connected node
+          nodes.push({
+            id: String(r.target_id),
+            type: "default",
+            data: { label: nameOf(r.target_id) },
+            position: { x, y },
+            style: {
+              background: "#94a3b8",
+              color: "#ffffff",
+              border: "1px solid #64748b",
+              borderRadius: 8,
+              padding: "8px 16px",
+              fontSize: 13,
+              cursor: "pointer",
+            },
+          });
+
+          const isSym = (RECIPROCAL[r.type] || r.type) === r.type;
+          const label = r.note ? `${r.type} (${r.note})` : r.type;
+
+          // Add edge
+          edges.push({
+            id: `e-${activeId}-${r.target_id}`,
+            source: String(activeId),
+            target: String(r.target_id),
+            label,
+            type: "smoothstep",
+            animated: false,
+            style: { stroke: "#64748b", strokeWidth: 2 },
+            labelStyle: { fill: "#0f172a", fontWeight: 500, fontSize: 11 },
+            labelBgStyle: { fill: "#ffffff", fillOpacity: 0.9 },
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              color: "#64748b",
+            },
+            markerStart: isSym ? {
+              type: MarkerType.ArrowClosed,
+              color: "#64748b",
+            } : undefined,
+          });
+        });
+
+        console.log("Graph-Daten erstellt - Nodes:", nodes.length, "Edges:", edges.length);
+        setGraphData({ nodes, edges });
+      } catch (error) {
+        console.error("Fehler beim Laden der Beziehungen:", error);
+        setGraphData({ nodes: [], edges: [] });
+      } finally {
+        setLoading(false);
       }
-      const isSym = (RECIPROCAL[r.type] || r.type) === r.type;
-      links.push({
-        source: activeId,
-        target: r.target_id,
-        label: r.note ? `${r.type} (${r.note})` : r.type,
-        double: isSym,                // zweiter Pfeil für symmetrische Beziehungen
-        curv: LINK_CURVATURE
-      });
-    });
+    }
 
-    // Nachbarn ringförmig
-    const neighbors = nodes.filter(n => !n.ego);
-    const R = 160;
-    neighbors.forEach((n, i) => {
-      const a = (i / Math.max(1, neighbors.length)) * Math.PI * 2;
-      n.x = R * Math.cos(a);
-      n.y = R * Math.sin(a);
-    });
-    return { nodes, links };
-  }, [activeId, profile, allCharacters]);
+    loadRelations();
+  }, [open, activeId, allCharacters]);
 
-  const fgRef = useRef(null);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
-  // Container-Maße ermitteln -> ForceGraph width/height setzen
-  const wrapRef = useRef(null);
-  const [dims, setDims] = useState({ w: 0, h: 0 });
+  // Update nodes and edges when graphData changes
   useEffect(() => {
-    if (!open) return;
-    const el = wrapRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      const cr = entries[0].contentRect;
-      setDims({ w: Math.floor(cr.width), h: Math.floor(cr.height) });
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [open]);
+    if (graphData) {
+      console.log("Setze Nodes und Edges:", graphData.nodes.length, graphData.edges.length);
+      setNodes(graphData.nodes);
+      setEdges(graphData.edges);
+    }
+  }, [graphData, setNodes, setEdges]);
 
-  // Kräfte + Kamera
-  useEffect(() => {
-    if (!open) return;
-    const fg = fgRef.current;
-    if (!fg) return;
+  const onNodeClick = useCallback((_event, node) => {
+    const id = Number(node.id);
+    console.log("Node geklickt:", id, "Aktuell:", activeId);
+    if (id) {
+      onJumpToCharacter(id);
+      onClose();
+    }
+  }, [activeId, onJumpToCharacter, onClose]);
 
-    fg.d3Force("charge")?.strength(-220);
-    fg.d3Force("link")?.distance(140);
+  if (!open) return null;
 
-    const cf = fg.d3Force("center");
-    cf?.x?.(0);
-    cf?.y?.(0);
-
-    fg.d3ReheatSimulation?.();
-
-    const unpin = setTimeout(() => {
-      const ego = data.nodes.find(n => n.ego);
-      if (ego) { delete ego.fx; delete ego.fy; fg.d3ReheatSimulation?.(); }
-    }, 700);
-
-    const r1 = requestAnimationFrame(() =>
-      requestAnimationFrame(() => {
-        fg.centerAt(0, 0, 0);
-        fg.zoom(1.2, 300);
-      })
+  if (loading) {
+    return (
+      <Modal open={open} onClose={onClose} title="Beziehungs-Graph">
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100%",
+          color: "#64748b",
+          background: "#f8fafc"
+        }}>
+          Lade Beziehungen...
+        </div>
+      </Modal>
     );
+  }
 
-    return () => {
-      clearTimeout(unpin);
-      cancelAnimationFrame(r1);
-    };
-  }, [open, data, dims.w, dims.h]);
-
-  // Node-Text mit Halo (wie bisher)
-  const drawTextWithHalo = (ctx, text, x, y) => {
-    ctx.font = "11px sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = "rgba(255,255,255,.9)";
-    ctx.strokeText(text, x, y);
-    ctx.fillStyle = "#0f172a";
-    ctx.fillText(text, x, y);
-  };
+  const hasRelations = edges.length > 0;
 
   return (
     <Modal open={open} onClose={onClose} title="Beziehungs-Graph">
-      <div ref={wrapRef} style={{ width: "100%", height: "100%" }}>
-        {dims.w > 0 && dims.h > 0 && (
-          <ForceGraph2D
-            ref={fgRef}
-            width={dims.w}
-            height={dims.h}
-            graphData={data}
-            backgroundColor="#ffffff"
-            nodeRelSize={4}
-            linkWidth={1}
-            linkColor={() => "rgba(100,116,139,.6)"}
-            linkDirectionalArrowLength={6}
-            linkDirectionalArrowRelPos={0.98}
-            linkCurvature={(link) => link.curv ?? LINK_CURVATURE}
-            minZoom={0.4}
-            maxZoom={3}
-            cooldownTicks={80}
-            nodeLabel={() => ""}
-            nodeCanvasObject={(node, ctx) => {
-              const radius = node.ego ? 9 : 6;
-              ctx.beginPath();
-              ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
-              ctx.fillStyle = node.ego ? "#22c55e" : "#94a3b8";
-              ctx.fill();
-              ctx.lineWidth = 1;
-              ctx.strokeStyle = "rgba(15,23,42,.25)";
-              ctx.stroke();
-              drawTextWithHalo(ctx, node.name, node.x, node.y + radius + 10);
-            }}
-            linkCanvasObjectMode={() => "after"}
-            linkCanvasObject={(link, ctx) => {
-              const s = link.source, t = link.target;
-              if (typeof s !== "object" || typeof t !== "object") return;
-
-              const text = (link.label || "").slice(0, 80);
-              if (text) drawTextAlongQuadratic(ctx, s, t, text, link.curv ?? LINK_CURVATURE);
-
-              // Zweiter Pfeil am Quellende für symmetrische Beziehungen
-              if (link.double) {
-                const { cx, cy } = controlPoint(s.x, s.y, t.x, t.y, link.curv ?? LINK_CURVATURE);
-                const a = bezierPointAndAngle(s.x, s.y, cx, cy, t.x, t.y, 0.12);
-                drawArrowhead(ctx, a.x, a.y, a.angle + Math.PI);
-              }
-            }}
-            onNodeClick={(n) => { if (n?.id) { onJumpToCharacter(n.id); onClose(); } }}
-          />
+      <div style={{ width: "100%", height: "100%", background: "#f8fafc" }}>
+        {hasRelations ? (
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onNodeClick={onNodeClick}
+            nodesDraggable={false}
+            nodesConnectable={false}
+            elementsSelectable={true}
+            fitView
+            fitViewOptions={{ padding: 0.2 }}
+            minZoom={0.3}
+            maxZoom={2}
+          >
+            <Background color="#cbd5e1" gap={16} />
+            <Controls showInteractive={false} />
+            <Panel position="top-left">
+              <div style={{
+                background: "white",
+                padding: "8px 12px",
+                borderRadius: 6,
+                border: "1px solid #e2e8f0",
+                fontSize: 13,
+                color: "#64748b"
+              }}>
+                Klicke auf einen Charakter um zu seinem Profil zu springen
+              </div>
+            </Panel>
+          </ReactFlow>
+        ) : (
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "100%",
+            gap: 12,
+            color: "#64748b"
+          }}>
+            <div style={{ fontSize: 48 }}>🔗</div>
+            <div style={{ fontSize: 16, fontWeight: 500 }}>Keine Beziehungen vorhanden</div>
+            <div style={{ fontSize: 14, textAlign: "center", maxWidth: 400 }}>
+              Füge Beziehungen im Tab "Beziehungen" hinzu, um sie hier zu visualisieren.
+            </div>
+          </div>
         )}
       </div>
     </Modal>
   );
 }
 
-/* ------------- World Mindmap (alle Beziehungen) ------------- */
+/* ------------- Radiale Beziehungs-Übersicht ------------- */
 function WorldGraphModal({ open, onClose, characters, activeId, onJumpToCharacter }) {
-  const [graph, setGraph] = useState(null);
-
-  // Größe des Containers
-  const wrapRef = useRef(null);
-  const [dims, setDims] = useState({ w: 0, h: 0 });
-  useEffect(() => {
-    if (!open) return;
-    const el = wrapRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      const cr = entries[0].contentRect;
-      setDims({ w: Math.floor(cr.width), h: Math.floor(cr.height) });
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [open]);
+  const [relationData, setRelationData] = useState(null);
 
   // Daten laden/aufbauen
   useEffect(() => {
@@ -461,133 +427,196 @@ function WorldGraphModal({ open, onClose, characters, activeId, onJumpToCharacte
           })))
         );
 
-        const nodes = profiles.map(p => ({
-          id: p.id,
-          name: p.name,
-          active: p.id === activeId
-        }));
-
-        const links = [];
-        const seenSymUndirected = new Set();  // Symmetrisch: eine Linie
-        const pairCurvCount = new Map();      // Für mehrere Kanten zwischen Paaren
-
-        const isSym = (type) => (RECIPROCAL[type] || type) === type;
-
+        // Gruppiere alle Beziehungen nach Charakteren
+        const relMap = new Map();
         for (const p of profiles) {
           const rels = getPath(p.profile, "links.connections", []) || [];
-          for (const r of rels) {
-            const source = p.id;
-            const target = r.target_id;
-            const type   = r.type;
-            const label  = r.note ? `${type} (${r.note})` : type;
-
-            if (isSym(type)) {
-              // Eine Linie, zwei Pfeile
-              const key = `${Math.min(source,target)}|${Math.max(source,target)}|${type}|${r.note||""}`;
-              if (seenSymUndirected.has(key)) continue;
-              seenSymUndirected.add(key);
-              links.push({ source, target, label, double: true, curv: LINK_CURVATURE });
-            } else {
-              // Asymmetrisch: jede Richtung als eigene Kante, Krümmung abwechselnd
-              const pairKey = `${Math.min(source,target)}|${Math.max(source,target)}`;
-              const n = pairCurvCount.get(pairKey) || 0;
-              const curv = (n % 2 === 0) ? LINK_CURVATURE : -LINK_CURVATURE;
-              pairCurvCount.set(pairKey, n + 1);
-              links.push({ source, target, label, double: false, curv });
-            }
-          }
+          // Filtere nur Beziehungen zu existierenden Charakteren
+          const validRels = rels
+            .filter(r => profiles.find(pr => pr.id === r.target_id))
+            .map(r => ({
+              targetId: r.target_id,
+              targetName: profiles.find(pr => pr.id === r.target_id)?.name || `#${r.target_id}`,
+              type: r.type,
+              note: r.note
+            }));
+          relMap.set(p.id, validRels);
         }
 
-        if (!cancelled) setGraph({ nodes, links });
+        if (!cancelled) setRelationData({ profiles, relMap });
       } catch (e) {
-        console.warn("world graph load failed", e);
-        if (!cancelled) setGraph({ nodes: [], links: [] });
+        console.warn("relation data load failed", e);
+        if (!cancelled) setRelationData({ profiles: [], relMap: new Map() });
       }
     }
     build();
     return () => { cancelled = true; };
-  }, [open, characters, activeId]);
+  }, [open, characters]);
 
-  const fgRef = useRef(null);
+  if (!open) return null;
 
-  // Zoom-to-fit
-  useEffect(() => {
-    if (!open || !graph) return;
-    const fg = fgRef.current;
-    if (!fg) return;
-    fg.d3Force("charge")?.strength(-220);
-    fg.d3Force("link")?.distance(140);
-    fg.d3ReheatSimulation?.();
-
-    const raf = requestAnimationFrame(() =>
-      requestAnimationFrame(() => {
-        try { fg.zoomToFit(400, 40); } catch {}
-      })
+  if (!relationData) {
+    return (
+      <Modal open={open} onClose={onClose} title="Beziehungsübersicht – alle Charaktere">
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100%",
+          color: "#64748b",
+          background: "#f8fafc"
+        }}>
+          Lade Beziehungen...
+        </div>
+      </Modal>
     );
-    return () => cancelAnimationFrame(raf);
-  }, [open, graph, dims.w, dims.h]);
+  }
 
-  // Node-Text (wie oben)
-  const drawTextWithHalo = (ctx, text, x, y) => {
-    ctx.font = "11px sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = "rgba(255,255,255,.9)";
-    ctx.strokeText(text, x, y);
-    ctx.fillStyle = "#0f172a";
-    ctx.fillText(text, x, y);
-  };
+  const { profiles, relMap } = relationData;
 
   return (
-    <Modal open={open} onClose={onClose} title="Mindmap – alle Beziehungen">
-      <div ref={wrapRef} style={{ width: "100%", height: "100%" }}>
-        {graph && dims.w > 0 && dims.h > 0 && (
-          <ForceGraph2D
-            ref={fgRef}
-            width={dims.w}
-            height={dims.h}
-            graphData={graph}
-            backgroundColor="#ffffff"
-            nodeRelSize={4}
-            linkWidth={1}
-            linkColor={() => "rgba(100,116,139,.6)"}
-            linkDirectionalArrowLength={6}
-            linkDirectionalArrowRelPos={0.98}
-            linkCurvature={(link) => link.curv ?? LINK_CURVATURE}
-            minZoom={0.3}
-            maxZoom={3.5}
-            cooldownTicks={120}
-            nodeLabel={() => ""}
-            nodeCanvasObject={(node, ctx) => {
-              const radius = node.active ? 9 : 6;
-              ctx.beginPath();
-              ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
-              ctx.fillStyle = node.active ? "#22c55e" : "#94a3b8";
-              ctx.fill();
-              ctx.lineWidth = 1;
-              ctx.strokeStyle = "rgba(15,23,42,.25)";
-              ctx.stroke();
-              drawTextWithHalo(ctx, node.name, node.x, node.y + radius + 10);
-            }}
-            linkCanvasObjectMode={() => "after"}
-            linkCanvasObject={(link, ctx) => {
-              const s = link.source, t = link.target;
-              if (typeof s !== "object" || typeof t !== "object") return;
+    <Modal open={open} onClose={onClose} title="Beziehungsübersicht – alle Charaktere">
+      <div style={{
+        width: "100%",
+        height: "100%",
+        background: "#f8fafc",
+        overflowY: "auto",
+        padding: "16px"
+      }}>
+        <div style={{
+          maxWidth: 1000,
+          margin: "0 auto",
+          display: "grid",
+          gap: 16
+        }}>
+          {profiles.map(p => {
+            const relations = relMap.get(p.id) || [];
+            const isActive = p.id === activeId;
 
-              const text = (link.label || "").slice(0, 80);
-              if (text) drawTextAlongQuadratic(ctx, s, t, text, link.curv ?? LINK_CURVATURE);
+            return (
+              <div
+                key={p.id}
+                className="panel"
+                style={{
+                  padding: "16px 20px",
+                  background: isActive ? "#ecfdf5" : "#ffffff",
+                  border: isActive ? "2px solid #22c55e" : "1px solid #e5e7eb",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                  transition: "all 0.2s"
+                }}
+                onClick={() => onJumpToCharacter(p.id)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)";
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = "none";
+                  e.currentTarget.style.transform = "translateY(0)";
+                }}
+              >
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  marginBottom: relations.length > 0 ? 12 : 0
+                }}>
+                  <div style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: "50%",
+                    background: isActive ? "#22c55e" : "#94a3b8",
+                    flexShrink: 0
+                  }} />
+                  <div style={{
+                    fontSize: 16,
+                    fontWeight: isActive ? 600 : 500,
+                    color: isActive ? "#15803d" : "#0f172a"
+                  }}>
+                    {p.name}
+                  </div>
+                  {relations.length > 0 && (
+                    <div style={{
+                      marginLeft: "auto",
+                      fontSize: 13,
+                      color: "#64748b",
+                      background: "#f1f5f9",
+                      padding: "2px 8px",
+                      borderRadius: 12
+                    }}>
+                      {relations.length} {relations.length === 1 ? "Beziehung" : "Beziehungen"}
+                    </div>
+                  )}
+                </div>
 
-              // zweiter Pfeil bei symmetrischen Beziehungen
-              if (link.double) {
-                const { cx, cy } = controlPoint(s.x, s.y, t.x, t.y, link.curv ?? LINK_CURVATURE);
-                const a = bezierPointAndAngle(s.x, s.y, cx, cy, t.x, t.y, 0.12);
-                drawArrowhead(ctx, a.x, a.y, a.angle + Math.PI);
-              }
-            }}
-            onNodeClick={(n) => { if (n?.id) { onJumpToCharacter(n.id); } }}
-          />
-        )}
+                {relations.length > 0 && (
+                  <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
+                    gap: 8,
+                    paddingLeft: 22
+                  }}>
+                    {relations.map((rel, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          background: "#f8fafc",
+                          padding: "6px 12px",
+                          borderRadius: 6,
+                          fontSize: 13,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          border: "1px solid #e2e8f0"
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onJumpToCharacter(rel.targetId);
+                        }}
+                      >
+                        <span style={{
+                          color: "#0ea5e9",
+                          fontWeight: 500,
+                          flexShrink: 0
+                        }}>
+                          {rel.type}
+                        </span>
+                        <span style={{ color: "#64748b" }}>→</span>
+                        <span style={{
+                          color: "#0f172a",
+                          fontWeight: 500
+                        }}>
+                          {rel.targetName}
+                        </span>
+                        {rel.note && (
+                          <span style={{
+                            color: "#64748b",
+                            fontSize: 12,
+                            marginLeft: "auto",
+                            fontStyle: "italic"
+                          }}>
+                            ({rel.note})
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {relations.length === 0 && (
+                  <div style={{
+                    paddingLeft: 22,
+                    fontSize: 13,
+                    color: "#94a3b8",
+                    fontStyle: "italic"
+                  }}>
+                    Keine Beziehungen
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </Modal>
   );
@@ -695,7 +724,6 @@ const CharacterEditor = React.memo(function CharacterEditor({
           </div>
         </div>
       )}
-
 
       {activeTab === "appearance" && (
         <div className="form-grid">
@@ -810,24 +838,20 @@ const CharacterEditor = React.memo(function CharacterEditor({
                 onChange={e => {
                   const val = e.target.value;
                   if (val.endsWith(",") || val.endsWith("\n")) {
-                    // Extract skill text without comma/newline
                     const skillText = val.slice(0, -1).trim();
                     if (skillText) {
-                      // Add to list if not empty
                       const currentSkills = getPath(profile, "skills.list", []);
                       const updatedSkills = Array.from(new Set([...currentSkills, skillText]));
                       onChangeProfilePath("skills.list", updatedSkills);
-                      // Clear input
                       onChangeProfilePath("skills.input", "");
                     }
                   } else {
-                    // Normal text input - just update the field
                     onChangeProfilePath("skills.input", val);
                   }
                 }}
                 onKeyDown={e => {
                   if (e.key === "Enter") {
-                    e.preventDefault(); // Prevent newline
+                    e.preventDefault();
                     const val = getPath(profile, "skills.input", "").trim();
                     if (val) {
                       const currentSkills = getPath(profile, "skills.list", []);
@@ -1045,10 +1069,8 @@ const CharacterEditor = React.memo(function CharacterEditor({
         </div>
       )}
 
-      {/* Beziehungen (NEU + Button unten mittig) */}
       {activeTab === "links" && (
         <div className="form-grid">
-          {/* obere Zeile: nur Editor */}
           <div className="form-row" style={{ gridColumn: "span 12", display:"flex", alignItems:"center" }}>
             <div className="form-field" style={{flex:1}}>
               <label className="small muted">Neue Verbindung</label>
@@ -1060,7 +1082,6 @@ const CharacterEditor = React.memo(function CharacterEditor({
             </div>
           </div>
 
-          {/* Liste */}
           <div className="form-row" style={{ gridColumn: "span 12" }}>
             <div className="form-field">
               <label className="small muted">Bestehende Verbindungen</label>
@@ -1072,7 +1093,6 @@ const CharacterEditor = React.memo(function CharacterEditor({
             </div>
           </div>
 
-          {/* Runder Icon-Button – mittig unter den Beziehungen */}
           <div className="form-row" style={{ gridColumn: "span 12" }}>
             <div style={{ display: "flex", justifyContent: "center", width: "100%", marginTop: 8 }}>
               <button
@@ -1102,10 +1122,9 @@ const CharacterEditor = React.memo(function CharacterEditor({
         </div>
       )}
 
-      {/* Hintergrund (aus Platzgründen hier ausgelassen) */}
       {activeTab === "relations" && (
         <div className="form-grid">
-          {/* ... deine bestehenden Felder ... */}
+          {/* Hintergrund-Felder hier */}
         </div>
       )}
 
@@ -1137,7 +1156,10 @@ export default function Characters() {
   const [activeTab, setActiveTab] = useState("basic");
   const [lastSavedAt, setLastSavedAt] = useState(null);
   const [showGraph, setShowGraph] = useState(false);
-  const [showWorldGraph, setShowWorldGraph] = useState(false); // NEU
+  const [showWorldGraph, setShowWorldGraph] = useState(false);
+
+  const saveTimer = useRef(null);
+  const isLoadingRef = useRef(false);
 
   const draftFullName = useMemo(() => fullNameFromProfile(profile), [profile]);
 
@@ -1154,18 +1176,32 @@ export default function Characters() {
     }
     if (pid) load();
     return () => { cancel = true; };
-  }, [pid]);
+  }, [pid, activeId]);
 
   useEffect(() => {
     if (!activeId) { setProfile({}); return; }
     let cancel = false;
+
     async function loadOne() {
+      isLoadingRef.current = true;
       try {
         const r = await axios.get(`/api/characters/${activeId}`);
         if (cancel) return;
-        setProfile(r.data?.profile || {});
-      } catch (e) { console.warn(e); }
+        // Nur setzen wenn wirklich Daten vorhanden sind
+        const loadedProfile = r.data?.profile;
+        if (loadedProfile && typeof loadedProfile === 'object') {
+          setProfile(loadedProfile);
+        } else {
+          // Falls keine Daten vorhanden, setze leeres Objekt
+          setProfile({});
+        }
+      } catch (e) {
+        console.warn('Fehler beim Laden des Charakters:', e);
+      } finally {
+        isLoadingRef.current = false;
+      }
     }
+
     loadOne();
     return () => { cancel = true; };
   }, [activeId]);
@@ -1231,9 +1267,11 @@ export default function Characters() {
   }, [activeId, profile]);
 
   // Autosave
-  const saveTimer = useRef(null);
   const saveNow = useCallback(async () => {
     if (!activeId) return;
+    // Nicht speichern während ein Charakter geladen wird
+    if (isLoadingRef.current) return;
+
     const newName = draftFullName || "Neuer Charakter";
     try {
       await axios.patch(`/api/characters/${activeId}`, {
@@ -1264,7 +1302,6 @@ export default function Characters() {
     return () => clearTimeout(saveTimer.current);
   }, [activeId, profile, saveNow]);
 
-  // Aktionen
   const addCharacter = async () => {
     try {
       const r = await axios.post(`/api/projects/${pid}/characters`, { name: "Neuer Charakter" });
@@ -1277,6 +1314,7 @@ export default function Characters() {
       alert("Charakter konnte nicht angelegt werden.");
     }
   };
+
   const deleteCharacter = async (cid) => {
     if (!confirm("Charakter löschen?")) return;
     try {
@@ -1298,7 +1336,6 @@ export default function Characters() {
         <div className="tree">
           <div className="tree-head">
             <span className="tree-title">Charaktere</span>
-            {/* NEU: Mindmap-Button in der Kopfzeile der Links-Navigation */}
             <button
               className="icon-btn"
               title="Mindmap (alle Beziehungen)"
@@ -1355,7 +1392,6 @@ export default function Characters() {
               open={showGraph}
               onClose={()=>setShowGraph(false)}
               activeId={activeId}
-              profile={profile}
               allCharacters={list}
               onJumpToCharacter={(id) => setActiveId(id)}
             />

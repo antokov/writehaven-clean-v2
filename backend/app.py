@@ -99,13 +99,13 @@ def create_app():
         try:
             # Erst alle offenen Transaktionen zurückrollen
             db.session.rollback()
-            
+
             # Postgres-spezifischer Check
             check_query = """
                 SELECT EXISTS (
-                    SELECT 1 
-                    FROM information_schema.columns 
-                    WHERE table_name = 'character' 
+                    SELECT 1
+                    FROM information_schema.columns
+                    WHERE table_name = 'character'
                     AND column_name = 'profile_json'
                 )
             """
@@ -125,6 +125,37 @@ def create_app():
         except Exception as e:
             db.session.rollback()
             print(f"Migration error (can be ignored if column exists): {str(e)}")
+
+        # --- Migration: worldnode.relations_json nachrüsten ---
+        try:
+            db.session.rollback()
+
+            # Postgres-spezifischer Check
+            check_query = """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM information_schema.columns
+                    WHERE table_name = 'worldnode'
+                    AND column_name = 'relations_json'
+                )
+            """
+            try:
+                has_column = db.session.execute(text(check_query)).scalar()
+            except Exception:
+                # Fallback für SQLite
+                has_column = db.session.execute(text("""
+                    SELECT 1
+                    FROM pragma_table_info('worldnode')
+                    WHERE name = 'relations_json'
+                """)).scalar()
+
+            if not has_column:
+                db.session.execute(text("ALTER TABLE worldnode ADD COLUMN relations_json TEXT DEFAULT '{}'"))
+                db.session.commit()
+                print("Migration: worldnode.relations_json column added successfully")
+        except Exception as e:
+            db.session.rollback()
+            print(f"Migration error for worldnode.relations_json (can be ignored if column exists): {str(e)}")
 
     # ---------- SPA fallback (für Deep Links) ----------
     @app.before_request
@@ -394,12 +425,13 @@ def create_app():
         w = WorldNode.query.get(w_id)
         if not w: return not_found()
         return ok({
-            "id": w.id, 
-            "project_id": w.project_id, 
-            "title": w.title, 
+            "id": w.id,
+            "project_id": w.project_id,
+            "title": w.title,
             "kind": w.kind,
-            "summary": w.summary, 
-            "icon": w.icon
+            "summary": w.summary,
+            "icon": w.icon,
+            "relations": _loads(w.relations_json or "{}")
         })
 
     @app.put("/api/world/<int:w_id>")
@@ -411,9 +443,21 @@ def create_app():
         w.kind    = data.get("kind", w.kind)
         w.summary = data.get("summary", w.summary)
         w.icon    = data.get("icon", w.icon)
+
+        # Relations speichern
+        if "relations" in data and isinstance(data["relations"], dict):
+            w.relations_json = _dumps(data["relations"])
+
         db.session.commit()
-        return ok({"id": w.id, "project_id": w.project_id, "title": w.title, "kind": w.kind,
-                   "summary": w.summary, "icon": w.icon})
+        return ok({
+            "id": w.id,
+            "project_id": w.project_id,
+            "title": w.title,
+            "kind": w.kind,
+            "summary": w.summary,
+            "icon": w.icon,
+            "relations": _loads(w.relations_json or "{}")
+        })
 
     @app.delete("/api/world/<int:w_id>")
     def delete_world(w_id):

@@ -96,3 +96,4 @@ class WorldNode(db.Model):
     kind = db.Column(db.String(100), nullable=False, default="Ort")
     summary = db.Column(db.Text, default="")
     icon = db.Column(db.String(50), default="🏰")
+    relations_json = db.Column(db.Text, default="{}")

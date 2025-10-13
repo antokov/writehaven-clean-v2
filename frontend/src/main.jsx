@@ -4,18 +4,20 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import App from './App.jsx'
 
 import Dashboard from './pages/Dashboard.jsx'
-import ProjectLayout from './pages/ProjectLayout.jsx'   // <— neu
+import ProjectLayout from './pages/ProjectLayout.jsx'   // <ï¿½ neu
 import ProjectView from './pages/ProjectView.jsx'
-import Characters from './pages/Characters.jsx'         // <— neu
-import World from './pages/World.jsx'                   // <— neu
+import Characters from './pages/Characters.jsx'         // <ï¿½ neu
+import World from './pages/World.jsx'                   // <ï¿½ neu
+import BookExport from './pages/BookExport.jsx'         // <ï¿½ neu
 
 import './styles.css'
 import './layout-2col.css'
 import './projectview.css'
 import './header.css'
 import './topnav.css'
-import './dashboard.css'   // <— NEU: Styles für Kacheln & Grid
+import './dashboard.css'   // <ï¿½ NEU: Styles fï¿½r Kacheln & Grid
 import "./characters.css";
+import "./bookexport.css";
 
 
 import axios from 'axios'
@@ -42,6 +44,7 @@ createRoot(document.getElementById('root')).render(
             <Route index element={<ProjectView />} />        {/* Schreiben */}
             <Route path="characters" element={<Characters />} />
             <Route path="world" element={<World />} />
+            <Route path="export" element={<BookExport />} />
             {/* <Route path="preview" element={<Preview />} /> */}
           </Route>
         </Route>

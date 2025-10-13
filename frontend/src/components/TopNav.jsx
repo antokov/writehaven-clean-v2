@@ -10,7 +10,7 @@ export default function TopNav(){
       <NavLink end to={base} className="tab">Schreiben</NavLink>
       <NavLink to={`${base}/characters`} className="tab">Charaktere</NavLink>
       <NavLink to={`${base}/world`} className="tab">Welt</NavLink>
-      <NavLink to={`${base}/preview`} className="tab">Vorschau</NavLink>
+      <NavLink to={`${base}/export`} className="tab">Export</NavLink>
     </div>
   )
 }

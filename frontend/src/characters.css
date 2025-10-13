@@ -1,37 +1,66 @@
-/* Tabs inline – an die vorhandene .tabs/.tab Optik angelehnt */
+/* Tabs inline - an die vorhandene .tabs/.tab Optik angelehnt */
 .tabs.tabs-inline {
   display: flex;
   align-items: center;
   gap: 16px;
   border-bottom: 1px solid var(--border, #e7ecf2);
   margin-bottom: 12px;
+  height: 48px;
 }
 
 .tabs.tabs-inline .tab {
+  position: relative;
   appearance: none;
   border: 0;
   background: none;
   padding: 8px 2px;
   font: inherit;
-  color: var(--text, #dbe4ef);
-  opacity: .9;
+  color: var(--muted, #64748b);
   cursor: pointer;
+  height: 100%;
 
-  /* nur so breit wie der Inhalt + Linie direkt am Button */
+  /* nur so breit wie der Inhalt */
   display: inline-flex;
   align-items: center;
-  border-bottom: 2px solid transparent;
+  transition: color .2s ease;
 }
 
-.tabs.tabs-inline .tab:hover { opacity: 1; }
+.tabs.tabs-inline .tab:hover {
+  color: var(--text, #0f172a);
+}
 
 .tabs.tabs-inline .tab.active {
-  color: var(--text, #e6eef8);
-  border-bottom-color: var(--accent, #22c55e); /* grüne Unterlinie */
+  color: var(--text, #0f172a);
 }
 
-/* evtl. vorhandene ::after-Linien sicher ausschalten */
-.tabs.tabs-inline .tab::after { content: none !important; }
+/* Animierte Unterstreichung wie bei TopNav */
+.tabs.tabs-inline .tab::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--brand, #22c55e);
+  transform: scaleX(0);
+  transform-origin: 50% 50%;
+  transition: transform .5s cubic-bezier(.4, 0, .2, 1);
+}
+
+.tabs.tabs-inline .tab:hover::after,
+.tabs.tabs-inline .tab:focus-visible::after {
+  transform: scaleX(1);
+}
+
+.tabs.tabs-inline .tab.active::after {
+  transform: scaleX(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tabs.tabs-inline .tab::after {
+    transition-duration: 0ms;
+  }
+}
 
 .tabs.tabs-inline .tabs-meta {
   margin-left: auto;
@@ -79,13 +108,13 @@
   overflow: hidden;
 }
 
-/* Linke Spalte (Sidebar) scrollt eigenständig */
+/* Linke Spalte (Sidebar) scrollt eigenstaendig */
 .characters-page .side {
   height: 100%;
   overflow: auto;
 }
 
-/* Rechte Spalte (Main) hält Kopfzeilen oben,
+/* Rechte Spalte (Main) haelt Kopfzeilen oben,
    Inhalt darunter scrollt */
 .characters-page .main {
   height: 100%;
@@ -97,7 +126,7 @@
 .characters-page .main .panel {
   flex: 1 1 auto;
   height: 100%;
-  min-height: 0;         /* wichtig für korrektes Overflow */
+  min-height: 0;         /* wichtig fuer korrektes Overflow */
   overflow: auto;        /* hier ist der Scrollbar */
 }
 
