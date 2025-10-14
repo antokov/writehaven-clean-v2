@@ -8,6 +8,7 @@ import ProtectedRoute from './components/ProtectedRoute.jsx'
 import Landing from './pages/Landing.jsx'               // Landing Page
 import Login from './pages/Login.jsx'                   // Login/Register Page
 import Dashboard from './pages/Dashboard.jsx'
+import Settings from './pages/Settings.jsx'
 import ProjectLayout from './pages/ProjectLayout.jsx'
 import ProjectView from './pages/ProjectView.jsx'
 import Characters from './pages/Characters.jsx'
@@ -51,6 +52,7 @@ createRoot(document.getElementById('root')).render(
           {/* Protected App Routes */}
           <Route path="/app" element={<ProtectedRoute><App /></ProtectedRoute>}>
             <Route index element={<Dashboard />} />
+            <Route path="settings" element={<Settings />} />
             {/* Projekt-Layout mit Tabs + Unterseiten */}
             <Route path="project/:id" element={<ProjectLayout />}>
               <Route index element={<ProjectView />} />        {/* Schreiben */}

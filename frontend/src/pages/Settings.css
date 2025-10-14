@@ -1,0 +1,142 @@
+.settings-page {
+  min-height: 100vh;
+  background: var(--bg);
+  padding: 2rem 1rem;
+}
+
+.settings-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.settings-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0 0 2rem 0;
+}
+
+.settings-section {
+  margin-bottom: 2rem;
+}
+
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 1rem 0;
+}
+
+.settings-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  transition: background 0.15s;
+}
+
+.settings-item:hover {
+  background: var(--hover-bg);
+}
+
+.settings-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(123, 200, 164, 0.1);
+  color: var(--brand);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.settings-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-item-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.25rem;
+}
+
+.settings-item-value {
+  font-size: 1rem;
+  color: var(--text);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0 1.5rem;
+}
+
+.settings-info {
+  padding: 1.25rem 1.5rem;
+}
+
+.settings-info p {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--text-muted);
+}
+
+.settings-info strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.settings-note {
+  padding: 1rem 1.25rem;
+  background: rgba(123, 200, 164, 0.05);
+  border: 1px solid rgba(123, 200, 164, 0.2);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .settings-page {
+    padding: 1.5rem 0.75rem;
+  }
+
+  .settings-title {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .settings-item {
+    padding: 1rem;
+  }
+
+  .settings-item-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .settings-divider {
+    margin: 0 1rem;
+  }
+
+  .settings-info {
+    padding: 1rem;
+  }
+}
