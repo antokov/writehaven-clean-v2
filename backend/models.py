@@ -11,6 +11,7 @@ except Exception:
 
 class Project(db.Model):
     __tablename__ = "project"
+    __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False, default="Neues Projekt")
@@ -33,6 +34,7 @@ class Project(db.Model):
 
 class Chapter(db.Model):
     __tablename__ = "chapter"
+    __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
     project_id = db.Column(
@@ -53,6 +55,7 @@ class Chapter(db.Model):
 
 class Scene(db.Model):
     __tablename__ = "scene"
+    __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
     chapter_id = db.Column(
@@ -69,6 +72,7 @@ class Scene(db.Model):
 
 class Character(db.Model):
     __tablename__ = "character"
+    __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
     project_id = db.Column(
@@ -87,6 +91,7 @@ class Character(db.Model):
 
 class WorldNode(db.Model):
     __tablename__ = "worldnode"
+    __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
     project_id = db.Column(

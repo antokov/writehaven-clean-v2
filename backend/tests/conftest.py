@@ -34,6 +34,7 @@ def app():
         "WTF_CSRF_ENABLED": False,
     })
 
+    # Tabellen werden bereits von create_app erstellt
     yield test_app
 
     # Cleanup
@@ -57,23 +58,44 @@ def db(app):
     Jeder Test bekommt eine saubere DB.
     """
     from extensions import db as _db
+    from models import Project, Chapter, Scene, Character, WorldNode
 
     with app.app_context():
         # Alles löschen vor jedem Test
-        _db.session.rollback()
-        _db.session.remove()
+        try:
+            _db.session.rollback()
+        except:
+            pass
 
-        # Alle Tabellen leeren
-        from models import Project, Chapter, Scene, Character, WorldNode
-        for model in [WorldNode, Character, Scene, Chapter, Project]:
-            _db.session.query(model).delete()
-        _db.session.commit()
+        try:
+            _db.session.close()
+        except:
+            pass
+
+        # Alle Tabellen leeren - in korrekter Reihenfolge wegen FK
+        try:
+            _db.session.execute(_db.delete(Scene))
+            _db.session.execute(_db.delete(Chapter))
+            _db.session.execute(_db.delete(WorldNode))
+            _db.session.execute(_db.delete(Character))
+            _db.session.execute(_db.delete(Project))
+            _db.session.commit()
+        except Exception as e:
+            print(f"Warning during DB cleanup: {e}")
+            _db.session.rollback()
 
         yield _db
 
         # Nach dem Test cleanup
-        _db.session.rollback()
-        _db.session.remove()
+        try:
+            _db.session.rollback()
+        except:
+            pass
+
+        try:
+            _db.session.close()
+        except:
+            pass
 
 
 @pytest.fixture
