@@ -440,9 +440,9 @@ export default function ProjectView() {
   const handleCreateWorldElement = async (name) => {
     try {
       const r = await axios.post(`/api/projects/${pid}/world`, {
-        name,
-        type: 'general',
-        description: ''
+        title: name,  // API erwartet "title" nicht "name"
+        kind: 'Ort',
+        summary: ''
       })
       const elementId = r.data.id
       // Navigiere zum Welt-Tab und übergebe die ID im state
