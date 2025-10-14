@@ -12,9 +12,11 @@ from sqlalchemy.exc import IntegrityError, ProgrammingError, OperationalError
 try:
     from backend.extensions import db
     from backend.models import Project, Chapter, Scene, Character, WorldNode, User
+    from backend.word_parser import parse_word_document
 except ImportError:
     from extensions import db
     from models import Project, Chapter, Scene, Character, WorldNode, User
+    from word_parser import parse_word_document
 
 
 # ---------- DB URI helpers ----------
@@ -392,15 +394,69 @@ def create_app():
     @app.post("/api/projects")
     @token_required
     def create_project(current_user):
-        data = request.get_json() or {}
-        p = Project(
-            user_id=current_user.id,
-            title=data.get("title") or "Neues Projekt",
-            description=data.get("description", "")
-        )
-        db.session.add(p)
-        db.session.commit()
-        return ok({"id": p.id, "title": p.title, "description": p.description}, 201)
+        # Check if multipart/form-data (file upload)
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            title = request.form.get("title", "Neues Projekt").strip()
+            description = request.form.get("description", "")
+            file = request.files.get("file")
+
+            # Erstelle Projekt
+            p = Project(
+                user_id=current_user.id,
+                title=title,
+                description=description
+            )
+            db.session.add(p)
+            db.session.commit()
+
+            # Verarbeite Word-Dokument falls vorhanden
+            if file and file.filename:
+                try:
+                    # Parse Word-Dokument
+                    parsed = parse_word_document(file.stream)
+
+                    # Erstelle Kapitel und Szenen
+                    for chapter_data in parsed.get("chapters", []):
+                        chapter = Chapter(
+                            project_id=p.id,
+                            title=chapter_data.get("title", "Kapitel"),
+                            order_index=chapter_data.get("order_index", 0)
+                        )
+                        db.session.add(chapter)
+                        db.session.flush()  # Get chapter ID
+
+                        # Erstelle Szenen für dieses Kapitel
+                        for scene_data in chapter_data.get("scenes", []):
+                            scene = Scene(
+                                chapter_id=chapter.id,
+                                title=scene_data.get("title", "Szene"),
+                                content=scene_data.get("content", ""),
+                                order_index=scene_data.get("order_index", 0)
+                            )
+                            db.session.add(scene)
+
+                    db.session.commit()
+
+                except Exception as e:
+                    db.session.rollback()
+                    # Lösche Projekt bei Fehler
+                    db.session.delete(p)
+                    db.session.commit()
+                    return ok({"error": f"Fehler beim Verarbeiten des Word-Dokuments: {str(e)}"}, 400)
+
+            return ok({"id": p.id, "title": p.title, "description": p.description}, 201)
+
+        else:
+            # JSON request (normal)
+            data = request.get_json() or {}
+            p = Project(
+                user_id=current_user.id,
+                title=data.get("title") or "Neues Projekt",
+                description=data.get("description", "")
+            )
+            db.session.add(p)
+            db.session.commit()
+            return ok({"id": p.id, "title": p.title, "description": p.description}, 201)
 
     @app.get("/api/projects/<int:pid>")
     @token_required

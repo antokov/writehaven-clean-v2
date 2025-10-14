@@ -1,0 +1,145 @@
+/* CreateProjectModal Styles */
+
+.modal-dialog-md {
+  max-width: 540px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.form-hint {
+  margin: 0 0 10px 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* File Upload Area */
+.file-upload-area {
+  position: relative;
+}
+
+.file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.file-upload-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  border: 2px dashed var(--line);
+  background: var(--panel-bg);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  gap: 8px;
+}
+
+.file-upload-label:hover {
+  border-color: var(--brand);
+  background: color-mix(in oklab, var(--brand) 5%, var(--panel-bg) 95%);
+}
+
+.upload-icon {
+  color: var(--muted);
+  transition: color 0.2s ease;
+}
+
+.file-upload-label:hover .upload-icon {
+  color: var(--brand);
+}
+
+.upload-text {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.upload-subtext {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* File Selected */
+.file-selected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--panel-bg);
+  border: 1px solid var(--line);
+  gap: 12px;
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.file-icon {
+  color: var(--brand);
+  flex-shrink: 0;
+}
+
+.file-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-name {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-size {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.btn-remove {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.btn-remove:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #b91c1c;
+}
+
+.btn-remove svg {
+  pointer-events: none;
+}

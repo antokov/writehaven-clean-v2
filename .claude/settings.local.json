@@ -1,27 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run dev)",
-      "Bash(python:*)",
-      "Bash(where python)",
-      "Bash(py --version)",
-      "Bash(py -m pip:*)",
-      "Bash(py app.py)",
-      "Bash(npm uninstall:*)",
-      "Read(//c/Users/anton/source/repos/**)",
-      "Bash(npm install:*)",
-      "Bash(git log:*)",
       "Bash(git push:*)",
-      "Bash(py -m pytest -v --tb=short)",
-      "Bash(py -m pytest -v tests/test_api_projects.py::TestProjectsAPI::test_health_check)",
-      "Bash(py -m pytest -v tests/test_api_projects.py::TestProjectsAPI::test_health_check --tb=short)",
-      "Bash(py -m pytest tests/test_api_projects.py::TestProjectsAPI::test_health_check -v --tb=line)",
-      "Bash(py -m pytest --tb=line -q)",
-      "Bash(py -m pytest:*)",
-      "Bash(pytest:*)",
-      "Bash(git restore:*)",
+      "Bash(npm install lucide-react)",
       "Bash(git add:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nFeature: Modern Landing Page mit Premium-Effekten\n\n- Neue Landing Page als Startseite auf /\n- Dashboard/App verschoben auf /app\n- Modernes Design mit Glassmorphism und Gradienten\n- Animierte Background-Orbs und Parallax-Effekte\n- Hero-Sektion mit Stats und gradient Text-Animation\n- Feature-Cards mit Hover-Effekten und Icons\n- Pricing-Sektion mit 3 Plänen (Free, Pro, Team)\n- Parallax Quote-Sektionen mit Blur-Effekten\n- CTA-Sektion mit floating Icon-Elementen\n- Vollständiger Footer mit Links und Social Media\n- Scroll-basierte Fade-in Animationen\n- Mouse-Parallax im Hero\n- Responsive Design für alle Bildschirmgrößen\n- Logo-Integration aus assets\n- Hero-Bilder im public/landing/assets Ordner\n- Backend-Tests hinzugefügt (pytest)\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git commit -m \"$(cat <<''EOF''\nFeature: Verbesserter Header mit Feedback-Button und Benutzerprofil-Dropdown\n\nHeader-Verbesserungen:\n- Feedback-Button mit Modal für Bug-Reports, Verbesserungsvorschläge und Feature-Wünsche\n- Benutzerprofil-Dropdown mit Icons (lucide-react)\n- Avatar-Icon im Dropdown\n- Einstellungen-Link im Dropdown\n- Abmelden-Button im Dropdown\n- Click-outside zum Schließen des Dropdowns\n\nNeue Components:\n- FeedbackModal.jsx mit Form für Feedback-Typen\n- UserMenu.css für Dropdown-Styling\n- Settings-Seite mit Benutzerdaten-Anzeige\n\nUI/UX:\n- Icons für bessere visuelle Orientierung\n- Smooth Animationen für Dropdown und Modal\n- Responsive Design (mobile-optimiert)\n- Keyboard-accessible (focus states)\n\nDependencies:\n- lucide-react für moderne Icons\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(\".venv/Scripts/python.exe\":*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

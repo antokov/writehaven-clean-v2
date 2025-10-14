@@ -6,6 +6,8 @@ import { createPortal } from "react-dom";
 import axios from "axios";
 
 import ConfirmModal from "../components/ConfirmModal";
+import DynamicFieldsTab from "../components/DynamicFieldsTab";
+import { BASIC_FIELDS, APPEARANCE_FIELDS, PERSONALITY_FIELDS, BACKGROUND_FIELDS } from "../config/characterFields";
 import ReactFlow, {
   useNodesState,
   useEdgesState,
@@ -646,186 +648,21 @@ const CharacterEditor = React.memo(function CharacterEditor({
       </nav>
 
       {activeTab === "basic" && (
-        <div className="form-grid">
-          <div className="form-row">
-            <div className="form-field">
-              <label className="small muted">Vorname</label>
-              <input className="input"
-                value={getPath(profile, "basic.first_name", "")}
-                onChange={e => onChangeProfilePath("basic.first_name", e.target.value)}
-              />
-            </div>
-            <div className="form-field">
-              <label className="small muted">Nachname</label>
-              <input className="input"
-                value={getPath(profile, "basic.last_name", "")}
-                onChange={e => onChangeProfilePath("basic.last_name", e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-field">
-              <label className="small muted">Spitzname(n)</label>
-              <input className="input"
-                value={getPath(profile, "basic.nickname", "")}
-                onChange={e => onChangeProfilePath("basic.nickname", e.target.value)}
-              />
-            </div>
-            <div className="form-field">
-              <label className="small muted">Geschlecht</label>
-              <input className="input"
-                value={getPath(profile, "basic.gender", "")}
-                onChange={e => onChangeProfilePath("basic.gender", e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-field">
-              <label className="small muted">Geburtsdatum</label>
-              <input className="input" placeholder="z.B. 1. Wintermond / 2001-12-05"
-                value={getPath(profile, "basic.birth_date", "")}
-                onChange={e => onChangeProfilePath("basic.birth_date", e.target.value)}
-              />
-            </div>
-            <div className="form-field">
-              <label className="small muted">Alter</label>
-              <input className="input"
-                value={getPath(profile, "basic.age", "")}
-                onChange={e => onChangeProfilePath("basic.age", e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-field">
-              <label className="small muted">Wohnort</label>
-              <input className="input"
-                value={getPath(profile, "basic.residence", "")}
-                onChange={e => onChangeProfilePath("basic.residence", e.target.value)}
-              />
-            </div>
-            <div className="form-field">
-              <label className="small muted">Nationalität</label>
-              <input className="input"
-                value={getPath(profile, "basic.nationality", "")}
-                onChange={e => onChangeProfilePath("basic.nationality", e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-field">
-              <label className="small muted">Religion</label>
-              <input className="input"
-                value={getPath(profile, "basic.religion", "")}
-                onChange={e => onChangeProfilePath("basic.religion", e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
+        <DynamicFieldsTab
+          fieldConfig={BASIC_FIELDS}
+          profile={profile}
+          onChangeProfilePath={onChangeProfilePath}
+          getPath={getPath}
+        />
       )}
 
       {activeTab === "appearance" && (
-        <div className="form-grid">
-          <div className="form-row">
-            <div className="form-field">
-              <label className="small muted">Größe</label>
-              <input className="input"
-                value={getPath(profile, "appearance.height", "")}
-                onChange={e => onChangeProfilePath("appearance.height", e.target.value)}
-              />
-            </div>
-            <div className="form-field">
-              <label className="small muted">Gewicht</label>
-              <input className="input"
-                value={getPath(profile, "appearance.weight", "")}
-                onChange={e => onChangeProfilePath("appearance.weight", e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-field">
-              <label className="small muted">Haarfarbe</label>
-              <input className="input"
-                value={getPath(profile, "appearance.hair_color", "")}
-                onChange={e => onChangeProfilePath("appearance.hair_color", e.target.value)}
-              />
-            </div>
-            <div className="form-field">
-              <label className="small muted">Augenfarbe</label>
-              <input className="input"
-                value={getPath(profile, "appearance.eye_color", "")}
-                onChange={e => onChangeProfilePath("appearance.eye_color", e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-field">
-              <label className="small muted">Statur / Körperbau</label>
-              <input className="input"
-                value={getPath(profile, "appearance.build", "")}
-                onChange={e => onChangeProfilePath("appearance.build", e.target.value)}
-              />
-            </div>
-            <div className="form-field">
-              <label className="small muted">Hautfarbe</label>
-              <input className="input"
-                value={getPath(profile, "appearance.skin_color", "")}
-                onChange={e => onChangeProfilePath("appearance.skin_color", e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-field">
-              <label className="small muted">Besondere Merkmale</label>
-              <input className="input"
-                value={getPath(profile, "appearance.distinguishing_features", "")}
-                onChange={e => onChangeProfilePath("appearance.distinguishing_features", e.target.value)}
-              />
-            </div>
-            <div className="form-field">
-              <label className="small muted">Kleidungsstil</label>
-              <input className="input"
-                value={getPath(profile, "appearance.clothing_style", "")}
-                onChange={e => onChangeProfilePath("appearance.clothing_style", e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-field">
-              <label className="small muted">Accessoires</label>
-              <input className="input"
-                value={getPath(profile, "appearance.accessories", "")}
-                onChange={e => onChangeProfilePath("appearance.accessories", e.target.value)}
-              />
-            </div>
-            <div className="form-field">
-              <label className="small muted">Körpersprache / Haltung</label>
-              <input className="input"
-                value={getPath(profile, "appearance.body_language", "")}
-                onChange={e => onChangeProfilePath("appearance.body_language", e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="form-row" style={{ gridColumn: "span 12" }}>
-            <div className="form-field">
-              <label className="small muted">Gesamteindruck & weitere Details</label>
-              <textarea
-                className="textarea"
-                value={getPath(profile, "appearance.general_impression", "")}
-                onChange={e => onChangeProfilePath("appearance.general_impression", e.target.value)}
-                rows={4}
-              />
-            </div>
-          </div>
-        </div>
+        <DynamicFieldsTab
+          fieldConfig={APPEARANCE_FIELDS}
+          profile={profile}
+          onChangeProfilePath={onChangeProfilePath}
+          getPath={getPath}
+        />
       )}
 
       {activeTab === "skills" && (
