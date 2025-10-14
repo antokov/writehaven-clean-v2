@@ -418,7 +418,14 @@ export default function ProjectView() {
 
   const handleCreateCharacter = async (name) => {
     try {
-      const r = await axios.post(`/api/projects/${pid}/characters`, { name })
+      const r = await axios.post(`/api/projects/${pid}/characters`, {
+        name,
+        profile: {
+          basic: {
+            first_name: name
+          }
+        }
+      })
       const characterId = r.data.id
       // Navigiere zum Charakter-Tab und übergebe die ID im state
       navigate(`/app/project/${pid}/characters`, {
