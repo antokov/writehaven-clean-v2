@@ -58,7 +58,6 @@ def db(app):
     Jeder Test bekommt eine saubere DB.
     """
     from extensions import db as _db
-    from models import Project, Chapter, Scene, Character, WorldNode
 
     with app.app_context():
         # Alles löschen vor jedem Test
@@ -72,13 +71,13 @@ def db(app):
         except:
             pass
 
-        # Alle Tabellen leeren - in korrekter Reihenfolge wegen FK
+        # Alle Tabellen leeren - verwende SQL direkt statt Model-Imports
         try:
-            _db.session.execute(_db.delete(Scene))
-            _db.session.execute(_db.delete(Chapter))
-            _db.session.execute(_db.delete(WorldNode))
-            _db.session.execute(_db.delete(Character))
-            _db.session.execute(_db.delete(Project))
+            _db.session.execute(_db.text("DELETE FROM scene"))
+            _db.session.execute(_db.text("DELETE FROM chapter"))
+            _db.session.execute(_db.text("DELETE FROM worldnode"))
+            _db.session.execute(_db.text("DELETE FROM character"))
+            _db.session.execute(_db.text("DELETE FROM project"))
             _db.session.commit()
         except Exception as e:
             print(f"Warning during DB cleanup: {e}")
@@ -99,88 +98,94 @@ def db(app):
 
 
 @pytest.fixture
-def sample_project(db):
+def sample_project(db, app):
     """Erstellt ein Test-Projekt"""
-    from models import Project
-    project = Project(
-        title="Test Project",
-        description="A test project description"
-    )
-    db.session.add(project)
-    db.session.commit()
-    db.session.refresh(project)
-    return project
+    with app.app_context():
+        # Import nur innerhalb des app context
+        from models import Project
+        project = Project(
+            title="Test Project",
+            description="A test project description"
+        )
+        db.session.add(project)
+        db.session.commit()
+        db.session.refresh(project)
+        return project
 
 
 @pytest.fixture
-def sample_chapter(db, sample_project):
+def sample_chapter(db, sample_project, app):
     """Erstellt ein Test-Kapitel"""
-    from models import Chapter
-    chapter = Chapter(
-        project_id=sample_project.id,
-        title="Test Chapter",
-        order_index=1,
-        content="Chapter content"
-    )
-    db.session.add(chapter)
-    db.session.commit()
-    db.session.refresh(chapter)
-    return chapter
+    with app.app_context():
+        from models import Chapter
+        chapter = Chapter(
+            project_id=sample_project.id,
+            title="Test Chapter",
+            order_index=1,
+            content="Chapter content"
+        )
+        db.session.add(chapter)
+        db.session.commit()
+        db.session.refresh(chapter)
+        return chapter
 
 
 @pytest.fixture
-def sample_scene(db, sample_chapter):
+def sample_scene(db, sample_chapter, app):
     """Erstellt eine Test-Szene"""
-    from models import Scene
-    scene = Scene(
-        chapter_id=sample_chapter.id,
-        title="Test Scene",
-        order_index=1,
-        content="Scene content here"
-    )
-    db.session.add(scene)
-    db.session.commit()
-    db.session.refresh(scene)
-    return scene
+    with app.app_context():
+        from models import Scene
+        scene = Scene(
+            chapter_id=sample_chapter.id,
+            title="Test Scene",
+            order_index=1,
+            content="Scene content here"
+        )
+        db.session.add(scene)
+        db.session.commit()
+        db.session.refresh(scene)
+        return scene
 
 
 @pytest.fixture
-def sample_character(db, sample_project):
+def sample_character(db, sample_project, app):
     """Erstellt einen Test-Charakter"""
-    from models import Character
-    import json
+    with app.app_context():
+        from models import Character
+        import json
 
-    character = Character(
-        project_id=sample_project.id,
-        name="John Doe",
-        summary="A test character",
-        avatar_url="https://example.com/avatar.jpg",
-        profile_json=json.dumps({
-            "basic": {"age": 30, "gender": "male"},
-            "appearance": {"height": "180cm", "hair": "brown"}
-        })
-    )
-    db.session.add(character)
-    db.session.commit()
-    db.session.refresh(character)
-    return character
+        character = Character(
+            project_id=sample_project.id,
+            name="John Doe",
+            summary="A test character",
+            avatar_url="https://example.com/avatar.jpg",
+            profile_json=json.dumps({
+                "basic": {"age": 30, "gender": "male"},
+                "appearance": {"height": "180cm", "hair": "brown"}
+            })
+        )
+        db.session.add(character)
+        db.session.commit()
+        db.session.refresh(character)
+        return character
 
 
 @pytest.fixture
-def sample_worldnode(db, sample_project):
+def sample_worldnode(db, sample_project, app):
     """Erstellt ein Test-World-Element"""
-    from models import WorldNode
-    import json
+    with app.app_context():
+        from models import WorldNode
+        import json
 
-    worldnode = WorldNode(
-        project_id=sample_project.id,
-        title="Test Location",
-        kind="Ort",
-        summary="A test location",
-        icon="🏰",
-        relations_json=json.dumps({})
-    )
-    db.session.add(worldnode)
-    db.session.commit()
-    db.session.refresh(worldnode)
-    return worldnode
+        worldnode = WorldNode(
+            project_id=sample_project.id,
+            title="Test Location",
+            kind="Ort",
+            summary="A test location",
+            icon="🏰",
+            relations_json=json.dumps({})
+        )
+        db.session.add(worldnode)
+        db.session.commit()
+        db.session.refresh(worldnode)
+        return worldnode
