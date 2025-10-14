@@ -8,7 +8,7 @@ const renderWithRouter = (initialRoute = '/') => {
   return render(
     <MemoryRouter initialEntries={[initialRoute]}>
       <Routes>
-        <Route path="/project/:id/*" element={<TopNav />} />
+        <Route path="/app/project/:id/*" element={<TopNav />} />
         <Route path="/" element={<TopNav />} />
       </Routes>
     </MemoryRouter>
@@ -22,7 +22,7 @@ describe('TopNav Component', () => {
   });
 
   it('sollte Navigation rendern wenn ID vorhanden ist', () => {
-    renderWithRouter('/project/123');
+    renderWithRouter('/app/project/123');
 
     expect(screen.getByText('Schreiben')).toBeInTheDocument();
     expect(screen.getByText('Charaktere')).toBeInTheDocument();
@@ -31,21 +31,21 @@ describe('TopNav Component', () => {
   });
 
   it('sollte alle Navigation-Links mit korrekten Pfaden haben', () => {
-    renderWithRouter('/project/456');
+    renderWithRouter('/app/project/456');
 
     const schreibenLink = screen.getByText('Schreiben').closest('a');
     const charaktereLink = screen.getByText('Charaktere').closest('a');
     const weltLink = screen.getByText('Welt').closest('a');
     const exportLink = screen.getByText('Export').closest('a');
 
-    expect(schreibenLink).toHaveAttribute('href', '/project/456');
-    expect(charaktereLink).toHaveAttribute('href', '/project/456/characters');
-    expect(weltLink).toHaveAttribute('href', '/project/456/world');
-    expect(exportLink).toHaveAttribute('href', '/project/456/export');
+    expect(schreibenLink).toHaveAttribute('href', '/app/project/456');
+    expect(charaktereLink).toHaveAttribute('href', '/app/project/456/characters');
+    expect(weltLink).toHaveAttribute('href', '/app/project/456/world');
+    expect(exportLink).toHaveAttribute('href', '/app/project/456/export');
   });
 
   it('sollte Tab-CSS-Klasse auf allen Links haben', () => {
-    renderWithRouter('/project/789');
+    renderWithRouter('/app/project/789');
 
     const links = screen.getAllByRole('link');
     links.forEach(link => {
@@ -54,7 +54,7 @@ describe('TopNav Component', () => {
   });
 
   it('sollte vier Tabs anzeigen', () => {
-    renderWithRouter('/project/100');
+    renderWithRouter('/app/project/100');
 
     const tabs = screen.getAllByRole('link');
     expect(tabs).toHaveLength(4);

@@ -22,7 +22,7 @@ describe('SiteHeader Component', () => {
     renderWithRouter();
     const link = screen.getByLabelText('Zum Dashboard');
     expect(link).toBeInTheDocument();
-    expect(link).toHaveAttribute('href', '/');
+    expect(link).toHaveAttribute('href', '/app');
   });
 
   it('sollte Logo-Bild anzeigen', () => {
