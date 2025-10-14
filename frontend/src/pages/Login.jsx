@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import axios from 'axios'
+import { useAuth } from '../context/AuthContext'
 import logoUrl from '../assets/logo.png'
 import './Login.css'
 
@@ -14,6 +15,7 @@ export default function Login() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const { login } = useAuth()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -24,9 +26,8 @@ export default function Login() {
       const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register'
       const response = await axios.post(endpoint, formData)
 
-      // Token speichern
-      localStorage.setItem('token', response.data.token)
-      localStorage.setItem('user', JSON.stringify(response.data.user))
+      // Token und User über AuthContext speichern
+      login(response.data.token, response.data.user)
 
       // Zur App navigieren
       navigate('/app')
