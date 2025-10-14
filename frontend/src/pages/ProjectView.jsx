@@ -1,19 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react'
 import axios from 'axios'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { BsPlus, BsTrash, BsChevronDown, BsChevronRight } from 'react-icons/bs'
 
 import ConfirmModal from '../components/ConfirmModal'
+import TextContextMenu from '../components/TextContextMenu'
 
 export default function ProjectView() {
   const { id } = useParams()
   const pid = Number(id)
+  const navigate = useNavigate()
 
   const [loading, setLoading] = useState(true)
   const [project, setProject] = useState(null)
   const [chapters, setChapters] = useState([])
   const [scenesByChapter, setScenesByChapter] = useState({})
   const [confirmModal, setConfirmModal] = useState(null)
+  const [contextMenu, setContextMenu] = useState(null) // { x, y, selectedText }
 
   const [activeChapterId, setActiveChapterId] = useState(null)
   const [activeSceneId, setActiveSceneId] = useState(null)
@@ -398,6 +401,54 @@ export default function ProjectView() {
     openScene(chapterId, scene.id)
   }
 
+  /* ----------------------- Kontextmenü-Handler -------------------------- */
+  const handleContextMenu = (e) => {
+    const selection = window.getSelection()
+    const selectedText = selection.toString().trim()
+
+    if (selectedText && selectedText.length > 0) {
+      e.preventDefault()
+      setContextMenu({
+        x: e.clientX,
+        y: e.clientY,
+        selectedText
+      })
+    }
+  }
+
+  const handleCreateCharacter = async (name) => {
+    try {
+      const r = await axios.post(`/api/projects/${pid}/characters`, { name })
+      const characterId = r.data.id
+      // Navigiere zum Charakter-Tab
+      navigate(`/app/project/${pid}/characters`)
+      // Kleine Verzögerung damit die Navigation abgeschlossen ist
+      setTimeout(() => {
+        // Der Characters-View sollte den neuen Charakter automatisch laden
+      }, 100)
+    } catch (err) {
+      console.error('Create character failed', err)
+      alert('Charakter konnte nicht erstellt werden.')
+    }
+  }
+
+  const handleCreateWorldElement = async (name) => {
+    try {
+      const r = await axios.post(`/api/projects/${pid}/world`, {
+        name,
+        type: 'general',
+        description: ''
+      })
+      const elementId = r.data.id
+      // Navigiere zum Welt-Tab
+      navigate(`/app/project/${pid}/world`)
+      // Der World-View sollte das neue Element automatisch laden
+    } catch (err) {
+      console.error('Create world element failed', err)
+      alert('Weltelement konnte nicht erstellt werden.')
+    }
+  }
+
   /* ------------------------------- Render ------------------------------- */
   if (loading) {
     return <div className="page-wrap"><div className="panel"><h3>Lade…</h3></div></div>
@@ -504,6 +555,7 @@ export default function ProjectView() {
                 value={sceneContent}
                 onChange={(e) => setSceneContent(e.target.value)}
                 onBlur={() => saveSceneNow(activeSceneId, sceneTitle, sceneContent)}
+                onContextMenu={handleContextMenu}
                 placeholder="Dein Text…"
               />
             </>
@@ -532,6 +584,15 @@ export default function ProjectView() {
       </main>
 
       {confirmModal && <ConfirmModal {...confirmModal} />}
+      {contextMenu && (
+        <TextContextMenu
+          position={{ x: contextMenu.x, y: contextMenu.y }}
+          selectedText={contextMenu.selectedText}
+          onCreateCharacter={handleCreateCharacter}
+          onCreateWorldElement={handleCreateWorldElement}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
     </div>
   )
 }

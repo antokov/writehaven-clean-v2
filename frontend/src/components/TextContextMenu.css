@@ -1,0 +1,75 @@
+/* Text Context Menu */
+
+.text-context-menu {
+  position: fixed;
+  background: white;
+  border: 1px solid var(--line, #e2e8f0);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+  z-index: 10000;
+  min-width: 220px;
+  overflow: hidden;
+}
+
+.context-menu-header {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line, #e2e8f0);
+  background: var(--panel-bg, #f8fafc);
+}
+
+.selected-text-preview {
+  font-size: 0.85rem;
+  color: var(--muted, #64748b);
+  font-style: italic;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.context-menu-items {
+  padding: 4px;
+}
+
+.context-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  color: var(--text);
+  font-size: 0.9rem;
+  border-radius: 4px;
+}
+
+.context-menu-item:hover {
+  background: var(--panel-bg, #f1f5f9);
+}
+
+.context-menu-icon {
+  font-size: 18px;
+  color: var(--brand, #3b82f6);
+  flex-shrink: 0;
+}
+
+/* Animation */
+.text-context-menu {
+  animation: contextMenuFadeIn 0.15s ease-out;
+}
+
+@keyframes contextMenuFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
