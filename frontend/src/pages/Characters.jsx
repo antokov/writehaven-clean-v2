@@ -846,6 +846,7 @@ export default function Characters() {
 
   const saveTimer = useRef(null);
   const isLoadingRef = useRef(false);
+  const hasHandledNewCharacter = useRef(false);
 
   const draftFullName = useMemo(() => fullNameFromProfile(profile), [profile]);
 
@@ -858,19 +859,22 @@ export default function Characters() {
         const items = r.data || [];
         setList(items);
 
-        // Prüfe ob ein neuer Charakter aus dem navigation state übergeben wurde
+        // Prüfe ob ein neuer Charakter aus dem navigation state übergeben wurde (nur einmal)
         const newCharId = state?.newCharacterId;
-        if (newCharId && items.find(c => c.id === newCharId)) {
+        if (newCharId && items.find(c => c.id === newCharId) && !hasHandledNewCharacter.current) {
+          hasHandledNewCharacter.current = true;
           setActiveId(newCharId);
-          setProfile({}); // Reset profile damit es neu geladen wird
-        } else if (!activeId && items.length) {
+          return; // Früher return um weitere Logik zu vermeiden
+        }
+
+        if (!activeId && items.length) {
           setActiveId(items[0].id);
         }
       } catch (e) { console.warn(e); }
     }
     if (pid) load();
     return () => { cancel = true; };
-  }, [pid, activeId, state]);
+  }, [pid, activeId, state?.newCharacterId]);
 
   useEffect(() => {
     if (!activeId) { setProfile({}); return; }

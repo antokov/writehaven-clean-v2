@@ -1168,9 +1168,9 @@ const WorldElementEditor = React.memo(function WorldElementEditor({
       </nav>
 
       {activeTab === "details" && (
-        <div className="form-grid">
-          <div className="form-row">
-            <div className="form-field">
+        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label className="small muted">Name</label>
               <input
                 className="input"
@@ -1178,7 +1178,7 @@ const WorldElementEditor = React.memo(function WorldElementEditor({
                 onChange={e => onChangeElement("title", e.target.value)}
               />
             </div>
-            <div className="form-field">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label className="small muted">Typ</label>
               <SearchableSelect
                 value={getPath(element, "kind", "Stadt")}
@@ -1187,8 +1187,8 @@ const WorldElementEditor = React.memo(function WorldElementEditor({
             </div>
           </div>
 
-          <div className="form-row" style={{ gridColumn: "span 12" }}>
-            <div className="form-field">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label className="small muted">Notizen & Details</label>
               <textarea
                 className="textarea"
@@ -1203,54 +1203,48 @@ const WorldElementEditor = React.memo(function WorldElementEditor({
       )}
 
       {activeTab === "relations" && (
-        <div className="form-grid">
-          <div className="form-row" style={{ gridColumn: "span 12", display:"flex", alignItems:"center" }}>
-            <div className="form-field" style={{flex:1}}>
-              <label className="small muted">Neue Verbindung</label>
-              <RelationEditor
-                currentId={elementId}
-                allElements={allElements}
-                onAdd={onAddRelation}
-              />
-            </div>
+        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label className="small muted">Neue Verbindung</label>
+            <RelationEditor
+              currentId={elementId}
+              allElements={allElements}
+              onAdd={onAddRelation}
+            />
           </div>
 
-          <div className="form-row" style={{ gridColumn: "span 12" }}>
-            <div className="form-field">
-              <label className="small muted">Bestehende Verbindungen</label>
-              <RelationList
-                element={element}
-                allElements={allElements}
-                onRemove={onRemoveRelation}
-              />
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label className="small muted">Bestehende Verbindungen</label>
+            <RelationList
+              element={element}
+              allElements={allElements}
+              onRemove={onRemoveRelation}
+            />
           </div>
 
-          <div className="form-row" style={{ gridColumn: "span 12" }}>
-            <div style={{ display: "flex", justifyContent: "center", width: "100%", marginTop: 8 }}>
-              <button
-                type="button"
-                onClick={onOpenGraph}
-                title="Beziehungs-Graph öffnen"
-                aria-label="Beziehungs-Graph öffnen"
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: "9999px",
-                  border: "1px solid #e5e7eb",
-                  background: "#ffffff",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  boxShadow: "0 4px 14px rgba(15,23,42,.10)",
-                  cursor: "pointer"
-                }}
-                onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 6px 16px rgba(15,23,42,.16)")}
-                onMouseLeave={e => (e.currentTarget.style.boxShadow = "0 4px 14px rgba(15,23,42,.10)")}
-              >
-                <TbNetwork size={22} color="#0f172a" />
-              </button>
-            </div>
+          <div style={{ display: "flex", justifyContent: "center", width: "100%", marginTop: 8 }}>
+            <button
+              type="button"
+              onClick={onOpenGraph}
+              title="Beziehungs-Graph öffnen"
+              aria-label="Beziehungs-Graph öffnen"
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: "9999px",
+                border: "1px solid #e5e7eb",
+                background: "#ffffff",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 4px 14px rgba(15,23,42,.10)",
+                cursor: "pointer"
+              }}
+              onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 6px 16px rgba(15,23,42,.16)")}
+              onMouseLeave={e => (e.currentTarget.style.boxShadow = "0 4px 14px rgba(15,23,42,.10)")}
+            >
+              <TbNetwork size={22} color="#0f172a" />
+            </button>
           </div>
         </div>
       )}
@@ -1273,6 +1267,9 @@ export default function World() {
   const [showWorldGraph, setShowWorldGraph] = useState(false);
   const [confirmModal, setConfirmModal] = useState(null);
 
+  // Ref um zu tracken ob wir schon initial geladen haben
+  const hasHandledNewElement = useRef(false);
+
   // Liste der Welt-Elemente laden
   useEffect(() => {
     let cancel = false;
@@ -1283,19 +1280,22 @@ export default function World() {
         const items = r.data || [];
         setList(items);
 
-        // Prüfe ob ein neues Element aus dem navigation state übergeben wurde
+        // Prüfe ob ein neues Element aus dem navigation state übergeben wurde (nur einmal)
         const newElId = state?.newElementId;
-        if (newElId && items.find(el => el.id === newElId)) {
+        if (newElId && items.find(el => el.id === newElId) && !hasHandledNewElement.current) {
+          hasHandledNewElement.current = true;
           setActiveId(newElId);
-          setElement({}); // Reset element damit es neu geladen wird
-        } else if (!activeId && items.length) {
+          return; // Früher return um weitere Logik zu vermeiden
+        }
+
+        if (!activeId && items.length) {
           setActiveId(items[0].id);
         }
       } catch (e) { console.warn(e); }
     }
     if (pid) load();
     return () => { cancel = true; };
-  }, [pid, activeId, state]);
+  }, [pid, activeId, state?.newElementId]);
 
   // Aktives Element laden
   useEffect(() => {
