@@ -742,170 +742,12 @@ const CharacterEditor = React.memo(function CharacterEditor({
       )}
 
       {activeTab === "personality" && (
-        <div className="form-grid">
-          <div className="form-row" style={{ gridColumn: "span 12" }}>
-            <div className="form-field">
-              <label className="small muted">Hervorstechende Charakterzüge (positiv & negativ)</label>
-              <textarea className="textarea"
-                value={getPath(profile, "personality.traits", "")}
-                onChange={e => onChangeProfilePath("personality.traits", e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-field">
-              <label className="small muted">Stärken</label>
-              <input className="input"
-                value={getPath(profile, "personality.strengths", "")}
-                onChange={e => onChangeProfilePath("personality.strengths", e.target.value)}
-              />
-            </div>
-            <div className="form-field">
-              <label className="small muted">Schwächen</label>
-              <input className="input"
-                value={getPath(profile, "personality.weaknesses", "")}
-                onChange={e => onChangeProfilePath("personality.weaknesses", e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-field">
-              <label className="small muted">Intelligenz</label>
-              <input className="input"
-                value={getPath(profile, "personality.intelligence", "")}
-                onChange={e => onChangeProfilePath("personality.intelligence", e.target.value)}
-              />
-            </div>
-            <div className="form-field">
-              <label className="small muted">Art des Humors</label>
-              <input className="input"
-                value={getPath(profile, "personality.humor", "")}
-                onChange={e => onChangeProfilePath("personality.humor", e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-field">
-              <label className="small muted">Interessen</label>
-              <input className="input"
-                value={getPath(profile, "personality.interests", "")}
-                onChange={e => onChangeProfilePath("personality.interests", e.target.value)}
-              />
-            </div>
-            <div className="form-field">
-              <label className="small muted">Geschmäcker & Vorlieben</label>
-              <input className="input"
-                value={getPath(profile, "personality.likes", "")}
-                onChange={e => onChangeProfilePath("personality.likes", e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-field">
-              <label className="small muted">Abneigungen</label>
-              <input className="input"
-                value={getPath(profile, "personality.dislikes", "")}
-                onChange={e => onChangeProfilePath("personality.dislikes", e.target.value)}
-              />
-            </div>
-            <div className="form-field">
-              <label className="small muted">Moralvorstellungen & innere Haltung</label>
-              <input className="input"
-                value={getPath(profile, "personality.morals", "")}
-                onChange={e => onChangeProfilePath("personality.morals", e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-field">
-              <label className="small muted">Phobien & Ängste</label>
-              <input className="input"
-                value={getPath(profile, "personality.fears", "")}
-                onChange={e => onChangeProfilePath("personality.fears", e.target.value)}
-              />
-            </div>
-            <div className="form-field">
-              <label className="small muted">Ziele & Motivation</label>
-              <input className="input"
-                value={getPath(profile, "personality.goals_motivation", "")}
-                onChange={e => onChangeProfilePath("personality.goals_motivation", e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-field">
-              <label className="small muted">Ungelöste Probleme</label>
-              <input className="input"
-                value={getPath(profile, "personality.unresolved_problems", "")}
-                onChange={e => onChangeProfilePath("personality.unresolved_problems", e.target.value)}
-              />
-            </div>
-            <div className="form-field">
-              <label className="small muted">Innere Konflikte</label>
-              <input className="input"
-                value={getPath(profile, "personality.inner_conflicts", "")}
-                onChange={e => onChangeProfilePath("personality.inner_conflicts", e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-field">
-              <label className="small muted">(Geheime) Wünsche & Träume</label>
-              <input className="input"
-                value={getPath(profile, "personality.wishes_dreams", "")}
-                onChange={e => onChangeProfilePath("personality.wishes_dreams", e.target.value)}
-              />
-            </div>
-            <div className="form-field">
-              <label className="small muted">Wiederkehrende Verhaltensweisen</label>
-              <input className="input"
-                value={getPath(profile, "personality.patterns_in_situations", "")}
-                onChange={e => onChangeProfilePath("personality.patterns_in_situations", e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-field">
-              <label className="small muted">Traumata</label>
-              <input className="input"
-                value={getPath(profile, "personality.traumas", "")}
-                onChange={e => onChangeProfilePath("personality.traumas", e.target.value)}
-              />
-            </div>
-            <div className="form-field">
-              <label className="small muted">Schmerzliche Rückschläge & Erlebnisse</label>
-              <input className="input"
-                value={getPath(profile, "personality.setbacks", "")}
-                onChange={e => onChangeProfilePath("personality.setbacks", e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-field">
-              <label className="small muted">Bedeutungsvolle Erfahrungen</label>
-              <input className="input"
-                value={getPath(profile, "personality.experiences", "")}
-                onChange={e => onChangeProfilePath("personality.experiences", e.target.value)}
-              />
-            </div>
-            <div className="form-field">
-              <label className="small muted">Standpunkt ggü. Leben</label>
-              <input className="input"
-                value={getPath(profile, "personality.view_on_life", "")}
-                onChange={e => onChangeProfilePath("personality.view_on_life", e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-field" style={{ gridColumn: "span 12" }}>
-              <label className="small muted">Standpunkt ggü. Tod</label>
-              <input className="input"
-                value={getPath(profile, "personality.view_on_death", "")}
-                onChange={e => onChangeProfilePath("personality.view_on_death", e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
+        <DynamicFieldsTab
+          fieldConfig={PERSONALITY_FIELDS}
+          profile={profile}
+          onChangeProfilePath={onChangeProfilePath}
+          getPath={getPath}
+        />
       )}
 
       {activeTab === "links" && (
@@ -962,9 +804,12 @@ const CharacterEditor = React.memo(function CharacterEditor({
       )}
 
       {activeTab === "relations" && (
-        <div className="form-grid">
-          {/* Hintergrund-Felder hier */}
-        </div>
+        <DynamicFieldsTab
+          fieldConfig={BACKGROUND_FIELDS}
+          profile={profile}
+          onChangeProfilePath={onChangeProfilePath}
+          getPath={getPath}
+        />
       )}
 
       {activeTab === "notes" && (
