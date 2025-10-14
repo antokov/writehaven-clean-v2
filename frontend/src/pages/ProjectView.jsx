@@ -3,6 +3,8 @@ import axios from 'axios'
 import { useParams } from 'react-router-dom'
 import { BsPlus, BsTrash, BsChevronDown, BsChevronRight } from 'react-icons/bs'
 
+import ConfirmModal from '../components/ConfirmModal'
+
 export default function ProjectView() {
   const { id } = useParams()
   const pid = Number(id)
@@ -11,6 +13,7 @@ export default function ProjectView() {
   const [project, setProject] = useState(null)
   const [chapters, setChapters] = useState([])
   const [scenesByChapter, setScenesByChapter] = useState({})
+  const [confirmModal, setConfirmModal] = useState(null)
 
   const [activeChapterId, setActiveChapterId] = useState(null)
   const [activeSceneId, setActiveSceneId] = useState(null)
@@ -294,58 +297,79 @@ export default function ProjectView() {
   }
 
   async function deleteChapter(chapterId) {
-    if (!confirm('Kapitel und alle zugehörigen Szenen löschen?')) return
-    try {
-      await axios.delete(`/api/chapters/${chapterId}`)
-      const newChapters = chapters.filter(c => c.id !== chapterId)
-      setChapters(newChapters)
-      setScenesByChapter(prev => {
-        const copy = { ...prev }
-        delete copy[chapterId]
-        return copy
-      })
-      if (activeChapterId === chapterId) {
-        if (newChapters.length) {
-          const next = newChapters[0]
-          const r = await axios.get(`/api/chapters/${next.id}/scenes`)
-          setScenesByChapter(prev => ({ ...prev, [next.id]: r.data || [] }))
-          setActiveChapterId(next.id)
-          setChapterTitle(next.title || '')
-          expandOnly(next.id)
-          clearEditor()
-        } else {
-          setActiveChapterId(null)
-          setChapterTitle('')
-          expandOnly(null)
-          clearEditor()
+    const chapter = chapters.find(c => c.id === chapterId)
+    const scenes = scenesByChapter[chapterId] || []
+    setConfirmModal({
+      title: 'Kapitel löschen',
+      message: `Möchtest du das Kapitel "${chapter?.title || ''}" wirklich löschen? ${scenes.length > 0 ? `Alle ${scenes.length} Szene(n) werden ebenfalls gelöscht.` : ''} Diese Aktion kann nicht rückgängig gemacht werden.`,
+      confirmText: 'Löschen',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModal(null)
+        try {
+          await axios.delete(`/api/chapters/${chapterId}`)
+          const newChapters = chapters.filter(c => c.id !== chapterId)
+          setChapters(newChapters)
+          setScenesByChapter(prev => {
+            const copy = { ...prev }
+            delete copy[chapterId]
+            return copy
+          })
+          if (activeChapterId === chapterId) {
+            if (newChapters.length) {
+              const next = newChapters[0]
+              const r = await axios.get(`/api/chapters/${next.id}/scenes`)
+              setScenesByChapter(prev => ({ ...prev, [next.id]: r.data || [] }))
+              setActiveChapterId(next.id)
+              setChapterTitle(next.title || '')
+              expandOnly(next.id)
+              clearEditor()
+            } else {
+              setActiveChapterId(null)
+              setChapterTitle('')
+              expandOnly(null)
+              clearEditor()
+            }
+          } else {
+            expandOnly(activeChapterId)
+          }
+        } catch (err) {
+          console.error(err)
+          alert('Kapitel konnte nicht gelöscht werden.')
         }
-      } else {
-        // falls ein anderes Kapitel gelöscht wurde, sicherstellen dass nur das aktive offen ist
-        expandOnly(activeChapterId)
-      }
-    } catch (err) {
-      console.error(err)
-      alert('Kapitel konnte nicht gelöscht werden.')
-    }
+      },
+      onCancel: () => setConfirmModal(null)
+    })
   }
 
   async function deleteScene(sceneId, chapterId) {
-    if (!confirm('Szene löschen?')) return
-    try {
-      await axios.delete(`/api/scenes/${sceneId}`)
-      const list = scenesByChapter[chapterId] || []
-      const filtered = list.filter(s => s.id !== sceneId)
-      setScenesByChapter(prev => ({ ...prev, [chapterId]: filtered }))
-      setScenePreviewById(prev => {
-        const next = { ...prev }; delete next[sceneId]; return next
-      })
-      if (activeSceneId === sceneId) {
-        clearEditor()
-      }
-    } catch (err) {
-      console.error(err)
-      alert('Szene konnte nicht gelöscht werden.')
-    }
+    const scenes = scenesByChapter[chapterId] || []
+    const scene = scenes.find(s => s.id === sceneId)
+    setConfirmModal({
+      title: 'Szene löschen',
+      message: `Möchtest du die Szene "${scene?.title || ''}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`,
+      confirmText: 'Löschen',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModal(null)
+        try {
+          await axios.delete(`/api/scenes/${sceneId}`)
+          const list = scenesByChapter[chapterId] || []
+          const filtered = list.filter(s => s.id !== sceneId)
+          setScenesByChapter(prev => ({ ...prev, [chapterId]: filtered }))
+          setScenePreviewById(prev => {
+            const next = { ...prev }; delete next[sceneId]; return next
+          })
+          if (activeSceneId === sceneId) {
+            clearEditor()
+          }
+        } catch (err) {
+          console.error(err)
+          alert('Szene konnte nicht gelöscht werden.')
+        }
+      },
+      onCancel: () => setConfirmModal(null)
+    })
   }
 
   async function loadScenesForChapter(chapterId) {
@@ -506,6 +530,8 @@ export default function ProjectView() {
           ))}
         </div>
       </main>
+
+      {confirmModal && <ConfirmModal {...confirmModal} />}
     </div>
   )
 }

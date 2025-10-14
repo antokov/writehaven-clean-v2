@@ -4,7 +4,7 @@ import { NavLink, useParams } from 'react-router-dom'
 export default function TopNav(){
   const { id } = useParams()
   if (!id) return null            // nur auf Projektseiten anzeigen
-  const base = `/project/${id}`
+  const base = `/app/project/${id}`
   return (
     <div className="tabs">
       <NavLink end to={base} className="tab">Schreiben</NavLink>

@@ -4,6 +4,8 @@ import { BsPlus, BsTrash } from "react-icons/bs";
 import { TbNetwork, TbTopologyStar3 } from "react-icons/tb";
 import { createPortal } from "react-dom";
 import axios from "axios";
+
+import ConfirmModal from "../components/ConfirmModal";
 import ReactFlow, {
   useNodesState,
   useEdgesState,
@@ -1157,6 +1159,7 @@ export default function Characters() {
   const [lastSavedAt, setLastSavedAt] = useState(null);
   const [showGraph, setShowGraph] = useState(false);
   const [showWorldGraph, setShowWorldGraph] = useState(false);
+  const [confirmModal, setConfirmModal] = useState(null);
 
   const saveTimer = useRef(null);
   const isLoadingRef = useRef(false);
@@ -1316,18 +1319,28 @@ export default function Characters() {
   };
 
   const deleteCharacter = async (cid) => {
-    if (!confirm("Charakter löschen?")) return;
-    try {
-      await axios.delete(`/api/characters/${cid}`);
-      setList(prev => prev.filter(c => c.id !== cid));
-      if (activeId === cid) {
-        const next = list.find(c => c.id !== cid);
-        setActiveId(next?.id ?? null);
-      }
-    } catch (e) {
-      console.error(e);
-      alert("Charakter konnte nicht gelöscht werden.");
-    }
+    const character = list.find(c => c.id === cid);
+    setConfirmModal({
+      title: 'Charakter löschen',
+      message: `Möchtest du den Charakter "${character?.name || 'Unbenannt'}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`,
+      confirmText: 'Löschen',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModal(null);
+        try {
+          await axios.delete(`/api/characters/${cid}`);
+          setList(prev => prev.filter(c => c.id !== cid));
+          if (activeId === cid) {
+            const next = list.find(c => c.id !== cid);
+            setActiveId(next?.id ?? null);
+          }
+        } catch (e) {
+          console.error(e);
+          alert("Charakter konnte nicht gelöscht werden.");
+        }
+      },
+      onCancel: () => setConfirmModal(null)
+    });
   };
 
   return (
@@ -1405,6 +1418,8 @@ export default function Characters() {
           </>
         )}
       </main>
+
+      {confirmModal && <ConfirmModal {...confirmModal} />}
     </div>
   );
 }
