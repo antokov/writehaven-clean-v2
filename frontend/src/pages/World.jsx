@@ -14,114 +14,174 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 
-// Relationship types for world elements
-const REL_TYPES = [
-  "ist_teil_von",
-  "liegt_in",
-  "grenzt_an",
-  "hat_hauptstadt",
-  "regiert_von",
-  "vasall_von",
-  "buendnis_mit",
-  "im_krieg_mit",
-  "tribut_an",
-  "sanktioniert_durch",
-  "gesetz_gilt_in",
-  "erlassen_von",
-  "gericht_in",
-  "strafe_verhaengt_von",
-  "steuer_erhoben_von",
-  "waehrung_von",
-  "verehrt",
-  "patron_von",
-  "tempel_in",
-  "sprache_von",
-  "schrift_verwendet_von",
-  "fest_in",
-  "handelt_mit",
-  "liefert_an",
-  "produziert",
-  "verbraucht",
-  "exportiert_nach",
-  "verbindet_orte",
-  "route_fuehrt_nach",
-  "magieknoten_in",
-  "artefakt_gefunden_in",
-  "artefakt_im_besitz_von",
-  "zauber_gehoert_zu",
-  "magieschule_in_system",
-  "wirkt_auf",
-  "garnison_in",
-  "befehligt_von",
-  "belagert",
-  "schlacht_bei",
-  "pakt_mit",
-  "bewohnt_von",
-  "stammt_aus",
-  "vorkommen_in",
-  "fluss_muendet_in",
-  "fluss_entspringt_in",
-  "nachfolger_von",
-  "entstanden_aus",
-  "ereignis_in",
-  "ausgeloest_durch",
-  "beteiligt_an",
-  "mitglied_von",
-  "angefuehrt_von",
-  "rivalisiert_mit",
-  "verborgen_in",
-  "erbaut_von",
-  "zerstoert_durch",
-  "eingesetzt_von",
-  "haengt_zusammen_mit",
-  "ziel_von",
-  "deadline_fuer",
-  "schluessel_fuer"
+// Relationship types for world elements - gruppiert und lesbar
+const REL_CATEGORIES = [
+  {
+    name: "Einfache Beziehungen",
+    types: [
+      { key: "hat", label: "hat" },
+      { key: "ist", label: "ist" },
+      { key: "will", label: "will" },
+      { key: "kann", label: "kann" },
+      { key: "soll", label: "soll" },
+      { key: "muss", label: "muss" },
+      { key: "braucht", label: "braucht" },
+      { key: "kennt", label: "kennt" },
+      { key: "liebt", label: "liebt" },
+      { key: "hasst", label: "hasst" },
+      { key: "fuerchtet", label: "fürchtet" },
+      { key: "beschuetzt", label: "beschützt" }
+    ]
+  },
+  {
+    name: "Geografisch",
+    types: [
+      { key: "ist_teil_von", label: "ist Teil von" },
+      { key: "liegt_in", label: "liegt in" },
+      { key: "grenzt_an", label: "grenzt an" },
+      { key: "enthaelt", label: "enthält" },
+      { key: "verbindet", label: "verbindet" },
+      { key: "fuehrt_nach", label: "führt nach" }
+    ]
+  },
+  {
+    name: "Politisch",
+    types: [
+      { key: "regiert", label: "regiert" },
+      { key: "regiert_von", label: "regiert von" },
+      { key: "vasall_von", label: "Vasall von" },
+      { key: "buendnis_mit", label: "Bündnis mit" },
+      { key: "im_krieg_mit", label: "im Krieg mit" },
+      { key: "pakt_mit", label: "Pakt mit" },
+      { key: "rivalisiert_mit", label: "rivalisiert mit" },
+      { key: "tributpflichtig", label: "tributpflichtig" }
+    ]
+  },
+  {
+    name: "Wirtschaftlich",
+    types: [
+      { key: "handelt_mit", label: "handelt mit" },
+      { key: "liefert_an", label: "liefert an" },
+      { key: "produziert", label: "produziert" },
+      { key: "verbraucht", label: "verbraucht" },
+      { key: "exportiert_nach", label: "exportiert nach" },
+      { key: "importiert_von", label: "importiert von" }
+    ]
+  },
+  {
+    name: "Religiös & Kulturell",
+    types: [
+      { key: "verehrt", label: "verehrt" },
+      { key: "patron_von", label: "Patron von" },
+      { key: "heilig_fuer", label: "heilig für" },
+      { key: "verflucht_von", label: "verflucht von" },
+      { key: "spricht", label: "spricht (Sprache)" },
+      { key: "feiert", label: "feiert (Fest)" }
+    ]
+  },
+  {
+    name: "Militärisch",
+    types: [
+      { key: "verteidigt", label: "verteidigt" },
+      { key: "bedroht", label: "bedroht" },
+      { key: "belagert", label: "belagert" },
+      { key: "garnison_in", label: "Garnison in" },
+      { key: "befehligt", label: "befehligt" },
+      { key: "kaempft_gegen", label: "kämpft gegen" }
+    ]
+  },
+  {
+    name: "Magisch",
+    types: [
+      { key: "verstarkt", label: "verstärkt" },
+      { key: "schwacht", label: "schwächt" },
+      { key: "neutralisiert", label: "neutralisiert" },
+      { key: "wirkt_auf", label: "wirkt auf" },
+      { key: "magieknoten_in", label: "Magieknoten in" },
+      { key: "verbirgt", label: "verbirgt" }
+    ]
+  },
+  {
+    name: "Historisch",
+    types: [
+      { key: "nachfolger_von", label: "Nachfolger von" },
+      { key: "entstanden_aus", label: "entstanden aus" },
+      { key: "erbaut_von", label: "erbaut von" },
+      { key: "zerstoert_durch", label: "zerstört durch" },
+      { key: "gefunden_in", label: "gefunden in" },
+      { key: "ereignete_sich_in", label: "ereignete sich in" }
+    ]
+  },
+  {
+    name: "Organisatorisch",
+    types: [
+      { key: "mitglied_von", label: "Mitglied von" },
+      { key: "angefuehrt_von", label: "angeführt von" },
+      { key: "gegruendet_von", label: "gegründet von" },
+      { key: "kontrolliert", label: "kontrolliert" },
+      { key: "untersteht", label: "untersteht" }
+    ]
+  },
+  {
+    name: "Sonstiges",
+    types: [
+      { key: "haengt_zusammen_mit", label: "hängt zusammen mit" },
+      { key: "gegensatz_zu", label: "Gegensatz zu" },
+      { key: "aehnlich_wie", label: "ähnlich wie" },
+      { key: "ziel_von", label: "Ziel von" },
+      { key: "ursache_fuer", label: "Ursache für" },
+      { key: "folge_von", label: "Folge von" }
+    ]
+  }
 ];
+
+// Flache Liste aller Typen für Kompatibilität
+const REL_TYPES = REL_CATEGORIES.flatMap(cat => cat.types.map(t => t.key));
 
 // Reciprocal mappings - symmetrische und asymmetrische Beziehungen
 const RECIPROCAL = {
+  // Einfache (meist symmetrisch)
+  "hat": "gehoert_zu",
+  "gehoert_zu": "hat",
+  "ist": "ist",
+  "will": "wird_gewollt_von",
+  "wird_gewollt_von": "will",
+  "kann": "kann",
+  "soll": "soll",
+  "muss": "muss",
+  "braucht": "wird_gebraucht_von",
+  "wird_gebraucht_von": "braucht",
+  "kennt": "kennt",
+  "liebt": "liebt",
+  "hasst": "hasst",
+  "fuerchtet": "wird_gefuerchtet_von",
+  "wird_gefuerchtet_von": "fuerchtet",
+  "beschuetzt": "wird_beschuetzt_von",
+  "wird_beschuetzt_von": "beschuetzt",
+
+  // Geografisch
   "ist_teil_von": "besteht_aus",
   "besteht_aus": "ist_teil_von",
   "liegt_in": "enthaelt",
   "enthaelt": "liegt_in",
   "grenzt_an": "grenzt_an",
-  "hat_hauptstadt": "hauptstadt_von",
-  "hauptstadt_von": "hat_hauptstadt",
-  "regiert_von": "regiert",
+  "verbindet": "verbindet",
+  "fuehrt_nach": "fuehrt_von",
+  "fuehrt_von": "fuehrt_nach",
+
+  // Politisch
   "regiert": "regiert_von",
+  "regiert_von": "regiert",
   "vasall_von": "lehnsherr_von",
   "lehnsherr_von": "vasall_von",
   "buendnis_mit": "buendnis_mit",
   "im_krieg_mit": "im_krieg_mit",
-  "tribut_an": "erhaelt_tribut_von",
-  "erhaelt_tribut_von": "tribut_an",
-  "sanktioniert_durch": "sanktioniert",
-  "sanktioniert": "sanktioniert_durch",
-  "gesetz_gilt_in": "unterliegt_gesetz",
-  "unterliegt_gesetz": "gesetz_gilt_in",
-  "erlassen_von": "erlaesst",
-  "erlaesst": "erlassen_von",
-  "gericht_in": "hat_gericht",
-  "hat_gericht": "gericht_in",
-  "strafe_verhaengt_von": "verhaengt_strafe",
-  "verhaengt_strafe": "strafe_verhaengt_von",
-  "steuer_erhoben_von": "erhebt_steuer",
-  "erhebt_steuer": "steuer_erhoben_von",
-  "waehrung_von": "verwendet_waehrung",
-  "verwendet_waehrung": "waehrung_von",
-  "verehrt": "verehrt_von",
-  "verehrt_von": "verehrt",
-  "patron_von": "geschuetzt_von",
-  "geschuetzt_von": "patron_von",
-  "tempel_in": "beherbergt_tempel",
-  "beherbergt_tempel": "tempel_in",
-  "sprache_von": "spricht",
-  "spricht": "sprache_von",
-  "schrift_verwendet_von": "verwendet_schrift",
-  "verwendet_schrift": "schrift_verwendet_von",
-  "fest_in": "begeht_fest",
-  "begeht_fest": "fest_in",
+  "pakt_mit": "pakt_mit",
+  "rivalisiert_mit": "rivalisiert_mit",
+  "tributpflichtig": "erhaelt_tribut_von",
+  "erhaelt_tribut_von": "tributpflichtig",
+
+  // Wirtschaftlich
   "handelt_mit": "handelt_mit",
   "liefert_an": "erhaelt_von",
   "erhaelt_von": "liefert_an",
@@ -131,69 +191,82 @@ const RECIPROCAL = {
   "verbraucht_von": "verbraucht",
   "exportiert_nach": "importiert_von",
   "importiert_von": "exportiert_nach",
-  "verbindet_orte": "verbindet_orte",
-  "route_fuehrt_nach": "route_kommt_von",
-  "route_kommt_von": "route_fuehrt_nach",
-  "magieknoten_in": "hat_magieknoten",
-  "hat_magieknoten": "magieknoten_in",
-  "artefakt_gefunden_in": "fundort_von",
-  "fundort_von": "artefakt_gefunden_in",
-  "artefakt_im_besitz_von": "besitzt_artefakt",
-  "besitzt_artefakt": "artefakt_im_besitz_von",
-  "zauber_gehoert_zu": "umfasst_zauber",
-  "umfasst_zauber": "zauber_gehoert_zu",
-  "magieschule_in_system": "system_umfasst_schule",
-  "system_umfasst_schule": "magieschule_in_system",
-  "wirkt_auf": "beeinflusst_von",
-  "beeinflusst_von": "wirkt_auf",
-  "garnison_in": "beherbergt_garnison",
-  "beherbergt_garnison": "garnison_in",
-  "befehligt_von": "befehligt",
-  "befehligt": "befehligt_von",
+
+  // Religiös & Kulturell
+  "verehrt": "verehrt_von",
+  "verehrt_von": "verehrt",
+  "patron_von": "geschuetzt_von",
+  "geschuetzt_von": "patron_von",
+  "heilig_fuer": "heiligt",
+  "heiligt": "heilig_fuer",
+  "verflucht_von": "verflucht",
+  "verflucht": "verflucht_von",
+  "spricht": "wird_gesprochen_in",
+  "wird_gesprochen_in": "spricht",
+  "feiert": "wird_gefeiert_von",
+  "wird_gefeiert_von": "feiert",
+
+  // Militärisch
+  "verteidigt": "verteidigt_von",
+  "verteidigt_von": "verteidigt",
+  "bedroht": "bedroht_von",
+  "bedroht_von": "bedroht",
   "belagert": "belagert_von",
   "belagert_von": "belagert",
-  "schlacht_bei": "ort_der_schlacht",
-  "ort_der_schlacht": "schlacht_bei",
-  "pakt_mit": "pakt_mit",
-  "bewohnt_von": "bewohnt",
-  "bewohnt": "bewohnt_von",
-  "stammt_aus": "ursprung_von",
-  "ursprung_von": "stammt_aus",
-  "vorkommen_in": "hat_vorkommen",
-  "hat_vorkommen": "vorkommen_in",
-  "fluss_muendet_in": "muendung_von",
-  "muendung_von": "fluss_muendet_in",
-  "fluss_entspringt_in": "quelle_von",
-  "quelle_von": "fluss_entspringt_in",
+  "garnison_in": "beherbergt_garnison",
+  "beherbergt_garnison": "garnison_in",
+  "befehligt": "befehligt_von",
+  "befehligt_von": "befehligt",
+  "kaempft_gegen": "kaempft_gegen",
+
+  // Magisch
+  "verstarkt": "verstarkt_von",
+  "verstarkt_von": "verstarkt",
+  "schwacht": "geschwacht_von",
+  "geschwacht_von": "schwacht",
+  "neutralisiert": "neutralisiert_von",
+  "neutralisiert_von": "neutralisiert",
+  "wirkt_auf": "beeinflusst_von",
+  "beeinflusst_von": "wirkt_auf",
+  "magieknoten_in": "hat_magieknoten",
+  "hat_magieknoten": "magieknoten_in",
+  "verbirgt": "verborgen_in",
+  "verborgen_in": "verbirgt",
+
+  // Historisch
   "nachfolger_von": "vorgaenger_von",
   "vorgaenger_von": "nachfolger_von",
   "entstanden_aus": "fuehrte_zu",
   "fuehrte_zu": "entstanden_aus",
-  "ereignis_in": "schauplatz_von",
-  "schauplatz_von": "ereignis_in",
-  "ausgeloest_durch": "loest_aus",
-  "loest_aus": "ausgeloest_durch",
-  "beteiligt_an": "beteiligt_an",
-  "mitglied_von": "hat_mitglied",
-  "hat_mitglied": "mitglied_von",
-  "angefuehrt_von": "fuehrt_an",
-  "fuehrt_an": "angefuehrt_von",
-  "rivalisiert_mit": "rivalisiert_mit",
-  "verborgen_in": "verbirgt",
-  "verbirgt": "verborgen_in",
   "erbaut_von": "erbaute",
   "erbaute": "erbaut_von",
   "zerstoert_durch": "zerstoerte",
   "zerstoerte": "zerstoert_durch",
-  "eingesetzt_von": "setzt_ein",
-  "setzt_ein": "eingesetzt_von",
+  "gefunden_in": "fundort_von",
+  "fundort_von": "gefunden_in",
+  "ereignete_sich_in": "schauplatz_von",
+  "schauplatz_von": "ereignete_sich_in",
+
+  // Organisatorisch
+  "mitglied_von": "hat_mitglied",
+  "hat_mitglied": "mitglied_von",
+  "angefuehrt_von": "fuehrt_an",
+  "fuehrt_an": "angefuehrt_von",
+  "gegruendet_von": "gruendete",
+  "gruendete": "gegruendet_von",
+  "kontrolliert": "kontrolliert_von",
+  "kontrolliert_von": "kontrolliert",
+  "untersteht": "hat_untergebenen",
+  "hat_untergebenen": "untersteht",
+
+  // Sonstiges
   "haengt_zusammen_mit": "haengt_zusammen_mit",
+  "gegensatz_zu": "gegensatz_zu",
+  "aehnlich_wie": "aehnlich_wie",
   "ziel_von": "hat_zum_ziel",
   "hat_zum_ziel": "ziel_von",
-  "deadline_fuer": "hat_deadline",
-  "hat_deadline": "deadline_fuer",
-  "schluessel_fuer": "wird_entsperrt_durch",
-  "wird_entsperrt_durch": "schluessel_fuer"
+  "ursache_fuer": "folge_von",
+  "folge_von": "ursache_fuer"
 };
 
 // Element-Typen gruppiert nach Kategorien
@@ -463,9 +536,18 @@ function Modal({ open, onClose, title, children }) {
 }
 
 /* ---------------- Beziehungen UI ---------------- */
+// Helper: Get label for relationship type
+function getRelLabel(typeKey) {
+  for (const cat of REL_CATEGORIES) {
+    const found = cat.types.find(t => t.key === typeKey);
+    if (found) return found.label;
+  }
+  return typeKey;
+}
+
 function RelationEditor({ currentId, allElements, onAdd }) {
   const [targetId, setTargetId] = useState("");
-  const [type, setType] = useState(REL_TYPES[0]);
+  const [type, setType] = useState(REL_CATEGORIES[0].types[0].key);
   const [note, setNote] = useState("");
   const options = (allElements || []).filter(el => el.id !== currentId);
 
@@ -476,7 +558,13 @@ function RelationEditor({ currentId, allElements, onAdd }) {
         {options.map(el => <option key={el.id} value={el.id}>{el.title || "Unbenannt"}</option>)}
       </select>
       <select className="input" value={type} onChange={e=>setType(e.target.value)}>
-        {REL_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+        {REL_CATEGORIES.map(cat => (
+          <optgroup key={cat.name} label={cat.name}>
+            {cat.types.map(t => (
+              <option key={t.key} value={t.key}>{t.label}</option>
+            ))}
+          </optgroup>
+        ))}
       </select>
       <input className="input" placeholder="Notiz (optional)" value={note} onChange={e=>setNote(e.target.value)} />
       <button className="btn" onClick={()=> targetId && onAdd({ target_id: targetId, type, note })}>Hinzufügen</button>
@@ -495,7 +583,7 @@ function RelationList({ element, allElements, onRemove }) {
       {validLinks.map((r, idx) => (
         <li key={idx} className="panel" style={{padding:"8px 10px"}}>
           <div style={{display:"flex", alignItems:"center", gap:12}}>
-            <div style={{flex: "0 0 auto"}}>{r.type}</div>
+            <div style={{flex: "0 0 auto", fontWeight: 600, color: "var(--brand)"}}>{getRelLabel(r.type)}</div>
             <div style={{flex: "1 1 auto", color:"var(--muted, #64748b)"}}>{nameOf(r.target_id)}</div>
             {r.note ? <div className="small muted" style={{flex:"2 1 auto"}}>{r.note}</div> : null}
             <button className="btn btn-danger-quiet" onClick={()=>onRemove(r)}>Entfernen</button>
@@ -572,7 +660,8 @@ function RelationsGraphModal({ open, onClose, activeId, allElements, onJumpToEle
           });
 
           const isSym = (RECIPROCAL[r.type] || r.type) === r.type;
-          const label = r.note ? `${r.type} (${r.note})` : r.type;
+          const typeLabel = getRelLabel(r.type);
+          const label = r.note ? `${typeLabel} (${r.note})` : typeLabel;
 
           // Add edge
           edges.push({
@@ -870,7 +959,7 @@ function WorldGraphModal({ open, onClose, elements, activeId, onJumpToElement })
                           fontWeight: 500,
                           flexShrink: 0
                         }}>
-                          {rel.type}
+                          {getRelLabel(rel.type)}
                         </span>
                         <span style={{ color: "#64748b" }}>→</span>
                         <span style={{
