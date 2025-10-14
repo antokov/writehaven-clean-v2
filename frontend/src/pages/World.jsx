@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import axios from "axios";
 import { BsPlus, BsTrash, BsSearch } from "react-icons/bs";
+import ConfirmModal from "../components/ConfirmModal";
 import { TbNetwork, TbTopologyStar3 } from "react-icons/tb";
 import { createPortal } from "react-dom";
 import ReactFlow, {
@@ -1260,6 +1261,7 @@ const WorldElementEditor = React.memo(function WorldElementEditor({
 /* ---------------- Hauptkomponente ---------------- */
 export default function World() {
   const { id } = useParams();
+  const { state } = useLocation();
   const pid = Number(id);
 
   const [list, setList] = useState([]);
@@ -1269,6 +1271,7 @@ export default function World() {
   const [activeTab, setActiveTab] = useState("details");
   const [showGraph, setShowGraph] = useState(false);
   const [showWorldGraph, setShowWorldGraph] = useState(false);
+  const [confirmModal, setConfirmModal] = useState(null);
 
   // Liste der Welt-Elemente laden
   useEffect(() => {
@@ -1279,12 +1282,20 @@ export default function World() {
         if (cancel) return;
         const items = r.data || [];
         setList(items);
-        if (!activeId && items.length) setActiveId(items[0].id);
+
+        // Prüfe ob ein neues Element aus dem navigation state übergeben wurde
+        const newElId = state?.newElementId;
+        if (newElId && items.find(el => el.id === newElId)) {
+          setActiveId(newElId);
+          setElement({}); // Reset element damit es neu geladen wird
+        } else if (!activeId && items.length) {
+          setActiveId(items[0].id);
+        }
       } catch (e) { console.warn(e); }
     }
     if (pid) load();
     return () => { cancel = true; };
-  }, [pid]);
+  }, [pid, activeId, state]);
 
   // Aktives Element laden
   useEffect(() => {
@@ -1404,18 +1415,28 @@ export default function World() {
   };
 
   const deleteElement = async (eid) => {
-    if (!confirm("Element löschen?")) return;
-    try {
-      await axios.delete(`/api/world/${eid}`);
-      setList(prev => prev.filter(el => el.id !== eid));
-      if (activeId === eid) {
-        const next = list.find(el => el.id !== eid);
-        setActiveId(next?.id ?? null);
-      }
-    } catch (e) {
-      console.error(e);
-      alert("Element konnte nicht gelöscht werden.");
-    }
+    const element = list.find(el => el.id === eid);
+    setConfirmModal({
+      title: 'Weltelement löschen',
+      message: `Möchtest du das Element "${element?.title || 'Unbenannt'}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`,
+      confirmText: 'Löschen',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModal(null);
+        try {
+          await axios.delete(`/api/world/${eid}`);
+          setList(prev => prev.filter(el => el.id !== eid));
+          if (activeId === eid) {
+            const next = list.find(el => el.id !== eid);
+            setActiveId(next?.id ?? null);
+          }
+        } catch (e) {
+          console.error(e);
+          alert("Element konnte nicht gelöscht werden.");
+        }
+      },
+      onCancel: () => setConfirmModal(null)
+    });
   };
 
   return (
@@ -1493,6 +1514,8 @@ export default function World() {
           </>
         )}
       </main>
+
+      {confirmModal && <ConfirmModal {...confirmModal} />}
     </div>
   );
 }
