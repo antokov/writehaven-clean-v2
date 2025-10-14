@@ -15,6 +15,7 @@ class Project(db.Model):
     __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
     title = db.Column(db.String(200), nullable=False, default="Neues Projekt")
     description = db.Column(db.Text, default="")
     created_at = db.Column(db.DateTime, server_default=func.now())
@@ -22,6 +23,8 @@ class Project(db.Model):
         db.DateTime, server_default=func.now(), onupdate=func.now()
     )
 
+    # Relationships
+    user = db.relationship("User", backref="projects")
     chapters = db.relationship(
         "Chapter", cascade="all, delete-orphan", backref="project", lazy="selectin"
     )

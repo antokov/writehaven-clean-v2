@@ -164,6 +164,52 @@ def create_app():
             db.session.rollback()
             print(f"Migration error for worldnode.relations_json (can be ignored if column exists): {str(e)}")
 
+        # --- Migration: project.user_id nachrüsten ---
+        try:
+            db.session.rollback()
+
+            # Check ob user_id existiert
+            check_query = """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM information_schema.columns
+                    WHERE table_name = 'project'
+                    AND column_name = 'user_id'
+                )
+            """
+            try:
+                has_column = db.session.execute(text(check_query)).scalar()
+            except Exception:
+                # Fallback für SQLite
+                has_column = db.session.execute(text("""
+                    SELECT 1
+                    FROM pragma_table_info('project')
+                    WHERE name = 'user_id'
+                """)).scalar()
+
+            if not has_column:
+                # Spalte hinzufügen (nullable zuerst)
+                db.session.execute(text("ALTER TABLE project ADD COLUMN user_id INTEGER"))
+                db.session.commit()
+
+                # Test-User erstellen oder finden
+                test_user = User.query.filter_by(email="test@test.com").first()
+                if not test_user:
+                    test_user = User(email="test@test.com", name="Test User")
+                    test_user.set_password("test123")
+                    db.session.add(test_user)
+                    db.session.commit()
+                    print(f"Migration: Test user created with ID {test_user.id}")
+
+                # Alle bestehenden Projekte dem Test-User zuweisen
+                db.session.execute(text(f"UPDATE project SET user_id = {test_user.id} WHERE user_id IS NULL"))
+                db.session.commit()
+
+                print(f"Migration: project.user_id column added and existing projects assigned to test user")
+        except Exception as e:
+            db.session.rollback()
+            print(f"Migration error for project.user_id (can be ignored if column exists): {str(e)}")
+
     # ---------- SPA fallback (für Deep Links) ----------
     @app.before_request
     def spa_fallback():
@@ -183,6 +229,33 @@ def create_app():
     def ok(data, status=200): return jsonify(data), status
     def not_found():          return ok({"error": "not_found"}, 404)
     def bad_request(msg="bad_request"): return ok({"error": msg}, 400)
+    def forbidden():          return ok({"error": "forbidden"}, 403)
+
+    def verify_project_ownership(project_id, user_id):
+        """Prüft ob das Projekt dem User gehört"""
+        project = Project.query.filter_by(id=project_id, user_id=user_id).first()
+        return project
+
+    def verify_chapter_ownership(chapter_id, user_id):
+        """Prüft ob das Chapter dem User gehört (über project)"""
+        chapter = Chapter.query.get(chapter_id)
+        if not chapter:
+            return None
+        return chapter if verify_project_ownership(chapter.project_id, user_id) else None
+
+    def verify_character_ownership(character_id, user_id):
+        """Prüft ob der Character dem User gehört (über project)"""
+        character = Character.query.get(character_id)
+        if not character:
+            return None
+        return character if verify_project_ownership(character.project_id, user_id) else None
+
+    def verify_world_ownership(world_id, user_id):
+        """Prüft ob das World-Element dem User gehört (über project)"""
+        world = WorldNode.query.get(world_id)
+        if not world:
+            return None
+        return world if verify_project_ownership(world.project_id, user_id) else None
 
     # ---------- Health ----------
     @app.get("/api/health")
@@ -307,30 +380,39 @@ def create_app():
 
     # ---------- Projects ----------
     @app.get("/api/projects")
-    def list_projects():
-        rows = (Project.query.order_by(Project.updated_at.desc()).all()
+    @token_required
+    def list_projects(current_user):
+        rows = (Project.query.filter_by(user_id=current_user.id)
+                .order_by(Project.updated_at.desc()).all()
                 if hasattr(Project, "updated_at")
-                else Project.query.order_by(Project.id.desc()).all())
+                else Project.query.filter_by(user_id=current_user.id)
+                .order_by(Project.id.desc()).all())
         return ok([{"id": p.id, "title": p.title, "description": p.description} for p in rows])
 
     @app.post("/api/projects")
-    def create_project():
+    @token_required
+    def create_project(current_user):
         data = request.get_json() or {}
-        p = Project(title=data.get("title") or "Neues Projekt",
-                    description=data.get("description", ""))
+        p = Project(
+            user_id=current_user.id,
+            title=data.get("title") or "Neues Projekt",
+            description=data.get("description", "")
+        )
         db.session.add(p)
         db.session.commit()
         return ok({"id": p.id, "title": p.title, "description": p.description}, 201)
 
     @app.get("/api/projects/<int:pid>")
-    def get_project(pid):
-        p = Project.query.get(pid)
+    @token_required
+    def get_project(current_user, pid):
+        p = Project.query.filter_by(id=pid, user_id=current_user.id).first()
         if not p: return not_found()
         return ok({"id": p.id, "title": p.title, "description": p.description})
 
     @app.put("/api/projects/<int:pid>")
-    def update_project(pid):
-        p = Project.query.get(pid)
+    @token_required
+    def update_project(current_user, pid):
+        p = Project.query.filter_by(id=pid, user_id=current_user.id).first()
         if not p: return not_found()
         data = request.get_json() or {}
         p.title = data.get("title", p.title)
@@ -339,8 +421,9 @@ def create_app():
         return ok({"id": p.id, "title": p.title, "description": p.description})
 
     @app.delete("/api/projects/<int:pid>")
-    def delete_project(pid):
-        p = Project.query.get(pid)
+    @token_required
+    def delete_project(current_user, pid):
+        p = Project.query.filter_by(id=pid, user_id=current_user.id).first()
         if not p: return not_found()
         db.session.delete(p)
         db.session.commit()
@@ -348,7 +431,10 @@ def create_app():
 
     # ---------- Chapters ----------
     @app.get("/api/projects/<int:pid>/chapters")
-    def list_chapters(pid):
+    @token_required
+    def list_chapters(current_user, pid):
+        if not verify_project_ownership(pid, current_user.id):
+            return forbidden()
         rows = (Chapter.query.filter_by(project_id=pid)
                 .order_by(Chapter.order_index.asc(), Chapter.id.asc())
                 .all())
@@ -358,8 +444,10 @@ def create_app():
         } for c in rows])
 
     @app.post("/api/projects/<int:pid>/chapters")
-    def create_chapter(pid):
-        if not Project.query.get(pid): return not_found()
+    @token_required
+    def create_chapter(current_user, pid):
+        if not verify_project_ownership(pid, current_user.id):
+            return forbidden()
         data = request.get_json() or {}
         c = Chapter(project_id=pid,
                     title=(data.get("title") or "Neues Kapitel").strip(),
@@ -368,15 +456,17 @@ def create_app():
         return ok({"id": c.id, "title": c.title, "order_index": c.order_index, "project_id": c.project_id}, 201)
 
     @app.get("/api/chapters/<int:cid>")
-    def get_chapter(cid):
-        c = Chapter.query.get(cid)
+    @token_required
+    def get_chapter(current_user, cid):
+        c = verify_chapter_ownership(cid, current_user.id)
         if not c: return not_found()
         return ok({"id": c.id, "project_id": c.project_id, "title": c.title,
                    "order_index": c.order_index, "content": getattr(c, "content", None)})
 
     @app.put("/api/chapters/<int:cid>")
-    def update_chapter(cid):
-        c = Chapter.query.get(cid)
+    @token_required
+    def update_chapter(current_user, cid):
+        c = verify_chapter_ownership(cid, current_user.id)
         if not c: return not_found()
         data = request.get_json() or {}
         title = data.get("title")
@@ -388,15 +478,19 @@ def create_app():
         return ok({"id": c.id, "title": c.title, "order_index": c.order_index, "project_id": c.project_id})
 
     @app.delete("/api/chapters/<int:cid>")
-    def delete_chapter(cid):
-        c = Chapter.query.get(cid)
+    @token_required
+    def delete_chapter(current_user, cid):
+        c = verify_chapter_ownership(cid, current_user.id)
         if not c: return not_found()
         db.session.delete(c); db.session.commit()
         return ok({"ok": True})
 
     # ---------- Scenes ----------
     @app.get("/api/chapters/<int:cid>/scenes")
-    def list_scenes(cid):
+    @token_required
+    def list_scenes(current_user, cid):
+        if not verify_chapter_ownership(cid, current_user.id):
+            return forbidden()
         rows = (Scene.query.filter_by(chapter_id=cid)
                 .order_by(Scene.order_index.asc(), Scene.id.asc())
                 .all())
@@ -406,8 +500,9 @@ def create_app():
         } for s in rows])
 
     @app.post("/api/chapters/<int:cid>/scenes")
-    def create_scene(cid):
-        if not Chapter.query.get(cid): return not_found()
+    @token_required
+    def create_scene(current_user, cid):
+        if not verify_chapter_ownership(cid, current_user.id): return forbidden()
         data = request.get_json() or {}
         s = Scene(chapter_id=cid,
                   title=(data.get("title") or "Neue Szene").strip(),
@@ -422,16 +517,22 @@ def create_app():
                    "chapter_id": s.chapter_id, "content": s.content}, 201)
 
     @app.get("/api/scenes/<int:sid>")
-    def get_scene(sid):
+    @token_required
+    def get_scene(current_user, sid):
         s = Scene.query.get(sid)
+        if s and not verify_chapter_ownership(s.chapter_id, current_user.id):
+            return forbidden()
         if not s: return not_found()
         return ok({"id": s.id, "chapter_id": s.chapter_id, "title": s.title,
                    "order_index": s.order_index, "content": s.content})
 
     @app.put("/api/scenes/<int:sid>")
-    def update_scene(sid):
+    @token_required
+    def update_scene(current_user, sid):
         s = Scene.query.get(sid)
         if not s: return not_found()
+        if not verify_chapter_ownership(s.chapter_id, current_user.id):
+            return forbidden()
         data = request.get_json() or {}
         if (t := data.get("title")) is not None:   s.title = t.strip()
         if (c := data.get("content")) is not None: s.content = c
@@ -440,9 +541,12 @@ def create_app():
                    "chapter_id": s.chapter_id, "content": s.content})
 
     @app.delete("/api/scenes/<int:sid>")
-    def delete_scene(sid):
+    @token_required
+    def delete_scene(current_user, sid):
         s = Scene.query.get(sid)
         if not s: return not_found()
+        if not verify_chapter_ownership(s.chapter_id, current_user.id):
+            return forbidden()
         db.session.delete(s); db.session.commit()
         return ok({"ok": True})
 
@@ -458,13 +562,17 @@ def create_app():
         }
 
     @app.get("/api/projects/<int:pid>/characters")
-    def list_characters(pid):
+    @token_required
+    def list_characters(current_user, pid):
+        if not verify_project_ownership(pid, current_user.id):
+            return forbidden()
         rows = Character.query.filter_by(project_id=pid).order_by(Character.id.asc()).all()
         return ok([_char_to_dict(c) for c in rows])
 
     @app.post("/api/projects/<int:pid>/characters")
-    def create_character(pid):
-        if not Project.query.get(pid):
+    @token_required
+    def create_character(current_user, pid):
+        if not verify_project_ownership(pid, current_user.id):
             return not_found()
         data = request.get_json() or {}
         profile = data.get("profile") or {}
@@ -479,15 +587,17 @@ def create_app():
         return ok(_char_to_dict(c), 201)
 
     @app.get("/api/characters/<int:cid>")
-    def get_character(cid):
-        c = Character.query.get(cid)
+    @token_required
+    def get_character(current_user, cid):
+        c = verify_character_ownership(cid, current_user.id)
         if not c: return not_found()
         return ok(_char_to_dict(c))
 
     @app.put("/api/characters/<int:cid>")
     @app.patch("/api/characters/<int:cid>")
-    def update_character(cid):
-        c = Character.query.get(cid)
+    @token_required
+    def update_character(current_user, cid):
+        c = verify_character_ownership(cid, current_user.id)
         if not c: return not_found()
         data = request.get_json() or {}
 
@@ -511,15 +621,19 @@ def create_app():
         return ok(_char_to_dict(c))
 
     @app.delete("/api/characters/<int:cid>")
-    def delete_character(cid):
-        c = Character.query.get(cid)
+    @token_required
+    def delete_character(current_user, cid):
+        c = verify_character_ownership(cid, current_user.id)
         if not c: return not_found()
         db.session.delete(c); db.session.commit()
         return ok({"ok": True})
 
     # ---------- World ----------
     @app.get("/api/projects/<int:pid>/world")
-    def list_world(pid):
+    @token_required
+    def list_world(current_user, pid):
+        if not verify_project_ownership(pid, current_user.id):
+            return forbidden()
         rows = WorldNode.query.filter_by(project_id=pid).order_by(WorldNode.id.asc()).all()
         return ok([{
             "id": w.id, "project_id": w.project_id, "title": w.title, "kind": w.kind,
@@ -527,7 +641,10 @@ def create_app():
         } for w in rows])
 
     @app.post("/api/projects/<int:pid>/world")
-    def create_world(pid):
+    @token_required
+    def create_world(current_user, pid):
+        if not verify_project_ownership(pid, current_user.id):
+            return forbidden()
         data = request.get_json() or {}
         w = WorldNode(project_id=pid,
                       title=data.get("title") or "Neues Element",
@@ -539,8 +656,9 @@ def create_app():
                    "summary": w.summary, "icon": w.icon}, 201)
 
     @app.get("/api/world/<int:w_id>")
-    def get_world(w_id):
-        w = WorldNode.query.get(w_id)
+    @token_required
+    def get_world(current_user, w_id):
+        w = verify_world_ownership(w_id, current_user.id)
         if not w: return not_found()
         return ok({
             "id": w.id,
@@ -553,8 +671,9 @@ def create_app():
         })
 
     @app.put("/api/world/<int:w_id>")
-    def update_world(w_id):
-        w = WorldNode.query.get(w_id)
+    @token_required
+    def update_world(current_user, w_id):
+        w = verify_world_ownership(w_id, current_user.id)
         if not w: return not_found()
         data = request.get_json() or {}
         w.title   = data.get("title", w.title)
@@ -578,8 +697,9 @@ def create_app():
         })
 
     @app.delete("/api/world/<int:w_id>")
-    def delete_world(w_id):
-        w = WorldNode.query.get(w_id)
+    @token_required
+    def delete_world(current_user, w_id):
+        w = verify_world_ownership(w_id, current_user.id)
         if not w: return not_found()
         db.session.delete(w); db.session.commit()
         return ok({"ok": True})
