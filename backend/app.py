@@ -1,6 +1,9 @@
 # backend/app.py
 import os
 import json
+import jwt
+from datetime import datetime, timedelta
+from functools import wraps
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from sqlalchemy import text
@@ -8,10 +11,10 @@ from sqlalchemy.exc import IntegrityError, ProgrammingError, OperationalError
 
 try:
     from backend.extensions import db
-    from backend.models import Project, Chapter, Scene, Character, WorldNode
+    from backend.models import Project, Chapter, Scene, Character, WorldNode, User
 except ImportError:
     from extensions import db
-    from models import Project, Chapter, Scene, Character, WorldNode
+    from models import Project, Chapter, Scene, Character, WorldNode, User
 
 
 # ---------- DB URI helpers ----------
@@ -48,6 +51,10 @@ def _dumps(d: dict) -> str:
 def create_app():
     app = Flask(__name__, static_folder="static", static_url_path="")
     app.json.sort_keys = False
+
+    # JWT Secret Key
+    app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
+    app.config["JWT_EXPIRATION_HOURS"] = int(os.getenv("JWT_EXPIRATION_HOURS", "24"))
 
     # SQLAlchemy
     app.config["SQLALCHEMY_DATABASE_URI"] = get_database_uri()
@@ -186,6 +193,117 @@ def create_app():
         except Exception as e:
             db_ok = f"error: {e.__class__.__name__}: {e}"
         return jsonify({"status": "ok", "db": db_ok}), 200
+
+    # ---------- JWT Helper ----------
+    def generate_token(user_id):
+        """Generiere JWT Token"""
+        payload = {
+            "user_id": user_id,
+            "exp": datetime.utcnow() + timedelta(hours=app.config["JWT_EXPIRATION_HOURS"])
+        }
+        return jwt.encode(payload, app.config["SECRET_KEY"], algorithm="HS256")
+
+    def token_required(f):
+        """Decorator für protected routes"""
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            token = None
+            auth_header = request.headers.get("Authorization")
+
+            if auth_header and auth_header.startswith("Bearer "):
+                token = auth_header.split(" ")[1]
+
+            if not token:
+                return ok({"error": "Token fehlt"}, 401)
+
+            try:
+                payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+                current_user_id = payload["user_id"]
+                current_user = User.query.get(current_user_id)
+                if not current_user:
+                    return ok({"error": "User nicht gefunden"}, 401)
+            except jwt.ExpiredSignatureError:
+                return ok({"error": "Token abgelaufen"}, 401)
+            except jwt.InvalidTokenError:
+                return ok({"error": "Ungültiger Token"}, 401)
+
+            return f(current_user, *args, **kwargs)
+
+        return decorated
+
+    # ---------- Auth ----------
+    @app.post("/api/auth/register")
+    def register():
+        """Registriere neuen User"""
+        data = request.get_json() or {}
+        email = data.get("email", "").strip().lower()
+        password = data.get("password", "")
+        name = data.get("name", "").strip()
+
+        if not email or not password:
+            return ok({"error": "Email und Passwort erforderlich"}, 400)
+
+        if len(password) < 6:
+            return ok({"error": "Passwort muss mindestens 6 Zeichen lang sein"}, 400)
+
+        # Prüfe ob User existiert
+        if User.query.filter_by(email=email).first():
+            return ok({"error": "Email bereits registriert"}, 400)
+
+        # Erstelle User
+        user = User(email=email, name=name or email.split("@")[0])
+        user.set_password(password)
+
+        try:
+            db.session.add(user)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            return ok({"error": "Registrierung fehlgeschlagen"}, 400)
+
+        token = generate_token(user.id)
+        return ok({
+            "token": token,
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "name": user.name
+            }
+        }, 201)
+
+    @app.post("/api/auth/login")
+    def login():
+        """Login User"""
+        data = request.get_json() or {}
+        email = data.get("email", "").strip().lower()
+        password = data.get("password", "")
+
+        if not email or not password:
+            return ok({"error": "Email und Passwort erforderlich"}, 400)
+
+        user = User.query.filter_by(email=email).first()
+        if not user or not user.check_password(password):
+            return ok({"error": "Ungültige Anmeldedaten"}, 401)
+
+        token = generate_token(user.id)
+        return ok({
+            "token": token,
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "name": user.name
+            }
+        })
+
+    @app.get("/api/auth/me")
+    @token_required
+    def get_current_user(current_user):
+        """Hole aktuellen User"""
+        return ok({
+            "id": current_user.id,
+            "email": current_user.email,
+            "name": current_user.name
+        })
 
     # ---------- Projects ----------
     @app.get("/api/projects")

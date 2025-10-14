@@ -1,5 +1,6 @@
 # backend/models.py
 from sqlalchemy.sql import func
+from werkzeug.security import generate_password_hash, check_password_hash
 
 try:
     # Paket-Start (z.B. gunicorn) -> backend.extensions
@@ -102,3 +103,22 @@ class WorldNode(db.Model):
     summary = db.Column(db.Text, default="")
     icon = db.Column(db.String(50), default="🏰")
     relations_json = db.Column(db.Text, default="{}")
+
+
+class User(db.Model):
+    __tablename__ = "user"
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(255), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    name = db.Column(db.String(200))
+    created_at = db.Column(db.DateTime, server_default=func.now())
+
+    def set_password(self, password):
+        """Hash und speichere Passwort"""
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        """Prüfe Passwort gegen Hash"""
+        return check_password_hash(self.password_hash, password)
