@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import axios from 'axios'
 import { useAuth } from '../context/AuthContext'
 import logoUrl from '../assets/logo.png'
+import backgroundUrl from '../assets/background.png'
 import './Login.css'
 
 export default function Login() {
@@ -53,6 +54,8 @@ export default function Login() {
 
   return (
     <div className="login-container">
+      <div className="login-bg" style={{ backgroundImage: `url(${backgroundUrl})` }} />
+      <div className="login-gradient" />
       <div className="login-card">
         <div className="login-header">
           <img src={logoUrl} alt="Writehaven" className="login-logo" />
