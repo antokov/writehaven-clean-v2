@@ -420,12 +420,10 @@ export default function ProjectView() {
     try {
       const r = await axios.post(`/api/projects/${pid}/characters`, { name })
       const characterId = r.data.id
-      // Navigiere zum Charakter-Tab
-      navigate(`/app/project/${pid}/characters`)
-      // Kleine Verzögerung damit die Navigation abgeschlossen ist
-      setTimeout(() => {
-        // Der Characters-View sollte den neuen Charakter automatisch laden
-      }, 100)
+      // Navigiere zum Charakter-Tab und übergebe die ID im state
+      navigate(`/app/project/${pid}/characters`, {
+        state: { newCharacterId: characterId }
+      })
     } catch (err) {
       console.error('Create character failed', err)
       alert('Charakter konnte nicht erstellt werden.')
@@ -440,9 +438,10 @@ export default function ProjectView() {
         description: ''
       })
       const elementId = r.data.id
-      // Navigiere zum Welt-Tab
-      navigate(`/app/project/${pid}/world`)
-      // Der World-View sollte das neue Element automatisch laden
+      // Navigiere zum Welt-Tab und übergebe die ID im state
+      navigate(`/app/project/${pid}/world`, {
+        state: { newElementId: elementId }
+      })
     } catch (err) {
       console.error('Create world element failed', err)
       alert('Weltelement konnte nicht erstellt werden.')

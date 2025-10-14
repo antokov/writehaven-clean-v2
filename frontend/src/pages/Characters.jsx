@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import { BsPlus, BsTrash } from "react-icons/bs";
 import { TbNetwork, TbTopologyStar3 } from "react-icons/tb";
 import { createPortal } from "react-dom";
@@ -832,6 +832,7 @@ const CharacterEditor = React.memo(function CharacterEditor({
 /* ---------------- Seite ---------------- */
 export default function Characters() {
   const { id } = useParams();
+  const { state } = useLocation();
   const pid = Number(id);
 
   const [list, setList] = useState([]);
@@ -856,12 +857,20 @@ export default function Characters() {
         if (cancel) return;
         const items = r.data || [];
         setList(items);
-        if (!activeId && items.length) setActiveId(items[0].id);
+
+        // Prüfe ob ein neuer Charakter aus dem navigation state übergeben wurde
+        const newCharId = state?.newCharacterId;
+        if (newCharId && items.find(c => c.id === newCharId)) {
+          setActiveId(newCharId);
+          setProfile({}); // Reset profile damit es neu geladen wird
+        } else if (!activeId && items.length) {
+          setActiveId(items[0].id);
+        }
       } catch (e) { console.warn(e); }
     }
     if (pid) load();
     return () => { cancel = true; };
-  }, [pid, activeId]);
+  }, [pid, activeId, state]);
 
   useEffect(() => {
     if (!activeId) { setProfile({}); return; }
