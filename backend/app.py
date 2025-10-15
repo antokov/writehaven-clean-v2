@@ -212,6 +212,47 @@ def create_app():
             db.session.rollback()
             print(f"Migration error for project.user_id (can be ignored if column exists): {str(e)}")
 
+        # --- Migration: project settings fields nachrüsten ---
+        settings_columns = [
+            ("author", "TEXT DEFAULT ''"),
+            ("genre", "TEXT DEFAULT ''"),
+            ("target_audience", "TEXT DEFAULT ''"),
+            ("estimated_word_count", "INTEGER DEFAULT 0"),
+            ("cover_image_url", "TEXT DEFAULT ''"),
+            ("share_with_community", "BOOLEAN DEFAULT 0")
+        ]
+
+        for col_name, col_type in settings_columns:
+            try:
+                db.session.rollback()
+
+                # Check ob Spalte existiert
+                check_query = f"""
+                    SELECT EXISTS (
+                        SELECT 1
+                        FROM information_schema.columns
+                        WHERE table_name = 'project'
+                        AND column_name = '{col_name}'
+                    )
+                """
+                try:
+                    has_column = db.session.execute(text(check_query)).scalar()
+                except Exception:
+                    # Fallback für SQLite
+                    has_column = db.session.execute(text(f"""
+                        SELECT 1
+                        FROM pragma_table_info('project')
+                        WHERE name = '{col_name}'
+                    """)).scalar()
+
+                if not has_column:
+                    db.session.execute(text(f"ALTER TABLE project ADD COLUMN {col_name} {col_type}"))
+                    db.session.commit()
+                    print(f"Migration: project.{col_name} column added")
+            except Exception as e:
+                db.session.rollback()
+                print(f"Migration error for project.{col_name} (can be ignored if column exists): {str(e)}")
+
     # ---------- SPA fallback (für Deep Links) ----------
     @app.before_request
     def spa_fallback():
@@ -759,6 +800,92 @@ def create_app():
         if not w: return not_found()
         db.session.delete(w); db.session.commit()
         return ok({"ok": True})
+
+    # ---------- Project Settings ----------
+    @app.get("/api/projects/<int:pid>/settings")
+    @token_required
+    def get_project_settings(current_user, pid):
+        p = verify_project_ownership(pid, current_user.id)
+        if not p: return not_found()
+        return ok({
+            "title": p.title,
+            "author": p.author or "",
+            "genre": p.genre or "",
+            "description": p.description or "",
+            "target_audience": p.target_audience or "",
+            "estimated_word_count": p.estimated_word_count or 0,
+            "cover_image_url": p.cover_image_url or "",
+            "share_with_community": p.share_with_community or False
+        })
+
+    @app.put("/api/projects/<int:pid>/settings")
+    @token_required
+    def update_project_settings(current_user, pid):
+        p = verify_project_ownership(pid, current_user.id)
+        if not p: return not_found()
+        data = request.get_json() or {}
+
+        # Update fields
+        if "title" in data: p.title = data["title"]
+        if "author" in data: p.author = data["author"]
+        if "genre" in data: p.genre = data["genre"]
+        if "description" in data: p.description = data["description"]
+        if "target_audience" in data: p.target_audience = data["target_audience"]
+        if "estimated_word_count" in data: p.estimated_word_count = int(data["estimated_word_count"] or 0)
+        if "cover_image_url" in data: p.cover_image_url = data["cover_image_url"]
+        if "share_with_community" in data: p.share_with_community = bool(data["share_with_community"])
+
+        db.session.commit()
+        return ok({
+            "title": p.title,
+            "author": p.author,
+            "genre": p.genre,
+            "description": p.description,
+            "target_audience": p.target_audience,
+            "estimated_word_count": p.estimated_word_count,
+            "cover_image_url": p.cover_image_url,
+            "share_with_community": p.share_with_community
+        })
+
+    @app.post("/api/projects/<int:pid>/upload-cover")
+    @token_required
+    def upload_project_cover(current_user, pid):
+        p = verify_project_ownership(pid, current_user.id)
+        if not p: return not_found()
+
+        if 'cover' not in request.files:
+            return bad_request("Keine Datei hochgeladen")
+
+        file = request.files['cover']
+        if file.filename == '':
+            return bad_request("Leere Datei")
+
+        # Erlaubte Dateitypen
+        allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+        ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+        if ext not in allowed_extensions:
+            return bad_request("Ungültiges Dateiformat. Erlaubt: PNG, JPG, JPEG, GIF, WEBP")
+
+        # Erstelle uploads Verzeichnis
+        upload_folder = os.path.join(app.static_folder, 'uploads', 'covers')
+        os.makedirs(upload_folder, exist_ok=True)
+
+        # Generiere eindeutigen Dateinamen
+        import uuid
+        filename = f"{uuid.uuid4().hex}.{ext}"
+        filepath = os.path.join(upload_folder, filename)
+
+        # Speichere Datei
+        file.save(filepath)
+
+        # Generiere URL (relativ zu static folder)
+        cover_url = f"/uploads/covers/{filename}"
+
+        # Update Projekt
+        p.cover_image_url = cover_url
+        db.session.commit()
+
+        return ok({"cover_url": cover_url})
 
     # Optional: globaler Integrity-Handler
     @app.errorhandler(IntegrityError)

@@ -23,6 +23,14 @@ class Project(db.Model):
         db.DateTime, server_default=func.now(), onupdate=func.now()
     )
 
+    # Projekteinstellungen
+    author = db.Column(db.String(200), default="")
+    genre = db.Column(db.String(100), default="")
+    target_audience = db.Column(db.String(100), default="")
+    estimated_word_count = db.Column(db.Integer, default=0)
+    cover_image_url = db.Column(db.String(500), default="")
+    share_with_community = db.Column(db.Boolean, default=False)
+
     # Relationships
     user = db.relationship("User", backref="projects")
     chapters = db.relationship(

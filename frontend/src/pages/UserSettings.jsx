@@ -1,8 +1,8 @@
 import { useAuth } from '../context/AuthContext'
 import { User, Mail, Calendar } from 'lucide-react'
-import './Settings.css'
+import './UserSettings.css'
 
-export default function Settings() {
+export default function UserSettings() {
   const { user } = useAuth()
 
   const formatDate = (dateString) => {

@@ -5,14 +5,14 @@
 }
 
 .tabs{
-  position: static;                 /* NICHT sticky */
+  position: relative;               /* Für absolute Positionierung des Settings-Buttons */
   z-index: 1;
 
   height: var(--topnav-h);          /* exakte Blockhöhe */
-  display:flex; justify-content:center; align-items:center; gap:1.6rem;
+  display:flex; align-items:center;
 
   /* nur seitliches Padding – KEIN vertical padding */
-  padding-inline: 1rem; 
+  padding-inline: 1rem;
   padding-block: 0;
 
   color: var(--text);
@@ -22,7 +22,45 @@
   margin-top: 0;
 
   border-bottom: 1px solid var(--line);   /* Linie unten */
-  overflow-x: clip;                       /* Subpixel-Artefakte vermeiden */
+  overflow-x: visible;                    /* Settings-Button nicht abschneiden */
+}
+
+/* Wrapper für zentriierte Tabs */
+.tabs-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1.6rem;
+  flex: 1;
+}
+
+/* Settings Button - absolut rechts positioniert */
+.tabs .settings-btn {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.tabs .settings-btn:hover {
+  background: var(--panel-bg, #f8fafc);
+  color: var(--text);
+}
+
+.tabs .settings-btn svg {
+  font-size: 20px;
 }
 
 /* --- Text-Tabs mit Underline-Fill --------------------------------------- */
@@ -30,7 +68,7 @@
   position: relative;
   display:inline-flex; align-items:center;
   height: 100%;
-  padding: 0 .2rem;                      /* nur Text-Abstand seitlich */
+  padding: 8px 2px;                      /* Gleiche Padding wie untere Navigation */
   color: var(--muted);
   text-decoration: none;
   border:0 !important; background:transparent !important; border-radius:0 !important;
@@ -40,8 +78,8 @@
 
 .tabs .tab::after{
   content:"";
-  position:absolute; left:0; right:0; bottom: 6px;  /* Unterstrich im Balken */
-  height: var(--tab-indicator-h);
+  position:absolute; left:0; right:0; bottom: 0;  /* Unterstrich am unteren Rand */
+  height: 3px;                                     /* Exakt wie untere Navigation */
   background: var(--brand);
   transform: scaleX(0);
   transform-origin: 50% 50%;
