@@ -25,6 +25,16 @@
   font-weight: 700;
   color: var(--text);
   margin: 0 0 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.save-indicator {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--brand);
+  opacity: 0.8;
 }
 
 .settings-card {

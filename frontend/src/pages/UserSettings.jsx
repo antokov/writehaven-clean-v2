@@ -17,6 +17,7 @@ export default function UserSettings() {
   const { user } = useAuth()
   const [language, setLanguage] = useState('de')
   const [isSaving, setIsSaving] = useState(false)
+  const [lastSavedAt, setLastSavedAt] = useState(null)
 
   useEffect(() => {
     if (user?.language) {
@@ -30,6 +31,7 @@ export default function UserSettings() {
 
     try {
       await axios.put('/api/auth/update-language', { language: newLanguage })
+      setLastSavedAt(new Date())
     } catch (error) {
       console.error('Fehler beim Speichern der Sprache:', error)
     } finally {
@@ -94,7 +96,14 @@ export default function UserSettings() {
         </div>
 
         <div className="settings-section">
-          <h2 className="section-title">Präferenzen</h2>
+          <h2 className="section-title">
+            Präferenzen
+            {lastSavedAt && (
+              <span className="save-indicator">
+                Gespeichert {lastSavedAt.toLocaleTimeString()}
+              </span>
+            )}
+          </h2>
           <div className="settings-card">
             <div className="settings-item">
               <div className="settings-item-icon">
