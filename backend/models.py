@@ -26,7 +26,7 @@ class Project(db.Model):
     # Projekteinstellungen
     author = db.Column(db.String(200), default="")
     genre = db.Column(db.String(100), default="")
-    language = db.Column(db.String(10), default="de")
+    language = db.Column(db.String(10), default="en")
     target_audience = db.Column(db.String(100), default="")
     estimated_word_count = db.Column(db.Integer, default=0)
     cover_image_url = db.Column(db.String(500), default="")
@@ -125,7 +125,7 @@ class User(db.Model):
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     name = db.Column(db.String(200))
-    language = db.Column(db.String(10), default="de")
+    language = db.Column(db.String(10), default="en")
     created_at = db.Column(db.DateTime, server_default=func.now())
 
     def set_password(self, password):

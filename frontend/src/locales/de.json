@@ -1,0 +1,127 @@
+{
+  "common": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "create": "Erstellen",
+    "close": "Schließen",
+    "search": "Suchen",
+    "loading": "Lädt...",
+    "saved": "Gespeichert {{time}}",
+    "language": "Sprache"
+  },
+  "auth": {
+    "login": "Anmelden",
+    "register": "Registrieren",
+    "logout": "Abmelden",
+    "email": "E-Mail",
+    "password": "Passwort",
+    "name": "Name",
+    "welcomeBack": "Willkommen zurück",
+    "createAccount": "Konto erstellen",
+    "loginPrompt": "Melde dich bei deinem Konto an",
+    "registerPrompt": "Erstelle ein neues Konto",
+    "alreadyHaveAccount": "Bereits ein Konto?",
+    "dontHaveAccount": "Noch kein Konto?"
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "settings": "Einstellungen",
+    "writing": "Schreiben",
+    "characters": "Charaktere",
+    "world": "Welt",
+    "export": "Export",
+    "projectSettings": "Projekteinstellungen"
+  },
+  "dashboard": {
+    "title": "Meine Projekte",
+    "newProject": "Neues Projekt",
+    "importWord": "Word-Dokument importieren",
+    "projectTitle": "Projekttitel",
+    "projectDescription": "Beschreibung (optional)",
+    "wordFile": "Word-Dokument",
+    "selectFile": "Datei auswählen",
+    "createProject": "Projekt erstellen",
+    "importing": "Importiere..."
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "userProfile": "Benutzerprofil",
+    "preferences": "Präferenzen",
+    "accountInfo": "Account-Informationen",
+    "userId": "Benutzer-ID",
+    "accountCreated": "Konto erstellt",
+    "notSpecified": "Nicht angegeben",
+    "moreSettingsSoon": "Weitere Einstellungen und Profil-Bearbeitung werden in einer zukünftigen Version verfügbar sein."
+  },
+  "projectSettings": {
+    "title": "Projekteinstellungen",
+    "general": "Allgemein",
+    "metadata": "Metadaten",
+    "community": "Community",
+    "bookTitle": "Titel",
+    "bookTitlePlaceholder": "Titel deines Buches",
+    "author": "Autor/in",
+    "authorPlaceholder": "Dein Name",
+    "description": "Beschreibung / Klappentext",
+    "descriptionPlaceholder": "Eine kurze Zusammenfassung deines Buches...",
+    "bookLanguage": "Sprache",
+    "genre": "Genre",
+    "selectGenre": "-- Wähle ein Genre --",
+    "targetAudience": "Zielgruppe",
+    "selectAudience": "-- Wähle eine Zielgruppe --",
+    "shareWithCommunity": "Mit Community teilen",
+    "communityDescription": "Wenn aktiviert, wird dein Projekt in der öffentlichen Community-Galerie angezeigt. Andere können dein Werk entdecken und Feedback geben."
+  },
+  "genres": {
+    "fantasy": "Fantasy",
+    "scifi": "Science Fiction",
+    "romance": "Romantik",
+    "thriller": "Thriller",
+    "mystery": "Krimi/Mystery",
+    "historical": "Historisch",
+    "contemporary": "Gegenwartsliteratur",
+    "horror": "Horror",
+    "young_adult": "Jugendbuch",
+    "children": "Kinderbuch",
+    "non_fiction": "Sachbuch",
+    "other": "Sonstiges"
+  },
+  "audiences": {
+    "children": "Kinder (6-12)",
+    "young_adult": "Jugendliche (13-17)",
+    "adult": "Erwachsene (18+)",
+    "all_ages": "Alle Altersgruppen"
+  },
+  "characters": {
+    "title": "Charaktere",
+    "newCharacter": "Neuer Charakter",
+    "unnamed": "Unbenannt",
+    "tabs": {
+      "basic": "Grunddaten",
+      "appearance": "Äußeres",
+      "personality": "Persönlichkeit",
+      "background": "Hintergrund",
+      "skills": "Fähigkeiten",
+      "relationships": "Beziehungen",
+      "notes": "Notizen"
+    }
+  },
+  "world": {
+    "title": "Welt",
+    "newElement": "Neues Element",
+    "tabs": {
+      "details": "Details",
+      "relationships": "Beziehungen",
+      "notes": "Notizen"
+    }
+  },
+  "writing": {
+    "chapters": "Kapitel",
+    "scenes": "Szenen",
+    "newChapter": "Neues Kapitel",
+    "newScene": "Neue Szene",
+    "wordCount": "{{count}} Wörter"
+  }
+}

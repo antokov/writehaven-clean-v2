@@ -1,0 +1,127 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "close": "Close",
+    "search": "Search",
+    "loading": "Loading...",
+    "saved": "Saved {{time}}",
+    "language": "Language"
+  },
+  "auth": {
+    "login": "Log in",
+    "register": "Sign up",
+    "logout": "Log out",
+    "email": "Email",
+    "password": "Password",
+    "name": "Name",
+    "welcomeBack": "Welcome back",
+    "createAccount": "Create account",
+    "loginPrompt": "Log in to your account",
+    "registerPrompt": "Create a new account",
+    "alreadyHaveAccount": "Already have an account?",
+    "dontHaveAccount": "Don't have an account yet?"
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "settings": "Settings",
+    "writing": "Writing",
+    "characters": "Characters",
+    "world": "World",
+    "export": "Export",
+    "projectSettings": "Project Settings"
+  },
+  "dashboard": {
+    "title": "My Projects",
+    "newProject": "New Project",
+    "importWord": "Import Word Document",
+    "projectTitle": "Project Title",
+    "projectDescription": "Description (optional)",
+    "wordFile": "Word Document",
+    "selectFile": "Select file",
+    "createProject": "Create Project",
+    "importing": "Importing..."
+  },
+  "settings": {
+    "title": "Settings",
+    "userProfile": "User Profile",
+    "preferences": "Preferences",
+    "accountInfo": "Account Information",
+    "userId": "User ID",
+    "accountCreated": "Account created",
+    "notSpecified": "Not specified",
+    "moreSettingsSoon": "More settings and profile editing will be available in a future version."
+  },
+  "projectSettings": {
+    "title": "Project Settings",
+    "general": "General",
+    "metadata": "Metadata",
+    "community": "Community",
+    "bookTitle": "Title",
+    "bookTitlePlaceholder": "Title of your book",
+    "author": "Author",
+    "authorPlaceholder": "Your name",
+    "description": "Description / Blurb",
+    "descriptionPlaceholder": "A brief summary of your book...",
+    "bookLanguage": "Language",
+    "genre": "Genre",
+    "selectGenre": "-- Select a genre --",
+    "targetAudience": "Target Audience",
+    "selectAudience": "-- Select target audience --",
+    "shareWithCommunity": "Share with community",
+    "communityDescription": "When enabled, your project will be displayed in the public community gallery. Others can discover your work and give feedback."
+  },
+  "genres": {
+    "fantasy": "Fantasy",
+    "scifi": "Science Fiction",
+    "romance": "Romance",
+    "thriller": "Thriller",
+    "mystery": "Mystery/Crime",
+    "historical": "Historical",
+    "contemporary": "Contemporary Fiction",
+    "horror": "Horror",
+    "young_adult": "Young Adult",
+    "children": "Children's Book",
+    "non_fiction": "Non-Fiction",
+    "other": "Other"
+  },
+  "audiences": {
+    "children": "Children (6-12)",
+    "young_adult": "Young Adult (13-17)",
+    "adult": "Adults (18+)",
+    "all_ages": "All Ages"
+  },
+  "characters": {
+    "title": "Characters",
+    "newCharacter": "New Character",
+    "unnamed": "Unnamed",
+    "tabs": {
+      "basic": "Basic",
+      "appearance": "Appearance",
+      "personality": "Personality",
+      "background": "Background",
+      "skills": "Skills",
+      "relationships": "Relationships",
+      "notes": "Notes"
+    }
+  },
+  "world": {
+    "title": "World",
+    "newElement": "New Element",
+    "tabs": {
+      "details": "Details",
+      "relationships": "Relationships",
+      "notes": "Notes"
+    }
+  },
+  "writing": {
+    "chapters": "Chapters",
+    "scenes": "Scenes",
+    "newChapter": "New Chapter",
+    "newScene": "New Scene",
+    "wordCount": "{{count}} words"
+  }
+}

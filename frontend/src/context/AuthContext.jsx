@@ -1,5 +1,6 @@
 import { createContext, useState, useContext, useEffect } from 'react'
 import axios from 'axios'
+import i18n from '../i18n'
 
 const AuthContext = createContext(null)
 
@@ -13,9 +14,14 @@ export function AuthProvider({ children }) {
     const savedUser = localStorage.getItem('user')
 
     if (token && savedUser) {
-      setUser(JSON.parse(savedUser))
+      const userData = JSON.parse(savedUser)
+      setUser(userData)
       // Token in axios defaults setzen
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
+      // Set i18n language from user preference
+      if (userData.language) {
+        i18n.changeLanguage(userData.language)
+      }
     }
 
     setLoading(false)
@@ -26,6 +32,10 @@ export function AuthProvider({ children }) {
     localStorage.setItem('user', JSON.stringify(userData))
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
     setUser(userData)
+    // Set i18n language
+    if (userData.language) {
+      i18n.changeLanguage(userData.language)
+    }
   }
 
   const logout = () => {
@@ -39,6 +49,10 @@ export function AuthProvider({ children }) {
     const updatedUser = { ...user, ...userData }
     localStorage.setItem('user', JSON.stringify(updatedUser))
     setUser(updatedUser)
+    // Update i18n language if language changed
+    if (userData.language) {
+      i18n.changeLanguage(userData.language)
+    }
   }
 
   const value = {

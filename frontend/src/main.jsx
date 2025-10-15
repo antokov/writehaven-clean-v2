@@ -27,6 +27,7 @@ import "./bookexport.css";
 import './landing.css';
 
 import axios from 'axios'
+import './i18n' // Initialize i18n
 
 // API Base URL Configuration
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '')
