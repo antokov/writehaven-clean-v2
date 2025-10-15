@@ -414,7 +414,9 @@ def create_app():
             "user": {
                 "id": user.id,
                 "email": user.email,
-                "name": user.name
+                "name": user.name,
+                "language": user.language or "de",
+                "created_at": user.created_at.isoformat() if user.created_at else None
             }
         }, 201)
 
@@ -438,7 +440,9 @@ def create_app():
             "user": {
                 "id": user.id,
                 "email": user.email,
-                "name": user.name
+                "name": user.name,
+                "language": user.language or "de",
+                "created_at": user.created_at.isoformat() if user.created_at else None
             }
         })
 

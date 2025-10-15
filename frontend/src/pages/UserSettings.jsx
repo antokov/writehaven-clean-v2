@@ -14,7 +14,7 @@ const LANGUAGES = [
 ]
 
 export default function UserSettings() {
-  const { user } = useAuth()
+  const { user, updateUser } = useAuth()
   const [language, setLanguage] = useState('de')
   const [isSaving, setIsSaving] = useState(false)
   const [lastSavedAt, setLastSavedAt] = useState(null)
@@ -31,9 +31,13 @@ export default function UserSettings() {
 
     try {
       await axios.put('/api/auth/update-language', { language: newLanguage })
+      // Aktualisiere den User im Context und localStorage
+      updateUser({ language: newLanguage })
       setLastSavedAt(new Date())
     } catch (error) {
       console.error('Fehler beim Speichern der Sprache:', error)
+      // Bei Fehler zurücksetzen
+      setLanguage(user?.language || 'de')
     } finally {
       setIsSaving(false)
     }
