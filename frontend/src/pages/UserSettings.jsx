@@ -10,11 +10,7 @@ const LANGUAGES = [
   { code: 'es', name: 'Español' },
   { code: 'fr', name: 'Français' },
   { code: 'it', name: 'Italiano' },
-  { code: 'pt', name: 'Português' },
-  { code: 'ru', name: 'Русский' },
-  { code: 'zh', name: '中文' },
-  { code: 'ja', name: '日本語' },
-  { code: 'ar', name: 'العربية' }
+  { code: 'pt', name: 'Português' }
 ]
 
 export default function UserSettings() {

@@ -462,7 +462,7 @@ def create_app():
         language = data.get("language", "de")
 
         # Validiere Sprache
-        valid_languages = ['de', 'en', 'es', 'fr', 'it', 'pt', 'ru', 'zh', 'ja', 'ar']
+        valid_languages = ['de', 'en', 'es', 'fr', 'it', 'pt']
         if language not in valid_languages:
             return bad_request("Ungültige Sprache")
 
