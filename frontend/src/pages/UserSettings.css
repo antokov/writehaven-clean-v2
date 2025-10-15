@@ -81,6 +81,34 @@
   white-space: nowrap;
 }
 
+.settings-select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  min-width: 200px;
+}
+
+.settings-select:hover {
+  border-color: var(--brand);
+}
+
+.settings-select:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(123, 200, 164, 0.1);
+}
+
+.settings-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .settings-divider {
   height: 1px;
   background: var(--border);

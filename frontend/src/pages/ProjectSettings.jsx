@@ -2,6 +2,19 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 
+const LANGUAGES = [
+  { code: 'de', name: 'Deutsch' },
+  { code: 'en', name: 'English' },
+  { code: 'es', name: 'Español' },
+  { code: 'fr', name: 'Français' },
+  { code: 'it', name: 'Italiano' },
+  { code: 'pt', name: 'Português' },
+  { code: 'ru', name: 'Русский' },
+  { code: 'zh', name: '中文' },
+  { code: 'ja', name: '日本語' },
+  { code: 'ar', name: 'العربية' }
+]
+
 function getPath(obj, path, fallback = "") {
   if (!obj) return fallback;
   let cur = obj;
@@ -95,6 +108,21 @@ const SettingsEditor = React.memo(function SettingsEditor({
         <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label className="small muted">Sprache</label>
+              <select
+                className="input"
+                value={getPath(settings, "language", "de")}
+                onChange={e => onChangeSetting("language", e.target.value)}
+              >
+                {LANGUAGES.map(lang => (
+                  <option key={lang.code} value={lang.code}>
+                    {lang.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label className="small muted">Genre</label>
               <select
                 className="input"
@@ -130,17 +158,6 @@ const SettingsEditor = React.memo(function SettingsEditor({
                 <option value="adult">Erwachsene (18+)</option>
                 <option value="all_ages">Alle Altersgruppen</option>
               </select>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label className="small muted">Geschätzter Umfang (Wörter)</label>
-              <input
-                type="number"
-                className="input"
-                value={getPath(settings, "estimated_word_count", "")}
-                onChange={e => onChangeSetting("estimated_word_count", e.target.value)}
-                placeholder="z.B. 80000"
-              />
             </div>
           </div>
         </div>

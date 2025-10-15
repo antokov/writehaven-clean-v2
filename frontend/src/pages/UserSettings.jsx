@@ -1,9 +1,45 @@
+import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { User, Mail, Calendar } from 'lucide-react'
+import { User, Mail, Calendar, Globe } from 'lucide-react'
+import axios from 'axios'
 import './UserSettings.css'
+
+const LANGUAGES = [
+  { code: 'de', name: 'Deutsch' },
+  { code: 'en', name: 'English' },
+  { code: 'es', name: 'Español' },
+  { code: 'fr', name: 'Français' },
+  { code: 'it', name: 'Italiano' },
+  { code: 'pt', name: 'Português' },
+  { code: 'ru', name: 'Русский' },
+  { code: 'zh', name: '中文' },
+  { code: 'ja', name: '日本語' },
+  { code: 'ar', name: 'العربية' }
+]
 
 export default function UserSettings() {
   const { user } = useAuth()
+  const [language, setLanguage] = useState('de')
+  const [isSaving, setIsSaving] = useState(false)
+
+  useEffect(() => {
+    if (user?.language) {
+      setLanguage(user.language)
+    }
+  }, [user])
+
+  const handleLanguageChange = async (newLanguage) => {
+    setLanguage(newLanguage)
+    setIsSaving(true)
+
+    try {
+      await axios.put('/api/auth/update-language', { language: newLanguage })
+    } catch (error) {
+      console.error('Fehler beim Speichern der Sprache:', error)
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Unbekannt'
@@ -56,6 +92,32 @@ export default function UserSettings() {
               <div className="settings-item-content">
                 <div className="settings-item-label">Konto erstellt</div>
                 <div className="settings-item-value">{formatDate(user?.created_at)}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <h2 className="section-title">Präferenzen</h2>
+          <div className="settings-card">
+            <div className="settings-item">
+              <div className="settings-item-icon">
+                <Globe size={20} />
+              </div>
+              <div className="settings-item-content">
+                <div className="settings-item-label">Sprache</div>
+                <select
+                  className="settings-select"
+                  value={language}
+                  onChange={(e) => handleLanguageChange(e.target.value)}
+                  disabled={isSaving}
+                >
+                  {LANGUAGES.map(lang => (
+                    <option key={lang.code} value={lang.code}>
+                      {lang.name}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>

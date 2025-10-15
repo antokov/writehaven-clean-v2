@@ -216,6 +216,7 @@ def create_app():
         settings_columns = [
             ("author", "TEXT DEFAULT ''"),
             ("genre", "TEXT DEFAULT ''"),
+            ("language", "TEXT DEFAULT 'de'"),
             ("target_audience", "TEXT DEFAULT ''"),
             ("estimated_word_count", "INTEGER DEFAULT 0"),
             ("cover_image_url", "TEXT DEFAULT ''"),
@@ -252,6 +253,36 @@ def create_app():
             except Exception as e:
                 db.session.rollback()
                 print(f"Migration error for project.{col_name} (can be ignored if column exists): {str(e)}")
+
+        # --- Migration: user.language nachrüsten ---
+        try:
+            db.session.rollback()
+
+            check_query = """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM information_schema.columns
+                    WHERE table_name = 'user'
+                    AND column_name = 'language'
+                )
+            """
+            try:
+                has_column = db.session.execute(text(check_query)).scalar()
+            except Exception:
+                # Fallback für SQLite
+                has_column = db.session.execute(text("""
+                    SELECT 1
+                    FROM pragma_table_info('user')
+                    WHERE name = 'language'
+                """)).scalar()
+
+            if not has_column:
+                db.session.execute(text("ALTER TABLE user ADD COLUMN language TEXT DEFAULT 'de'"))
+                db.session.commit()
+                print("Migration: user.language column added")
+        except Exception as e:
+            db.session.rollback()
+            print(f"Migration error for user.language (can be ignored if column exists): {str(e)}")
 
     # ---------- SPA fallback (für Deep Links) ----------
     @app.before_request
@@ -418,7 +449,31 @@ def create_app():
         return ok({
             "id": current_user.id,
             "email": current_user.email,
-            "name": current_user.name
+            "name": current_user.name,
+            "language": current_user.language or "de",
+            "created_at": current_user.created_at.isoformat() if current_user.created_at else None
+        })
+
+    @app.put("/api/auth/update-language")
+    @token_required
+    def update_user_language(current_user):
+        """Update user language preference"""
+        data = request.get_json() or {}
+        language = data.get("language", "de")
+
+        # Validiere Sprache
+        valid_languages = ['de', 'en', 'es', 'fr', 'it', 'pt', 'ru', 'zh', 'ja', 'ar']
+        if language not in valid_languages:
+            return bad_request("Ungültige Sprache")
+
+        current_user.language = language
+        db.session.commit()
+
+        return ok({
+            "id": current_user.id,
+            "email": current_user.email,
+            "name": current_user.name,
+            "language": current_user.language
         })
 
     # ---------- Projects ----------
@@ -811,6 +866,7 @@ def create_app():
             "title": p.title,
             "author": p.author or "",
             "genre": p.genre or "",
+            "language": p.language or "de",
             "description": p.description or "",
             "target_audience": p.target_audience or "",
             "estimated_word_count": p.estimated_word_count or 0,
@@ -829,6 +885,7 @@ def create_app():
         if "title" in data: p.title = data["title"]
         if "author" in data: p.author = data["author"]
         if "genre" in data: p.genre = data["genre"]
+        if "language" in data: p.language = data["language"]
         if "description" in data: p.description = data["description"]
         if "target_audience" in data: p.target_audience = data["target_audience"]
         if "estimated_word_count" in data: p.estimated_word_count = int(data["estimated_word_count"] or 0)
@@ -840,6 +897,7 @@ def create_app():
             "title": p.title,
             "author": p.author,
             "genre": p.genre,
+            "language": p.language,
             "description": p.description,
             "target_audience": p.target_audience,
             "estimated_word_count": p.estimated_word_count,
