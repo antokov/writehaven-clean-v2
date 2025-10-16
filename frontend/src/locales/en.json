@@ -9,7 +9,59 @@
     "search": "Search",
     "loading": "Loading...",
     "saved": "Saved {{time}}",
-    "language": "Language"
+    "language": "Language",
+    "backToHome": "Back to home",
+    "error": {
+      "generic": "Something went wrong"
+    },
+    "open": "Open",
+    "rename": "Rename",
+    "remove": "Remove"
+  },
+  "writing": {
+    "structure": "Structure",
+    "addChapter": "Add chapter",
+    "addScene": "Add scene",
+    "showChapter": "Show chapter",
+    "noScenes": "No scenes",
+    "noContent": "No content",
+    "sceneTitlePlaceholder": "Scene title",
+    "sceneContentPlaceholder": "Your text…",
+    "chapterTitlePlaceholder": "Chapter title",
+    "savedAt": "Saved {{time}}",
+    "noChapters": "No chapters yet.",
+    "createFirstChapter": "Create a chapter first.",
+    "deleteChapter": "Delete chapter",
+    "deleteChapterMessage_zero": "Do you really want to delete the chapter \"{{title}}\"? This action cannot be undone.",
+    "deleteChapterMessage_one": "Do you really want to delete the chapter \"{{title}}\"? All {{count}} scene will be deleted as well. This action cannot be undone.",
+    "deleteChapterMessage_other": "Do you really want to delete the chapter \"{{title}}\"? All {{count}} scenes will be deleted as well. This action cannot be undone.",
+    "deleteScene": "Delete scene",
+    "deleteSceneMessage": "Do you really want to delete the scene \"{{title}}\"? This action cannot be undone.",
+    "defaultChapterTitle": "Chapter {{index}}",
+    "defaultSceneTitle": "Scene {{index}}",
+    "noScenesYet": "No scenes yet.",
+    "createFirstScene": "Create the first one.",
+    "errors": {
+      "projectNotFound": "Project not found. Please create a project first.",
+      "loadFailedGeneric": "Loading failed. Please try again later.",
+      "sceneLoadFailed": "Could not load scene.",
+      "chapterCreateFailed": "Could not create chapter.",
+      "sceneCreateFailed": "Could not create scene.",
+      "chapterDeleteFailed": "Could not delete chapter.",
+      "sceneDeleteFailed": "Could not delete scene.",
+      "scenesLoadFailed": "Could not load scenes.",
+      "characterCreateFailed": "Could not create character.",
+      "worldElementCreateFailed": "Could not create world element."
+    },
+    "chapters": "Chapters",
+    "scenes": "Scenes",
+    "newChapter": "New Chapter",
+    "newScene": "New Scene",
+    "wordCount": "{{count}} words",
+    "context": {
+      "createCharacter": "New character",
+      "createWorldElement": "New world element"
+    }
   },
   "auth": {
     "login": "Log in",
@@ -18,7 +70,6 @@
     "email": "Email",
     "password": "Password",
     "name": "Name",
-    "welcomeBack": "Welcome back",
     "createAccount": "Create account",
     "loginPrompt": "Log in to your account",
     "registerPrompt": "Create a new account",
@@ -37,13 +88,37 @@
   "dashboard": {
     "title": "My Projects",
     "newProject": "New Project",
-    "importWord": "Import Word Document",
-    "projectTitle": "Project Title",
+    "empty": "No projects yet — click the plus card to create one.",
+    "openAria": "Open {{title}}",
+    "loadFailed": "Could not load projects. Is the backend running?",
+    "createFailed": "Failed to create project.",
+    "renameTitle": "Rename project",
+    "renameMessage": "Enter a new name for the project:",
+    "renameFailed": "Rename failed.",
+    "deleteTitle": "Delete project",
+    "deleteMessage": "Do you really want to delete the project \"{{title}}\"? This action cannot be undone.",
+    "deleteFailed": "Delete failed.",
+    "importWord": "Import Word document",
+    "projectTitle": "Project title",
     "projectDescription": "Description (optional)",
-    "wordFile": "Word Document",
+    "wordFile": "Word document",
     "selectFile": "Select file",
-    "createProject": "Create Project",
-    "importing": "Importing..."
+    "createProject": "Create project",
+    "importing": "Importing...",
+    "createModal": {
+      "title": "Create new project",
+      "projectNameLabel": "Project name",
+      "projectNamePlaceholder": "My new book",
+      "wordUploadLabel": "Upload Word document (optional)",
+      "wordUploadHint": "Upload an existing Word document. It will be automatically split into chapters and scenes.",
+      "chooseWord": "Choose Word document",
+      "extHint": ".doc or .docx",
+      "invalidFileType": "Please select a Word document (.docx or .doc).",
+      "fileSizeKB": "{{size}} KB",
+      "removeFile": "Remove file",
+      "create": "Create",
+      "creating": "Creating..."
+    }
   },
   "settings": {
     "title": "Settings",
@@ -96,8 +171,11 @@
   },
   "characters": {
     "title": "Characters",
+    "add": "Add character",
     "newCharacter": "New Character",
     "unnamed": "Unnamed",
+    "empty": "No characters yet",
+    "noneSelected": "No character selected.",
     "tabs": {
       "basic": "Basic",
       "appearance": "Appearance",
@@ -106,6 +184,115 @@
       "skills": "Skills",
       "relationships": "Relationships",
       "notes": "Notes"
+    },
+    "skills": {
+      "label": "Skills",
+      "placeholder": "Press ENTER or COMMA to add a new skill…"
+    },
+    "relations": {
+      "new": "New relation",
+      "existing": "Existing relations",
+      "targetPlaceholder": "– Target character –",
+      "notePlaceholder": "Note (optional)",
+      "add": "Add",
+      "none": "No relations",
+      "types": {
+        "friendship": "Friendship",
+        "family": "Family",
+        "enmity": "Enmity",
+        "mentor": "Mentor",
+        "student": "Student",
+        "business_partner": "Business partner",
+        "rivalry": "Rivalry",
+        "romance": "Romance"
+      }
+    },
+    "graph": {
+      "title": "Relations graph",
+      "open": "Open relations graph",
+      "loading": "Loading relations...",
+      "hint": "Click a character to jump to their profile",
+      "emptyTitle": "No relations yet",
+      "emptySub": "Add relations in the “Relationships” tab to visualize them here."
+    },
+    "worldGraph": {
+      "title": "Relations overview — all characters",
+      "open": "Mind map (all relations)",
+      "loading": "Loading relations...",
+      "count": "{{count}} {{count, plural, one {relation} other {relations}}}",
+      "none": "No relations"
+    },
+    "notes": {
+      "label": "Notes"
+    },
+    "delete": {
+      "title": "Delete character",
+      "message": "Do you really want to delete the character \"{{name}}\"? This action cannot be undone."
+    },
+    "errors": {
+      "createFailed": "Could not create character.",
+      "deleteFailed": "Could not delete character."
+    },
+    "attributes": {
+      "add": "Add attribute",
+      "select": "Select attribute",
+      "removeField": "Remove field"
+    },
+    "fields": {
+      "basic": {
+        "first_name": "First name",
+        "last_name": "Last name",
+        "nickname": "Nickname(s)",
+        "gender": "Gender",
+        "birth_date": "Date of birth",
+        "birth_date_placeholder": "e.g. 1st Winter Moon / 2001-12-05",
+        "age": "Age",
+        "residence": "Residence",
+        "nationality": "Nationality",
+        "religion": "Religion"
+      },
+      "appearance": {
+        "hair_color": "Hair color",
+        "eye_color": "Eye color",
+        "height": "Height",
+        "weight": "Weight",
+        "build": "Build / Body type",
+        "skin_color": "Skin color",
+        "distinguishing_features": "Distinguishing features",
+        "clothing_style": "Clothing style",
+        "accessories": "Accessories",
+        "body_language": "Body language / Posture",
+        "general_impression": "Overall impression & details"
+      },
+      "personality": {
+        "traits": "Prominent traits (positive & negative)",
+        "strengths": "Strengths",
+        "weaknesses": "Weaknesses",
+        "intelligence": "Intelligence",
+        "humor": "Sense of humor",
+        "interests": "Interests",
+        "likes": "Tastes & likes",
+        "dislikes": "Dislikes",
+        "morals": "Moral views & inner stance",
+        "fears": "Phobias & fears",
+        "goals_motivation": "Goals & motivation",
+        "unresolved_problems": "Unresolved problems",
+        "inner_conflicts": "Inner conflicts",
+        "wishes_dreams": "(Secret) wishes & dreams",
+        "patterns_in_situations": "Recurring behaviours",
+        "traumas": "Traumas",
+        "setbacks": "Painful setbacks & events",
+        "experiences": "Meaningful experiences",
+        "view_on_life": "View on life",
+        "view_on_death": "View on death"
+      },
+      "background": {
+        "family_background": "Family background",
+        "childhood": "Childhood",
+        "education": "Education",
+        "occupation": "Occupation",
+        "social_status": "Social status"
+      }
     }
   },
   "world": {
@@ -116,12 +303,5 @@
       "relationships": "Relationships",
       "notes": "Notes"
     }
-  },
-  "writing": {
-    "chapters": "Chapters",
-    "scenes": "Scenes",
-    "newChapter": "New Chapter",
-    "newScene": "New Scene",
-    "wordCount": "{{count}} words"
   }
 }

@@ -1,56 +1,58 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import axios from 'axios'
-import { useAuth } from '../context/AuthContext'
-import logoUrl from '../assets/logo.png'
-import backgroundUrl from '../assets/background.png'
-import './Login.css'
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
+import logoUrl from '../assets/logo.png';
+import backgroundUrl from '../assets/background.png';
+import { useTranslation } from 'react-i18next';
+import './Login.css';
 
 export default function Login() {
-  const [isLogin, setIsLogin] = useState(true)
+  const { t } = useTranslation();
+  const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     name: ''
-  })
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const navigate = useNavigate()
-  const { login } = useAuth()
+  });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
+    e.preventDefault();
+    setError('');
+    setLoading(true);
 
     try {
-      const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register'
-      const response = await axios.post(endpoint, formData)
+      const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
+      const response = await axios.post(endpoint, formData);
 
       // Token und User über AuthContext speichern
-      login(response.data.token, response.data.user)
+      login(response.data.token, response.data.user);
 
       // Zur App navigieren
-      navigate('/app')
+      navigate('/app');
     } catch (err) {
-      setError(err.response?.data?.error || 'Ein Fehler ist aufgetreten')
+      setError(err.response?.data?.error || t('common.error.generic'));
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
-    })
-  }
+    });
+  };
 
   const toggleMode = () => {
-    setIsLogin(!isLogin)
-    setError('')
-    setFormData({ email: '', password: '', name: '' })
-  }
+    setIsLogin(!isLogin);
+    setError('');
+    setFormData({ email: '', password: '', name: '' });
+  };
 
   return (
     <div className="login-container">
@@ -59,42 +61,42 @@ export default function Login() {
       <div className="login-card">
         <div className="login-header">
           <img src={logoUrl} alt="Writehaven" className="login-logo" />
-          <h1>{isLogin ? 'Willkommen zurück' : 'Konto erstellen'}</h1>
-          <p>{isLogin ? 'Melde dich bei deinem Konto an' : 'Erstelle ein neues Konto'}</p>
+          <h1>{isLogin ? t('auth.welcomeBack') : t('auth.createAccount')}</h1>
+          <p>{isLogin ? t('auth.loginPrompt') : t('auth.registerPrompt')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">
           {!isLogin && (
             <div className="form-group">
-              <label htmlFor="name">Name</label>
+              <label htmlFor="name">{t('auth.name')}</label>
               <input
                 type="text"
                 id="name"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                placeholder="Dein Name"
+                placeholder={t('auth.namePlaceholder')}
                 autoComplete="name"
               />
             </div>
           )}
 
           <div className="form-group">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">{t('auth.email')}</label>
             <input
               type="email"
               id="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
-              placeholder="deine@email.de"
+              placeholder={t('auth.emailPlaceholder')}
               required
               autoComplete="email"
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Passwort</label>
+            <label htmlFor="password">{t('auth.password')}</label>
             <input
               type="password"
               id="password"
@@ -104,10 +106,10 @@ export default function Login() {
               placeholder="••••••••"
               required
               minLength={6}
-              autoComplete={isLogin ? "current-password" : "new-password"}
+              autoComplete={isLogin ? 'current-password' : 'new-password'}
             />
             {!isLogin && (
-              <small>Mindestens 6 Zeichen</small>
+              <small>{t('auth.passwordHint')}</small>
             )}
           </div>
 
@@ -118,26 +120,30 @@ export default function Login() {
           )}
 
           <button type="submit" className="btn primary" disabled={loading}>
-            {loading ? 'Lädt...' : (isLogin ? 'Anmelden' : 'Registrieren')}
+            {loading ? t('common.loading') : t(isLogin ? 'auth.login' : 'auth.register')}
           </button>
         </form>
 
         <div className="login-footer">
           <button onClick={toggleMode} className="link-button">
             {isLogin ? (
-              <>Noch kein Konto? <strong>Registrieren</strong></>
+              <>
+                {t('auth.dontHaveAccount')} <strong>{t('auth.register')}</strong>
+              </>
             ) : (
-              <>Bereits registriert? <strong>Anmelden</strong></>
+              <>
+                {t('auth.alreadyHaveAccount')} <strong>{t('auth.login')}</strong>
+              </>
             )}
           </button>
         </div>
 
         <div className="login-back">
           <Link to="/" className="link-button">
-            ← Zurück zur Startseite
+            ← {t('common.backToHome')}
           </Link>
         </div>
       </div>
     </div>
-  )
+  );
 }

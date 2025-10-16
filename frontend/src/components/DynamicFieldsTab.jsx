@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { BsPlus, BsX } from 'react-icons/bs';
+import { useTranslation } from 'react-i18next';
 import './DynamicFieldsTab.css';
 
 /**
@@ -12,6 +13,8 @@ import './DynamicFieldsTab.css';
  * @param {function} getPath - Helper zum Lesen von verschachtelten Werten
  */
 export default function DynamicFieldsTab({ fieldConfig, profile, onChangeProfilePath, getPath }) {
+  const { t } = useTranslation();
+
   const [activeFields, setActiveFields] = useState(() => {
     // Initialisiere activeFields mit Feldern, die bereits Werte haben
     const initial = new Set();
@@ -46,11 +49,15 @@ export default function DynamicFieldsTab({ fieldConfig, profile, onChangeProfile
     const Icon = field.icon;
     const value = getPath(profile, field.path, '');
 
+    // << HIER kommen deine zwei Zeilen hin >>
+    const labelText = field.labelKey ? t(field.labelKey) : field.label;
+    const placeholderText = field.placeholderKey ? t(field.placeholderKey) : (field.placeholder || '');
+
     return (
       <div key={field.key} className="dynamic-field">
         <label className="dynamic-field-label">
           <Icon className="field-icon" />
-          <span>{field.label}</span>
+          <span>{labelText}</span>
         </label>
         <div className="dynamic-field-input-wrapper">
           {field.type === 'textarea' ? (
@@ -58,7 +65,7 @@ export default function DynamicFieldsTab({ fieldConfig, profile, onChangeProfile
               className="input textarea"
               value={value}
               onChange={e => onChangeProfilePath(field.path, e.target.value)}
-              placeholder={field.placeholder || ''}
+              placeholder={placeholderText}
               rows={field.rows || 3}
             />
           ) : (
@@ -67,7 +74,7 @@ export default function DynamicFieldsTab({ fieldConfig, profile, onChangeProfile
               type="text"
               value={value}
               onChange={e => onChangeProfilePath(field.path, e.target.value)}
-              placeholder={field.placeholder || ''}
+              placeholder={placeholderText}
             />
           )}
           {canRemove && (
@@ -75,7 +82,7 @@ export default function DynamicFieldsTab({ fieldConfig, profile, onChangeProfile
               type="button"
               className="remove-field-btn"
               onClick={() => removeField(field.key, field.path)}
-              title="Feld entfernen"
+              title={t('characters.attributes.removeField', 'Feld entfernen')}
             >
               <BsX />
             </button>
@@ -112,13 +119,13 @@ export default function DynamicFieldsTab({ fieldConfig, profile, onChangeProfile
             onClick={() => setShowAddMenu(!showAddMenu)}
           >
             <BsPlus className="add-icon" />
-            <span>Merkmal hinzufügen</span>
+            <span>{t('characters.attributes.add', 'Merkmal hinzufügen')}</span>
           </button>
 
           {showAddMenu && (
             <div className="add-field-menu">
               <div className="add-field-menu-header">
-                <span>Merkmal auswählen</span>
+                <span>{t('characters.attributes.select', 'Merkmal auswählen')}</span>
                 <button className="close-menu-btn" onClick={() => setShowAddMenu(false)}>
                   <BsX />
                 </button>
@@ -126,6 +133,7 @@ export default function DynamicFieldsTab({ fieldConfig, profile, onChangeProfile
               <div className="add-field-menu-list">
                 {availableFields.map(field => {
                   const Icon = field.icon;
+                  const labelText = field.labelKey ? t(field.labelKey) : field.label;
                   return (
                     <button
                       key={field.key}
@@ -134,7 +142,7 @@ export default function DynamicFieldsTab({ fieldConfig, profile, onChangeProfile
                       onClick={() => addField(field.key)}
                     >
                       <Icon className="menu-item-icon" />
-                      <span>{field.label}</span>
+                      <span>{labelText}</span>
                     </button>
                   );
                 })}

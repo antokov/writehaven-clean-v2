@@ -17,18 +17,27 @@ import ReactFlow, {
   Panel,
 } from "reactflow";
 import "reactflow/dist/style.css";
+import { useTranslation } from "react-i18next";
 
-// Relationship types and their reciprocal mappings
-const REL_TYPES = [
-  "Freundschaft",
-  "Familie",
-  "Feindschaft",
-  "Mentor",
-  "Schüler",
-  "Geschäftspartner",
-  "Konkurrenz",
-  "Liebesbeziehung"
+/* ---------------- Beziehungen (i18n Labels, deutsche Werte bleiben gespeichert) ---------------- */
+export const REL_OPTIONS = [
+  { value: "Freundschaft",     key: "friendship" },
+  { value: "Familie",          key: "family" },
+  { value: "Feindschaft",      key: "enmity" },
+  { value: "Mentor",           key: "mentor" },
+  { value: "Schüler",          key: "student" },
+  { value: "Geschäftspartner", key: "business_partner" },
+  { value: "Konkurrenz",       key: "rivalry" },
+  { value: "Liebesbeziehung",  key: "romance" },
 ];
+
+// Falls andere Stellen noch REL_TYPES nutzen:
+export const REL_TYPES = REL_OPTIONS.map(o => o.value);
+
+export function relTypeLabel(type, t) {
+  const opt = REL_OPTIONS.find(o => o.value === type);
+  return opt ? t(`characters.relations.types.${opt.key}`) : type;
+}
 
 const RECIPROCAL = {
   "Freundschaft": "Freundschaft",
@@ -79,12 +88,12 @@ function uniqBy(arr, keyFn) {
   });
 }
 
-/** Get display name for character in list */
-function displayNameForList(ch, activeId, draftFullName) {
-  if (ch.id === activeId && draftFullName && draftFullName !== "Unbenannt") {
+/** Get display name for character in list (i18n-aware) */
+function displayNameForList(ch, activeId, draftFullName, unnamedLabel) {
+  if (ch.id === activeId && draftFullName) {
     return draftFullName;
   }
-  return ch.name || "Unbenannt";
+  return ch.name || unnamedLabel;
 }
 
 /** Get reciprocal relation types for deletion */
@@ -98,23 +107,23 @@ function counterpartTypesForDelete(type) {
 
 /** Name from profile */
 function fullNameFromProfile(profile) {
-  const firstName = getPath(profile, "basic.first_name", "").trim();
-  const lastName = getPath(profile, "basic.last_name", "").trim();
+  const firstName = (getPath(profile, "basic.first_name", "") || "").trim();
+  const lastName  = (getPath(profile, "basic.last_name", "") || "").trim();
   if (firstName && lastName) return `${firstName} ${lastName}`;
   if (firstName) return firstName;
   if (lastName) return lastName;
-  return "Unbenannt";
+  return "";
 }
 
-/** Tabs */
+/** Tabs (Labels via i18n) */
 const TABS = [
-  { key: "basic",        label: "Grunddaten" },
-  { key: "appearance",   label: "Äußeres" },
-  { key: "personality",  label: "Persönlichkeit" },
-  { key: "relations",    label: "Hintergrund" },
-  { key: "skills",       label: "Fähigkeiten" },
-  { key: "links",        label: "Beziehungen" },
-  { key: "notes",        label: "Notizen" },
+  { key: "basic",        labelKey: "characters.tabs.basic" },
+  { key: "appearance",   labelKey: "characters.tabs.appearance" },
+  { key: "personality",  labelKey: "characters.tabs.personality" },
+  { key: "relations",    labelKey: "characters.tabs.background" },   // = Hintergrund
+  { key: "skills",       labelKey: "characters.tabs.skills" },
+  { key: "links",        labelKey: "characters.tabs.relationships" }, // = Beziehungen
+  { key: "notes",        labelKey: "characters.tabs.notes" },
 ];
 
 /* ---------------- Modal ---------------- */
@@ -153,42 +162,56 @@ function Modal({ open, onClose, title, children }) {
 
 /* ---------------- Beziehungen UI ---------------- */
 function RelationEditor({ currentId, allCharacters, onAdd }) {
+  const { t } = useTranslation();
   const [targetId, setTargetId] = useState("");
-  const [type, setType] = useState(REL_TYPES[0]);
+  const [type, setType] = useState(REL_OPTIONS[0].value);
   const [note, setNote] = useState("");
   const options = (allCharacters || []).filter(c => c.id !== currentId);
 
   return (
     <div style={{display:"grid", gridTemplateColumns:"1.5fr 1.2fr 1fr auto", gap:8}}>
       <select className="input" value={targetId} onChange={e=>setTargetId(Number(e.target.value))}>
-        <option value="">– Ziel-Charakter –</option>
+        <option value="">{t('characters.relations.targetPlaceholder')}</option>
         {options.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
       </select>
+
       <select className="input" value={type} onChange={e=>setType(e.target.value)}>
-        {REL_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+        {REL_OPTIONS.map(o => (
+          <option key={o.value} value={o.value}>
+            {t(`characters.relations.types.${o.key}`)}
+          </option>
+        ))}
       </select>
-      <input className="input" placeholder="Notiz (optional)" value={note} onChange={e=>setNote(e.target.value)} />
-      <button className="btn" onClick={()=> targetId && onAdd({ target_id: targetId, type, note })}>Hinzufügen</button>
+
+      <input
+        className="input"
+        placeholder={t('characters.relations.notePlaceholder')}
+        value={note}
+        onChange={e=>setNote(e.target.value)}
+      />
+      <button className="btn" onClick={()=> targetId && onAdd({ target_id: targetId, type, note })}>
+        {t('characters.relations.add')}
+      </button>
     </div>
   );
 }
 
 function RelationList({ profile, allCharacters, onRemove }) {
+  const { t } = useTranslation();
   const links = getPath(profile, "links.connections", []) || [];
-  // Filtere Beziehungen zu gelöschten Charakteren heraus
   const validLinks = links.filter(r => allCharacters.find(c => c.id === r.target_id));
 
-  if (!validLinks.length) return <div className="small muted">Keine Verbindungen</div>;
+  if (!validLinks.length) return <div className="small muted">{t('characters.relations.none')}</div>;
   const nameOf = (id) => (allCharacters.find(c=>c.id===id)?.name) || `#${id}`;
   return (
     <ul style={{listStyle:"none", padding:0, margin:0, display:"grid", gap:8}}>
       {validLinks.map((r, idx) => (
         <li key={idx} className="panel" style={{padding:"8px 10px"}}>
           <div style={{display:"flex", alignItems:"center", gap:12}}>
-            <div style={{flex: "0 0 auto"}}>{r.type}</div>
+            <div style={{flex: "0 0 auto"}}>{relTypeLabel(r.type, t)}</div>
             <div style={{flex: "1 1 auto", color:"var(--muted, #64748b)"}}>{nameOf(r.target_id)}</div>
             {r.note ? <div className="small muted" style={{flex:"2 1 auto"}}>{r.note}</div> : null}
-            <button className="btn btn-danger-quiet" onClick={()=>onRemove(r)}>Entfernen</button>
+            <button className="btn btn-danger-quiet" onClick={()=>onRemove(r)}>{t('common.delete')}</button>
           </div>
         </li>
       ))}
@@ -198,10 +221,10 @@ function RelationList({ profile, allCharacters, onRemove }) {
 
 /* ------------- Graph Modal (Ego-Netz) mit ReactFlow ------------- */
 function RelationsGraphModal({ open, onClose, activeId, allCharacters, onJumpToCharacter }) {
+  const { t } = useTranslation();
   const [graphData, setGraphData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Lade Beziehungen direkt aus der API
   useEffect(() => {
     if (!open || !activeId) return;
 
@@ -211,30 +234,16 @@ function RelationsGraphModal({ open, onClose, activeId, allCharacters, onJumpToC
         const response = await axios.get(`/api/characters/${activeId}`);
         const charProfile = response.data?.profile || {};
 
-        console.log("Vollständiges Profil:", charProfile);
-        console.log("Links-Objekt:", charProfile.links);
-
-        // Versuche verschiedene mögliche Pfade
         let rels = getPath(charProfile, "links.connections", []) || [];
-
         if (rels.length === 0 && charProfile.links) {
-          // Fallback: Schaue ob links direkt ein Array ist
-          if (Array.isArray(charProfile.links)) {
-            rels = charProfile.links;
-          }
+          if (Array.isArray(charProfile.links)) rels = charProfile.links;
         }
 
-        console.log("Gefundene Beziehungen:", rels);
-
-        // Filtere Beziehungen zu gelöschten Charakteren heraus
         const validRels = rels.filter(r => allCharacters.find(c => c.id === r.target_id));
-        console.log("Valide Beziehungen (nach Filter):", validRels);
-
         const nameOf = (id) => allCharacters.find(c => c.id === id)?.name || `#${id}`;
         const nodes = [];
         const edges = [];
 
-        // Center node (ego)
         nodes.push({
           id: String(activeId),
           type: "default",
@@ -260,7 +269,6 @@ function RelationsGraphModal({ open, onClose, activeId, allCharacters, onJumpToC
           const x = radius * Math.cos(angle);
           const y = radius * Math.sin(angle);
 
-          // Add connected node
           nodes.push({
             id: String(r.target_id),
             type: "default",
@@ -278,9 +286,9 @@ function RelationsGraphModal({ open, onClose, activeId, allCharacters, onJumpToC
           });
 
           const isSym = (RECIPROCAL[r.type] || r.type) === r.type;
-          const label = r.note ? `${r.type} (${r.note})` : r.type;
+          const typeLabel = relTypeLabel(r.type, t);
+          const label = r.note ? `${typeLabel} (${r.note})` : typeLabel;
 
-          // Add edge
           edges.push({
             id: `e-${activeId}-${r.target_id}`,
             source: String(activeId),
@@ -302,7 +310,6 @@ function RelationsGraphModal({ open, onClose, activeId, allCharacters, onJumpToC
           });
         });
 
-        console.log("Graph-Daten erstellt - Nodes:", nodes.length, "Edges:", edges.length);
         setGraphData({ nodes, edges });
       } catch (error) {
         console.error("Fehler beim Laden der Beziehungen:", error);
@@ -313,15 +320,13 @@ function RelationsGraphModal({ open, onClose, activeId, allCharacters, onJumpToC
     }
 
     loadRelations();
-  }, [open, activeId, allCharacters]);
+  }, [open, activeId, allCharacters, t]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
-  // Update nodes and edges when graphData changes
   useEffect(() => {
     if (graphData) {
-      console.log("Setze Nodes und Edges:", graphData.nodes.length, graphData.edges.length);
       setNodes(graphData.nodes);
       setEdges(graphData.edges);
     }
@@ -329,18 +334,17 @@ function RelationsGraphModal({ open, onClose, activeId, allCharacters, onJumpToC
 
   const onNodeClick = useCallback((_event, node) => {
     const id = Number(node.id);
-    console.log("Node geklickt:", id, "Aktuell:", activeId);
     if (id) {
       onJumpToCharacter(id);
       onClose();
     }
-  }, [activeId, onJumpToCharacter, onClose]);
+  }, [onJumpToCharacter, onClose]);
 
   if (!open) return null;
 
   if (loading) {
     return (
-      <Modal open={open} onClose={onClose} title="Beziehungs-Graph">
+      <Modal open={open} onClose={onClose} title={t('characters.graph.title')}>
         <div style={{
           display: "flex",
           alignItems: "center",
@@ -349,7 +353,7 @@ function RelationsGraphModal({ open, onClose, activeId, allCharacters, onJumpToC
           color: "#64748b",
           background: "#f8fafc"
         }}>
-          Lade Beziehungen...
+          {t('characters.graph.loading')}
         </div>
       </Modal>
     );
@@ -358,7 +362,7 @@ function RelationsGraphModal({ open, onClose, activeId, allCharacters, onJumpToC
   const hasRelations = edges.length > 0;
 
   return (
-    <Modal open={open} onClose={onClose} title="Beziehungs-Graph">
+    <Modal open={open} onClose={onClose} title={t('characters.graph.title')}>
       <div style={{ width: "100%", height: "100%", background: "#f8fafc" }}>
         {hasRelations ? (
           <ReactFlow
@@ -386,7 +390,7 @@ function RelationsGraphModal({ open, onClose, activeId, allCharacters, onJumpToC
                 fontSize: 13,
                 color: "#64748b"
               }}>
-                Klicke auf einen Charakter um zu seinem Profil zu springen
+                {t('characters.graph.hint')}
               </div>
             </Panel>
           </ReactFlow>
@@ -401,9 +405,9 @@ function RelationsGraphModal({ open, onClose, activeId, allCharacters, onJumpToC
             color: "#64748b"
           }}>
             <div style={{ fontSize: 48 }}>🔗</div>
-            <div style={{ fontSize: 16, fontWeight: 500 }}>Keine Beziehungen vorhanden</div>
+            <div style={{ fontSize: 16, fontWeight: 500 }}>{t('characters.graph.emptyTitle')}</div>
             <div style={{ fontSize: 14, textAlign: "center", maxWidth: 400 }}>
-              Füge Beziehungen im Tab "Beziehungen" hinzu, um sie hier zu visualisieren.
+              {t('characters.graph.emptySub')}
             </div>
           </div>
         )}
@@ -414,9 +418,9 @@ function RelationsGraphModal({ open, onClose, activeId, allCharacters, onJumpToC
 
 /* ------------- Radiale Beziehungs-Übersicht ------------- */
 function WorldGraphModal({ open, onClose, characters, activeId, onJumpToCharacter }) {
+  const { t } = useTranslation();
   const [relationData, setRelationData] = useState(null);
 
-  // Daten laden/aufbauen
   useEffect(() => {
     if (!open) return;
 
@@ -431,11 +435,9 @@ function WorldGraphModal({ open, onClose, characters, activeId, onJumpToCharacte
           })))
         );
 
-        // Gruppiere alle Beziehungen nach Charakteren
         const relMap = new Map();
         for (const p of profiles) {
           const rels = getPath(p.profile, "links.connections", []) || [];
-          // Filtere nur Beziehungen zu existierenden Charakteren
           const validRels = rels
             .filter(r => profiles.find(pr => pr.id === r.target_id))
             .map(r => ({
@@ -461,7 +463,7 @@ function WorldGraphModal({ open, onClose, characters, activeId, onJumpToCharacte
 
   if (!relationData) {
     return (
-      <Modal open={open} onClose={onClose} title="Beziehungsübersicht – alle Charaktere">
+      <Modal open={open} onClose={onClose} title={t('characters.worldGraph.title')}>
         <div style={{
           display: "flex",
           alignItems: "center",
@@ -470,7 +472,7 @@ function WorldGraphModal({ open, onClose, characters, activeId, onJumpToCharacte
           color: "#64748b",
           background: "#f8fafc"
         }}>
-          Lade Beziehungen...
+          {t('characters.worldGraph.loading')}
         </div>
       </Modal>
     );
@@ -479,7 +481,7 @@ function WorldGraphModal({ open, onClose, characters, activeId, onJumpToCharacte
   const { profiles, relMap } = relationData;
 
   return (
-    <Modal open={open} onClose={onClose} title="Beziehungsübersicht – alle Charaktere">
+    <Modal open={open} onClose={onClose} title={t('characters.worldGraph.title')}>
       <div style={{
         width: "100%",
         height: "100%",
@@ -548,7 +550,7 @@ function WorldGraphModal({ open, onClose, characters, activeId, onJumpToCharacte
                       padding: "2px 8px",
                       borderRadius: 12
                     }}>
-                      {relations.length} {relations.length === 1 ? "Beziehung" : "Beziehungen"}
+                      {t('characters.worldGraph.count', { count: relations.length })}
                     </div>
                   )}
                 </div>
@@ -578,18 +580,11 @@ function WorldGraphModal({ open, onClose, characters, activeId, onJumpToCharacte
                           onJumpToCharacter(rel.targetId);
                         }}
                       >
-                        <span style={{
-                          color: "#0ea5e9",
-                          fontWeight: 500,
-                          flexShrink: 0
-                        }}>
-                          {rel.type}
+                        <span style={{ color: "#0ea5e9", fontWeight: 500, flexShrink: 0 }}>
+                          {relTypeLabel(rel.type, t)}
                         </span>
                         <span style={{ color: "#64748b" }}>→</span>
-                        <span style={{
-                          color: "#0f172a",
-                          fontWeight: 500
-                        }}>
+                        <span style={{ color: "#0f172a", fontWeight: 500 }}>
                           {rel.targetName}
                         </span>
                         {rel.note && (
@@ -614,7 +609,7 @@ function WorldGraphModal({ open, onClose, characters, activeId, onJumpToCharacte
                     color: "#94a3b8",
                     fontStyle: "italic"
                   }}>
-                    Keine Beziehungen
+                    {t('characters.worldGraph.none')}
                   </div>
                 )}
               </div>
@@ -631,19 +626,22 @@ const CharacterEditor = React.memo(function CharacterEditor({
   characterId, profile, onChangeProfilePath, activeTab, setActiveTab,
   lastSavedAt, allCharacters, onAddRelation, onRemoveRelation, onOpenGraph
 }) {
+  const { t } = useTranslation();
   return (
     <div className="panel" key={characterId}>
       <nav className="tabs tabs-inline">
-        {TABS.map(t => (
+        {TABS.map(ti => (
           <button
-            key={t.key}
+            key={ti.key}
             type="button"
-            className={`tab ${activeTab === t.key ? "active" : ""}`}
-            onClick={() => setActiveTab(t.key)}
-          >{t.label}</button>
+            className={`tab ${activeTab === ti.key ? "active" : ""}`}
+            onClick={() => setActiveTab(ti.key)}
+          >
+            {t(ti.labelKey)}
+          </button>
         ))}
         <div className="tabs-meta">
-          {lastSavedAt ? <>Gespeichert {lastSavedAt.toLocaleTimeString()}</> : "—"}
+          {lastSavedAt ? <>{t('common.saved', { time: lastSavedAt.toLocaleTimeString() })}</> : "—"}
         </div>
       </nav>
 
@@ -669,10 +667,10 @@ const CharacterEditor = React.memo(function CharacterEditor({
         <div className="form-grid">
           <div className="form-row" style={{ gridColumn: "span 12" }}>
             <div className="form-field">
-              <label className="small muted">Fähigkeiten</label>
+              <label className="small muted">{t('characters.skills.label')}</label>
               <textarea
                 className="textarea"
-                placeholder="Drücke ENTER oder KOMMA um eine neue Fähigkeit hinzuzufügen..."
+                placeholder={t('characters.skills.placeholder')}
                 value={getPath(profile, "skills.input", "")}
                 onChange={e => {
                   const val = e.target.value;
@@ -731,7 +729,7 @@ const CharacterEditor = React.memo(function CharacterEditor({
                         lineHeight: 1,
                         padding: 0
                       }}
-                      title="Entfernen"
+                      title={t('common.delete')}
                     >×</button>
                   </span>
                 ))}
@@ -754,7 +752,7 @@ const CharacterEditor = React.memo(function CharacterEditor({
         <div className="form-grid">
           <div className="form-row" style={{ gridColumn: "span 12", display:"flex", alignItems:"center" }}>
             <div className="form-field" style={{flex:1}}>
-              <label className="small muted">Neue Verbindung</label>
+              <label className="small muted">{t('characters.relations.new')}</label>
               <RelationEditor
                 currentId={characterId}
                 allCharacters={allCharacters}
@@ -765,7 +763,7 @@ const CharacterEditor = React.memo(function CharacterEditor({
 
           <div className="form-row" style={{ gridColumn: "span 12" }}>
             <div className="form-field">
-              <label className="small muted">Bestehende Verbindungen</label>
+              <label className="small muted">{t('characters.relations.existing')}</label>
               <RelationList
                 profile={profile}
                 allCharacters={allCharacters}
@@ -779,8 +777,8 @@ const CharacterEditor = React.memo(function CharacterEditor({
               <button
                 type="button"
                 onClick={onOpenGraph}
-                title="Beziehungs-Graph öffnen"
-                aria-label="Beziehungs-Graph öffnen"
+                title={t('characters.graph.open')}
+                aria-label={t('characters.graph.open')}
                 style={{
                   width: 48,
                   height: 48,
@@ -816,7 +814,7 @@ const CharacterEditor = React.memo(function CharacterEditor({
         <div className="form-grid">
           <div className="form-row" style={{ gridColumn: "span 12" }}>
             <div className="form-field">
-              <label className="small muted">Notizen</label>
+              <label className="small muted">{t('characters.notes.label')}</label>
               <textarea className="textarea"
                 value={getPath(profile, "notes.text", "")}
                 onChange={e => onChangeProfilePath("notes.text", e.target.value)}
@@ -833,6 +831,7 @@ const CharacterEditor = React.memo(function CharacterEditor({
 export default function Characters() {
   const { id } = useParams();
   const { state } = useLocation();
+  const { t } = useTranslation();
   const pid = Number(id);
 
   const [list, setList] = useState([]);
@@ -859,12 +858,11 @@ export default function Characters() {
         const items = r.data || [];
         setList(items);
 
-        // Prüfe ob ein neuer Charakter aus dem navigation state übergeben wurde (nur einmal)
         const newCharId = state?.newCharacterId;
         if (newCharId && items.find(c => c.id === newCharId) && !hasHandledNewCharacter.current) {
           hasHandledNewCharacter.current = true;
           setActiveId(newCharId);
-          return; // Früher return um weitere Logik zu vermeiden
+          return;
         }
 
         if (!activeId && items.length) {
@@ -885,12 +883,10 @@ export default function Characters() {
       try {
         const r = await axios.get(`/api/characters/${activeId}`);
         if (cancel) return;
-        // Nur setzen wenn wirklich Daten vorhanden sind
         const loadedProfile = r.data?.profile;
         if (loadedProfile && typeof loadedProfile === 'object') {
           setProfile(loadedProfile);
         } else {
-          // Falls keine Daten vorhanden, setze leeres Objekt
           setProfile({});
         }
       } catch (e) {
@@ -967,10 +963,9 @@ export default function Characters() {
   // Autosave
   const saveNow = useCallback(async () => {
     if (!activeId) return;
-    // Nicht speichern während ein Charakter geladen wird
     if (isLoadingRef.current) return;
 
-    const newName = draftFullName || "Neuer Charakter";
+    const newName = draftFullName || t('characters.newCharacter');
     try {
       await axios.patch(`/api/characters/${activeId}`, {
         name: newName,
@@ -991,7 +986,7 @@ export default function Characters() {
       setLastSavedAt(new Date());
       setList(prev => prev.map(c => (c.id === activeId ? { ...c, name: newName } : c)));
     } catch (e) { console.warn("save failed", e); }
-  }, [activeId, profile, draftFullName]);
+  }, [activeId, profile, draftFullName, t]);
 
   useEffect(() => {
     if (!activeId) return;
@@ -1002,23 +997,24 @@ export default function Characters() {
 
   const addCharacter = async () => {
     try {
-      const r = await axios.post(`/api/projects/${pid}/characters`, { name: "Neuer Charakter" });
+      const r = await axios.post(`/api/projects/${pid}/characters`, { name: t('characters.newCharacter') });
       const c = r.data;
       setList(prev => [...prev, c]);
       setActiveId(c.id);
       setProfile({});
     } catch (e) {
       console.error(e);
-      alert("Charakter konnte nicht angelegt werden.");
+      alert(t('characters.errors.createFailed'));
     }
   };
 
   const deleteCharacter = async (cid) => {
     const character = list.find(c => c.id === cid);
     setConfirmModal({
-      title: 'Charakter löschen',
-      message: `Möchtest du den Charakter "${character?.name || 'Unbenannt'}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`,
-      confirmText: 'Löschen',
+      title: t('characters.delete.title'),
+      message: t('characters.delete.message', { name: character?.name || t('characters.unnamed') }),
+      confirmText: t('common.delete'),
+      cancelText: t('common.cancel'),
       variant: 'danger',
       onConfirm: async () => {
         setConfirmModal(null);
@@ -1031,45 +1027,51 @@ export default function Characters() {
           }
         } catch (e) {
           console.error(e);
-          alert("Charakter konnte nicht gelöscht werden.");
+          alert(t('characters.errors.deleteFailed'));
         }
       },
       onCancel: () => setConfirmModal(null)
     });
   };
 
+  const unnamed = t('characters.unnamed');
+
   return (
     <div className="page-wrap characters-page">
       <aside className="side">
         <div className="tree">
           <div className="tree-head">
-            <span className="tree-title">Charaktere</span>
+            <span className="tree-title">{t('characters.title')}</span>
             <button
               className="icon-btn"
-              title="Mindmap (alle Beziehungen)"
+              title={t('characters.worldGraph.open')}
               onClick={() => setShowWorldGraph(true)}
             >
               <TbTopologyStar3 />
             </button>
-            <button className="icon-btn" title="Charakter hinzufügen" onClick={addCharacter}>
+            <button className="icon-btn" title={t('characters.add')} onClick={addCharacter}>
               <BsPlus />
             </button>
           </div>
           <ul className="tree-list">
             {list.map(ch => (
               <li key={ch.id} className={`tree-scene ${activeId === ch.id ? "active" : ""}`}>
-                <div className="tree-row scene-row" onClick={() => setActiveId(ch.id)} title={displayNameForList(ch, activeId, draftFullName)}>
+                <div
+                  className="tree-row scene-row"
+                  onClick={() => setActiveId(ch.id)}
+                  title={displayNameForList(ch, activeId, draftFullName, unnamed)}
+                >
                   <span className="tree-dot" aria-hidden />
-                  <span className="tree-name">{displayNameForList(ch, activeId, draftFullName)}</span>
+                  <span className="tree-name">{displayNameForList(ch, activeId, draftFullName, unnamed)}</span>
                   <div className="row-actions" onClick={e => e.stopPropagation()}>
-                    <button className="icon-btn danger" title="Löschen" onClick={() => deleteCharacter(ch.id)}>
+                    <button className="icon-btn danger" title={t('common.delete')} onClick={() => deleteCharacter(ch.id)}>
                       <BsTrash />
                     </button>
                   </div>
                 </div>
               </li>
             ))}
-            {!list.length && <li className="tree-empty">Noch keine Charaktere</li>}
+            {!list.length && <li className="tree-empty">{t('characters.empty')}</li>}
           </ul>
         </div>
       </aside>
@@ -1077,9 +1079,9 @@ export default function Characters() {
       <main className="main">
         {!activeId ? (
           <div className="panel" style={{ padding: "1rem" }}>
-            <strong>Kein Charakter ausgewählt.</strong><br />
+            <strong>{t('characters.noneSelected')}</strong><br />
             <button className="btn btn-primary-quiet" onClick={addCharacter} style={{ marginTop: 8 }}>
-              + Charakter anlegen
+              + {t('characters.add')}
             </button>
           </div>
         ) : (

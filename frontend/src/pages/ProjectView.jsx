@@ -1,262 +1,267 @@
-import React, { useEffect, useRef, useState } from 'react'
-import axios from 'axios'
-import { useParams, useNavigate } from 'react-router-dom'
-import { BsPlus, BsTrash, BsChevronDown, BsChevronRight } from 'react-icons/bs'
+import React, { useEffect, useRef, useState } from 'react';
+import axios from 'axios';
+import { useParams, useNavigate } from 'react-router-dom';
+import { BsPlus, BsTrash, BsChevronDown, BsChevronRight } from 'react-icons/bs';
 
-import ConfirmModal from '../components/ConfirmModal'
-import TextContextMenu from '../components/TextContextMenu'
+import ConfirmModal from '../components/ConfirmModal';
+import TextContextMenu from '../components/TextContextMenu';
+import { useTranslation } from 'react-i18next';
 
 export default function ProjectView() {
-  const { id } = useParams()
-  const pid = Number(id)
-  const navigate = useNavigate()
+  const { id } = useParams();
+  const pid = Number(id);
+  const navigate = useNavigate();
+  const { t } = useTranslation();
 
-  const [loading, setLoading] = useState(true)
-  const [project, setProject] = useState(null)
-  const [chapters, setChapters] = useState([])
-  const [scenesByChapter, setScenesByChapter] = useState({})
-  const [confirmModal, setConfirmModal] = useState(null)
-  const [contextMenu, setContextMenu] = useState(null) // { x, y, selectedText }
+  const [loading, setLoading] = useState(true);
+  const [project, setProject] = useState(null);
+  const [chapters, setChapters] = useState([]);
+  const [scenesByChapter, setScenesByChapter] = useState({});
+  const [confirmModal, setConfirmModal] = useState(null);
+  const [contextMenu, setContextMenu] = useState(null); // { x, y, selectedText }
 
-  const [activeChapterId, setActiveChapterId] = useState(null)
-  const [activeSceneId, setActiveSceneId] = useState(null)
+  const [activeChapterId, setActiveChapterId] = useState(null);
+  const [activeSceneId, setActiveSceneId] = useState(null);
 
   // Editor (Szene)
-  const [sceneTitle, setSceneTitle] = useState('')
-  const [sceneContent, setSceneContent] = useState('')
-  const [lastSavedAt, setLastSavedAt] = useState(null)
+  const [sceneTitle, setSceneTitle] = useState('');
+  const [sceneContent, setSceneContent] = useState('');
+  const [lastSavedAt, setLastSavedAt] = useState(null);
 
   // Kapitel-Übersicht / -Titel
-  const [chapterTitle, setChapterTitle] = useState('')
-  const [lastChapterSavedAt, setLastChapterSavedAt] = useState(null)
+  const [chapterTitle, setChapterTitle] = useState('');
+  const [lastChapterSavedAt, setLastChapterSavedAt] = useState(null);
 
   // Tree
-  const [expanded, setExpanded] = useState({}) // { [chapterId]: true }
+  const [expanded, setExpanded] = useState({}); // { [chapterId]: true }
 
   // Autosave & Snapshot (Szene)
-  const saveTimer = useRef(null)
-  const snapshotRef = useRef({ id: null, title: '', content: '' })
+  const saveTimer = useRef(null);
+  const snapshotRef = useRef({ id: null, title: '', content: '' });
 
   // Debounce (Kapitel)
-  const chapterSaveTimer = useRef(null)
+  const chapterSaveTimer = useRef(null);
 
   // Race-Schutz für Szenen-Detail-Loads
-  const sceneLoadToken = useRef(0)
+  const sceneLoadToken = useRef(0);
 
   // Vorschau-Cache (Szene-ID -> Text)
-  const [scenePreviewById, setScenePreviewById] = useState({})
+  const [scenePreviewById, setScenePreviewById] = useState({});
 
   /* ----------------------------- Helpers -------------------------------- */
   function clearEditor() {
-    setActiveSceneId(null)
-    setSceneTitle('')
-    setSceneContent('')
-    snapshotRef.current = { id: null, title: '', content: '' }
+    setActiveSceneId(null);
+    setSceneTitle('');
+    setSceneContent('');
+    snapshotRef.current = { id: null, title: '', content: '' };
   }
 
   // exakt ein Kapitel expandieren
   function expandOnly(chapterId) {
-    if (chapterId) setExpanded({ [chapterId]: true })
-    else setExpanded({})
+    if (chapterId) setExpanded({ [chapterId]: true });
+    else setExpanded({});
   }
 
   function patchSceneInTree(chapterId, sceneId, patch) {
     setScenesByChapter(prev => {
-      const arr = prev[chapterId]
-      if (!arr) return prev
-      const idx = arr.findIndex(s => s.id === sceneId)
-      if (idx < 0) return prev
-      const nextArr = arr.slice()
-      nextArr[idx] = { ...nextArr[idx], ...patch }
-      return { ...prev, [chapterId]: nextArr }
-    })
+      const arr = prev[chapterId];
+      if (!arr) return prev;
+      const idx = arr.findIndex(s => s.id === sceneId);
+      if (idx < 0) return prev;
+      const nextArr = arr.slice();
+      nextArr[idx] = { ...nextArr[idx], ...patch };
+      return { ...prev, [chapterId]: nextArr };
+    });
   }
 
   function patchChapterInList(chapterId, patch) {
     setChapters(prev => {
-      const idx = prev.findIndex(c => c.id === chapterId)
-      if (idx < 0) return prev
-      const next = prev.slice()
-      next[idx] = { ...next[idx], ...patch }
-      return next
-    })
+      const idx = prev.findIndex(c => c.id === chapterId);
+      if (idx < 0) return prev;
+      const next = prev.slice();
+      next[idx] = { ...next[idx], ...patch };
+      return next;
+    });
   }
 
   /* --------------------------- Initial Load ----------------------------- */
   useEffect(() => {
-    let cancel = false
+    let cancel = false;
     async function loadAll() {
-      setLoading(true)
+      setLoading(true);
       try {
         const [p, ch] = await Promise.all([
           axios.get(`/api/projects/${pid}`),
           axios.get(`/api/projects/${pid}/chapters`)
-        ])
-        if (cancel) return
+        ]);
+        if (cancel) return;
 
-        setProject(p.data)
-        const chs = ch.data || []
-        setChapters(chs)
+        setProject(p.data);
+        const chs = ch.data || [];
+        setChapters(chs);
 
         if (chs.length) {
-          const chapterId = chs[0].id
-          setActiveChapterId(chapterId)
-          setChapterTitle(chs[0].title || '')
-          expandOnly(chapterId)
+          const chapterId = chs[0].id;
+          setActiveChapterId(chapterId);
+          setChapterTitle(chs[0].title || '');
+          expandOnly(chapterId);
 
-          const r = await axios.get(`/api/chapters/${chapterId}/scenes`)
-          if (cancel) return
-          const scenes = r.data || []
-          setScenesByChapter(prev => ({ ...prev, [chapterId]: scenes }))
-          clearEditor() // Start in der Kapitel-Übersicht
+          const r = await axios.get(`/api/chapters/${chapterId}/scenes`);
+          if (cancel) return;
+          const scenes = r.data || [];
+          setScenesByChapter(prev => ({ ...prev, [chapterId]: scenes }));
+          clearEditor(); // Start in der Kapitel-Übersicht
         } else {
-          setActiveChapterId(null)
-          expandOnly(null)
-          clearEditor()
+          setActiveChapterId(null);
+          expandOnly(null);
+          clearEditor();
         }
       } catch (err) {
-        console.error('Load failed', err)
-        alert(err?.response?.status === 404
-          ? 'Projekt nicht gefunden. Bitte zuerst ein Projekt anlegen.'
-          : 'Laden fehlgeschlagen. Bitte später erneut versuchen.')
+        console.error('Load failed', err);
+        alert(
+          err?.response?.status === 404
+            ? t('writing.errors.projectNotFound')
+            : t('writing.errors.loadFailedGeneric')
+        );
       } finally {
-        if (!cancel) setLoading(false)
+        if (!cancel) setLoading(false);
       }
     }
-    loadAll()
-    return () => { cancel = true }
-  }, [pid])
+    loadAll();
+    return () => { cancel = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pid]);
 
   /* --------------------------- Szene speichern -------------------------- */
   async function saveSceneNow(id, title, content) {
-    if (!id) return
+    if (!id) return;
     try {
-      await axios.put(`/api/scenes/${id}`, { title, content })
-      snapshotRef.current = { id, title, content }
-      setLastSavedAt(new Date())
-      if (activeChapterId) patchSceneInTree(activeChapterId, id, { title })
-      const txt = (content || '').replace(/\s+/g, ' ').trim()
-      setScenePreviewById(prev => ({ ...prev, [id]: txt }))
+      await axios.put(`/api/scenes/${id}`, { title, content });
+      snapshotRef.current = { id, title, content };
+      setLastSavedAt(new Date());
+      if (activeChapterId) patchSceneInTree(activeChapterId, id, { title });
+      const txt = (content || '').replace(/\s+/g, ' ').trim();
+      setScenePreviewById(prev => ({ ...prev, [id]: txt }));
     } catch (err) {
-      console.warn('Save failed', err)
+      console.warn('Save failed', err);
     }
   }
 
   async function flushIfDirty() {
-    const snap = snapshotRef.current
+    const snap = snapshotRef.current;
     if (activeSceneId && (sceneTitle !== snap.title || sceneContent !== snap.content)) {
-      if (saveTimer.current) clearTimeout(saveTimer.current)
-      await saveSceneNow(activeSceneId, sceneTitle, sceneContent)
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      await saveSceneNow(activeSceneId, sceneTitle, sceneContent);
     }
   }
 
   function scheduleSceneAutosave() {
-    const snap = snapshotRef.current
-    if (!activeSceneId) return
+    const snap = snapshotRef.current;
+    if (!activeSceneId) return;
     const changed =
-      activeSceneId !== snap.id || sceneTitle !== snap.title || sceneContent !== snap.content
-    if (!changed) return
-    if (saveTimer.current) clearTimeout(saveTimer.current)
+      activeSceneId !== snap.id || sceneTitle !== snap.title || sceneContent !== snap.content;
+    if (!changed) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      saveSceneNow(activeSceneId, sceneTitle, sceneContent)
-    }, 600)
+      saveSceneNow(activeSceneId, sceneTitle, sceneContent);
+    }, 600);
   }
 
   useEffect(() => {
-    scheduleSceneAutosave()
-    return () => clearTimeout(saveTimer.current)
+    scheduleSceneAutosave();
+    return () => clearTimeout(saveTimer.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSceneId, sceneTitle, sceneContent])
+  }, [activeSceneId, sceneTitle, sceneContent]);
 
   useEffect(() => {
-    if (!activeSceneId) return
-    const txt = (sceneContent || '').replace(/\s+/g, ' ').trim()
-    setScenePreviewById(prev => ({ ...prev, [activeSceneId]: txt }))
-  }, [activeSceneId, sceneContent])
+    if (!activeSceneId) return;
+    const txt = (sceneContent || '').replace(/\s+/g, ' ').trim();
+    setScenePreviewById(prev => ({ ...prev, [activeSceneId]: txt }));
+  }, [activeSceneId, sceneContent]);
 
   useEffect(() => {
     return () => {
-      const snap = snapshotRef.current
+      const snap = snapshotRef.current;
       if (activeSceneId && (sceneTitle !== snap.title || sceneContent !== snap.content)) {
-        saveSceneNow(activeSceneId, sceneTitle, sceneContent)
+        saveSceneNow(activeSceneId, sceneTitle, sceneContent);
       }
-    }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, []);
 
   /* ----------------------- Kapitel speichern (Titel) --------------------- */
   async function saveChapterNow(chapterId, title) {
-    if (!chapterId) return
+    if (!chapterId) return;
     try {
-      await axios.put(`/api/chapters/${chapterId}`, { title })
-      setLastChapterSavedAt(new Date())
-      patchChapterInList(chapterId, { title })
+      await axios.put(`/api/chapters/${chapterId}`, { title });
+      setLastChapterSavedAt(new Date());
+      patchChapterInList(chapterId, { title });
     } catch (err) {
-      console.warn('Chapter save failed', err)
+      console.warn('Chapter save failed', err);
     }
   }
 
   useEffect(() => {
-    if (!activeChapterId) return
-    if (chapterSaveTimer.current) clearTimeout(chapterSaveTimer.current)
+    if (!activeChapterId) return;
+    if (chapterSaveTimer.current) clearTimeout(chapterSaveTimer.current);
     chapterSaveTimer.current = setTimeout(() => {
-      saveChapterNow(activeChapterId, chapterTitle)
-    }, 500)
-    return () => clearTimeout(chapterSaveTimer.current)
+      saveChapterNow(activeChapterId, chapterTitle);
+    }, 500);
+    return () => clearTimeout(chapterSaveTimer.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeChapterId, chapterTitle])
+  }, [activeChapterId, chapterTitle]);
 
   /* ----------------------- Szenen-Previews laden ------------------------ */
   async function ensurePreviews(chapterId) {
-    const list = scenesByChapter[chapterId] || []
-    const missing = list.filter(s => scenePreviewById[s.id] === undefined)
-    if (!missing.length) return
+    const list = scenesByChapter[chapterId] || [];
+    const missing = list.filter(s => scenePreviewById[s.id] === undefined);
+    if (!missing.length) return;
     try {
       const results = await Promise.all(
         missing.map(s => axios.get(`/api/scenes/${s.id}`))
-      )
+      );
       setScenePreviewById(prev => {
-        const next = { ...prev }
+        const next = { ...prev };
         results.forEach((r, i) => {
-          const sc = r.data || {}
-          const txt = (sc.content || '').replace(/\s+/g, ' ').trim()
-          next[missing[i].id] = txt
-        })
-        return next
-      })
+          const sc = r.data || {};
+          const txt = (sc.content || '').replace(/\s+/g, ' ').trim();
+          next[missing[i].id] = txt;
+        });
+        return next;
+      });
     } catch (err) {
-      console.warn('Preview fetch failed', err)
+      console.warn('Preview fetch failed', err);
     }
   }
 
   useEffect(() => {
     if (activeChapterId && !activeSceneId) {
-      ensurePreviews(activeChapterId)
+      ensurePreviews(activeChapterId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeChapterId, activeSceneId, scenesByChapter])
+  }, [activeChapterId, activeSceneId, scenesByChapter]);
 
   /* -------------------------- Scene open (Detail) ----------------------- */
   async function openScene(chapterId, sceneId) {
-    await flushIfDirty()
-    setActiveChapterId(chapterId)
-    expandOnly(chapterId)
+    await flushIfDirty();
+    setActiveChapterId(chapterId);
+    expandOnly(chapterId);
 
-    const token = ++sceneLoadToken.current
+    const token = ++sceneLoadToken.current;
     try {
-      const r = await axios.get(`/api/scenes/${sceneId}`)
-      if (sceneLoadToken.current !== token) return
-      const s = r.data || {}
-      setActiveSceneId(s.id)
-      setSceneTitle(s.title || '')
-      setSceneContent(s.content || '')
-      snapshotRef.current = { id: s.id, title: s.title || '', content: s.content || '' }
-      patchSceneInTree(chapterId, s.id, { title: s.title || '' })
-      const txt = (s.content || '').replace(/\s+/g, ' ').trim()
-      setScenePreviewById(prev => ({ ...prev, [s.id]: txt }))
+      const r = await axios.get(`/api/scenes/${sceneId}`);
+      if (sceneLoadToken.current !== token) return;
+      const s = r.data || {};
+      setActiveSceneId(s.id);
+      setSceneTitle(s.title || '');
+      setSceneContent(s.content || '');
+      snapshotRef.current = { id: s.id, title: s.title || '', content: s.content || '' };
+      patchSceneInTree(chapterId, s.id, { title: s.title || '' });
+      const txt = (s.content || '').replace(/\s+/g, ' ').trim();
+      setScenePreviewById(prev => ({ ...prev, [s.id]: txt }));
     } catch (err) {
-      console.error('Scene load failed', err)
-      alert('Szene konnte nicht geladen werden.')
+      console.error('Scene load failed', err);
+      alert(t('writing.errors.sceneLoadFailed'));
     }
   }
 
@@ -264,157 +269,157 @@ export default function ProjectView() {
   async function addChapter() {
     try {
       const r = await axios.post(`/api/projects/${pid}/chapters`, {
-        title: `Kapitel ${chapters.length + 1}`,
+        title: t('writing.defaultChapterTitle', { index: chapters.length + 1 }),
         order_index: chapters.length
-      })
-      const newCh = [...chapters, r.data]
-      setChapters(newCh)
-      setActiveChapterId(r.data.id)
-      setChapterTitle(r.data.title || '')
-      setScenesByChapter(prev => ({ ...prev, [r.data.id]: [] }))
-      expandOnly(r.data.id)
-      clearEditor()
+      });
+      const newCh = [...chapters, r.data];
+      setChapters(newCh);
+      setActiveChapterId(r.data.id);
+      setChapterTitle(r.data.title || '');
+      setScenesByChapter(prev => ({ ...prev, [r.data.id]: [] }));
+      expandOnly(r.data.id);
+      clearEditor();
     } catch (err) {
-      console.error(err)
-      alert('Kapitel konnte nicht angelegt werden.')
+      console.error(err);
+      alert(t('writing.errors.chapterCreateFailed'));
     }
   }
 
   async function addSceneForChapter(chapterId) {
-    const cur = scenesByChapter[chapterId] || []
+    const cur = scenesByChapter[chapterId] || [];
     try {
-      await flushIfDirty()
+      await flushIfDirty();
       const r = await axios.post(`/api/chapters/${chapterId}/scenes`, {
-        title: `Szene ${cur.length + 1}`,
+        title: t('writing.defaultSceneTitle', { index: cur.length + 1 }),
         order_index: cur.length
-      })
-      const updated = { ...scenesByChapter, [chapterId]: [...cur, r.data] }
-      setScenesByChapter(updated)
-      expandOnly(chapterId)
-      setScenePreviewById(prev => ({ ...prev, [r.data.id]: '' }))
-      await openScene(chapterId, r.data.id)
+      });
+      const updated = { ...scenesByChapter, [chapterId]: [...cur, r.data] };
+      setScenesByChapter(updated);
+      expandOnly(chapterId);
+      setScenePreviewById(prev => ({ ...prev, [r.data.id]: '' }));
+      await openScene(chapterId, r.data.id);
     } catch (err) {
-      console.error(err)
-      alert('Szene konnte nicht angelegt werden.')
+      console.error(err);
+      alert(t('writing.errors.sceneCreateFailed'));
     }
   }
 
   async function deleteChapter(chapterId) {
-    const chapter = chapters.find(c => c.id === chapterId)
-    const scenes = scenesByChapter[chapterId] || []
+    const chapter = chapters.find(c => c.id === chapterId);
+    const scenes = scenesByChapter[chapterId] || [];
     setConfirmModal({
-      title: 'Kapitel löschen',
-      message: `Möchtest du das Kapitel "${chapter?.title || ''}" wirklich löschen? ${scenes.length > 0 ? `Alle ${scenes.length} Szene(n) werden ebenfalls gelöscht.` : ''} Diese Aktion kann nicht rückgängig gemacht werden.`,
-      confirmText: 'Löschen',
+      title: t('writing.deleteChapter'),
+      message: t('writing.deleteChapterMessage', { title: chapter?.title || '', count: scenes.length }),
+      confirmText: t('common.delete'),
       variant: 'danger',
       onConfirm: async () => {
-        setConfirmModal(null)
+        setConfirmModal(null);
         try {
-          await axios.delete(`/api/chapters/${chapterId}`)
-          const newChapters = chapters.filter(c => c.id !== chapterId)
-          setChapters(newChapters)
+          await axios.delete(`/api/chapters/${chapterId}`);
+          const newChapters = chapters.filter(c => c.id !== chapterId);
+          setChapters(newChapters);
           setScenesByChapter(prev => {
-            const copy = { ...prev }
-            delete copy[chapterId]
-            return copy
-          })
+            const copy = { ...prev };
+            delete copy[chapterId];
+            return copy;
+          });
           if (activeChapterId === chapterId) {
             if (newChapters.length) {
-              const next = newChapters[0]
-              const r = await axios.get(`/api/chapters/${next.id}/scenes`)
-              setScenesByChapter(prev => ({ ...prev, [next.id]: r.data || [] }))
-              setActiveChapterId(next.id)
-              setChapterTitle(next.title || '')
-              expandOnly(next.id)
-              clearEditor()
+              const next = newChapters[0];
+              const r = await axios.get(`/api/chapters/${next.id}/scenes`);
+              setScenesByChapter(prev => ({ ...prev, [next.id]: r.data || [] }));
+              setActiveChapterId(next.id);
+              setChapterTitle(next.title || '');
+              expandOnly(next.id);
+              clearEditor();
             } else {
-              setActiveChapterId(null)
-              setChapterTitle('')
-              expandOnly(null)
-              clearEditor()
+              setActiveChapterId(null);
+              setChapterTitle('');
+              expandOnly(null);
+              clearEditor();
             }
           } else {
-            expandOnly(activeChapterId)
+            expandOnly(activeChapterId);
           }
         } catch (err) {
-          console.error(err)
-          alert('Kapitel konnte nicht gelöscht werden.')
+          console.error(err);
+          alert(t('writing.errors.chapterDeleteFailed'));
         }
       },
       onCancel: () => setConfirmModal(null)
-    })
+    });
   }
 
   async function deleteScene(sceneId, chapterId) {
-    const scenes = scenesByChapter[chapterId] || []
-    const scene = scenes.find(s => s.id === sceneId)
+    const scenes = scenesByChapter[chapterId] || [];
+    const scene = scenes.find(s => s.id === sceneId);
     setConfirmModal({
-      title: 'Szene löschen',
-      message: `Möchtest du die Szene "${scene?.title || ''}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`,
-      confirmText: 'Löschen',
+      title: t('writing.deleteScene'),
+      message: t('writing.deleteSceneMessage', { title: scene?.title || '' }),
+      confirmText: t('common.delete'),
       variant: 'danger',
       onConfirm: async () => {
-        setConfirmModal(null)
+        setConfirmModal(null);
         try {
-          await axios.delete(`/api/scenes/${sceneId}`)
-          const list = scenesByChapter[chapterId] || []
-          const filtered = list.filter(s => s.id !== sceneId)
-          setScenesByChapter(prev => ({ ...prev, [chapterId]: filtered }))
+          await axios.delete(`/api/scenes/${sceneId}`);
+          const list = scenesByChapter[chapterId] || [];
+          const filtered = list.filter(s => s.id !== sceneId);
+          setScenesByChapter(prev => ({ ...prev, [chapterId]: filtered }));
           setScenePreviewById(prev => {
-            const next = { ...prev }; delete next[sceneId]; return next
-          })
+            const next = { ...prev }; delete next[sceneId]; return next;
+          });
           if (activeSceneId === sceneId) {
-            clearEditor()
+            clearEditor();
           }
         } catch (err) {
-          console.error(err)
-          alert('Szene konnte nicht gelöscht werden.')
+          console.error(err);
+          alert(t('writing.errors.sceneDeleteFailed'));
         }
       },
       onCancel: () => setConfirmModal(null)
-    })
+    });
   }
 
   async function loadScenesForChapter(chapterId) {
     try {
-      const r = await axios.get(`/api/chapters/${chapterId}/scenes`)
-      const scenes = r.data || []
-      setScenesByChapter(prev => ({ ...prev, [chapterId]: scenes }))
+      const r = await axios.get(`/api/chapters/${chapterId}/scenes`);
+      const scenes = r.data || [];
+      setScenesByChapter(prev => ({ ...prev, [chapterId]: scenes }));
     } catch (err) {
-      console.error(err)
-      alert('Szenen konnten nicht geladen werden.')
+      console.error(err);
+      alert(t('writing.errors.scenesLoadFailed'));
     }
   }
 
   // Kapitel-Klick → Überblick, nur dieses Kapitel offen
   async function onSelectChapter(chapterId) {
-    await flushIfDirty()
-    setActiveChapterId(chapterId)
-    const ch = chapters.find(c => c.id === chapterId)
-    setChapterTitle(ch?.title || '')
-    if (!scenesByChapter[chapterId]) await loadScenesForChapter(chapterId)
-    expandOnly(chapterId)
-    clearEditor()
+    await flushIfDirty();
+    setActiveChapterId(chapterId);
+    const ch = chapters.find(c => c.id === chapterId);
+    setChapterTitle(ch?.title || '');
+    if (!scenesByChapter[chapterId]) await loadScenesForChapter(chapterId);
+    expandOnly(chapterId);
+    clearEditor();
   }
 
   function onSelectScene(chapterId, scene) {
-    openScene(chapterId, scene.id)
+    openScene(chapterId, scene.id);
   }
 
   /* ----------------------- Kontextmenü-Handler -------------------------- */
   const handleContextMenu = (e) => {
-    const selection = window.getSelection()
-    const selectedText = selection.toString().trim()
+    const selection = window.getSelection();
+    const selectedText = selection.toString().trim();
 
     if (selectedText && selectedText.length > 0) {
-      e.preventDefault()
+      e.preventDefault();
       setContextMenu({
         x: e.clientX,
         y: e.clientY,
         selectedText
-      })
+      });
     }
-  }
+  };
 
   const handleCreateCharacter = async (name) => {
     try {
@@ -425,73 +430,66 @@ export default function ProjectView() {
             first_name: name
           }
         }
-      })
-      const characterId = r.data.id
-      // Navigiere zum Charakter-Tab und übergebe die ID im state
-      navigate(`/app/project/${pid}/characters`, {
-        state: { newCharacterId: characterId }
-      })
+      });
+      const characterId = r.data.id;
+      navigate(`/app/project/${pid}/characters`, { state: { newCharacterId: characterId } });
     } catch (err) {
-      console.error('Create character failed', err)
-      alert('Charakter konnte nicht erstellt werden.')
+      console.error('Create character failed', err);
+      alert(t('writing.errors.characterCreateFailed'));
     }
-  }
+  };
 
   const handleCreateWorldElement = async (name) => {
     try {
       const r = await axios.post(`/api/projects/${pid}/world`, {
-        title: name,  // API erwartet "title" nicht "name"
+        title: name,  // API erwartet "title"
         kind: 'Ort',
         summary: ''
-      })
-      const elementId = r.data.id
-      // Navigiere zum Welt-Tab und übergebe die ID im state
-      navigate(`/app/project/${pid}/world`, {
-        state: { newElementId: elementId }
-      })
+      });
+      const elementId = r.data.id;
+      navigate(`/app/project/${pid}/world`, { state: { newElementId: elementId } });
     } catch (err) {
-      console.error('Create world element failed', err)
-      alert('Weltelement konnte nicht erstellt werden.')
+      console.error('Create world element failed', err);
+      alert(t('writing.errors.worldElementCreateFailed'));
     }
-  }
+  };
 
   /* ------------------------------- Render ------------------------------- */
   if (loading) {
-    return <div className="page-wrap"><div className="panel"><h3>Lade…</h3></div></div>
+    return <div className="page-wrap"><div className="panel"><h3>{t('common.loading')}</h3></div></div>;
   }
 
-  const scenesOfActive = activeChapterId ? (scenesByChapter[activeChapterId] || []) : []
+  const scenesOfActive = activeChapterId ? (scenesByChapter[activeChapterId] || []) : [];
 
   return (
     <div className="page-wrap">
       <aside className="side">
         <div className="tree">
           <div className="tree-head">
-            <span className="tree-title">Struktur</span>
-            <button className="icon-btn" title="Kapitel hinzufügen" onClick={addChapter}>
+            <span className="tree-title">{t('writing.structure')}</span>
+            <button className="icon-btn" title={t('writing.addChapter')} onClick={addChapter}>
               <BsPlus />
             </button>
           </div>
 
           <ul className="tree-list">
             {chapters.map(ch => {
-              const open = !!expanded[ch.id]
-              const scenes = scenesByChapter[ch.id] || []
+              const open = !!expanded[ch.id];
+              const scenes = scenesByChapter[ch.id] || [];
               return (
                 <li key={ch.id} className={`tree-chapter ${activeChapterId === ch.id ? 'active' : ''}`}>
                   <div className="tree-row chapter-row" onClick={() => onSelectChapter(ch.id)}>
                     <button
                       className="icon-btn caret"
                       onClick={async (e) => {
-                        e.stopPropagation()
-                        // Caret fokussiert dieses Kapitel, alle anderen zu
-                        if (!scenesByChapter[ch.id]) await loadScenesForChapter(ch.id)
-                        setActiveChapterId(ch.id)
-                        setChapterTitle(ch.title || '')
-                        expandOnly(ch.id)
-                        clearEditor()
+                        e.stopPropagation();
+                        if (!scenesByChapter[ch.id]) await loadScenesForChapter(ch.id);
+                        setActiveChapterId(ch.id);
+                        setChapterTitle(ch.title || '');
+                        expandOnly(ch.id);
+                        clearEditor();
                       }}
-                      title={open ? 'Kapitel anzeigen' : 'Kapitel anzeigen'}
+                      title={t('writing.showChapter')}
                     >
                       {open ? <BsChevronDown /> : <BsChevronRight />}
                     </button>
@@ -499,10 +497,10 @@ export default function ProjectView() {
                     <span className="tree-name">{ch.title}</span>
 
                     <div className="row-actions" onClick={e => e.stopPropagation()}>
-                      <button className="icon-btn" title="Szene hinzufügen" onClick={() => addSceneForChapter(ch.id)}>
+                      <button className="icon-btn" title={t('writing.addScene')} onClick={() => addSceneForChapter(ch.id)}>
                         <BsPlus />
                       </button>
-                      <button className="icon-btn danger" title="Kapitel löschen" onClick={() => deleteChapter(ch.id)}>
+                      <button className="icon-btn danger" title={t('writing.deleteChapter')} onClick={() => deleteChapter(ch.id)}>
                         <BsTrash />
                       </button>
                     </div>
@@ -516,18 +514,18 @@ export default function ProjectView() {
                             <span className="tree-dot" aria-hidden />
                             <span className="tree-name">{s.title}</span>
                             <div className="row-actions" onClick={e => e.stopPropagation()}>
-                              <button className="icon-btn danger" title="Szene löschen" onClick={() => deleteScene(s.id, ch.id)}>
+                              <button className="icon-btn danger" title={t('writing.deleteScene')} onClick={() => deleteScene(s.id, ch.id)}>
                                 <BsTrash />
                               </button>
                             </div>
                           </div>
                         </li>
                       ))}
-                      {!scenes.length && <li className="tree-empty">Keine Szenen</li>}
+                      {!scenes.length && <li className="tree-empty">{t('writing.noScenes')}</li>}
                     </ul>
                   )}
                 </li>
-              )
+              );
             })}
           </ul>
         </div>
@@ -543,17 +541,17 @@ export default function ProjectView() {
                   className="scene-title"
                   value={sceneTitle}
                   onChange={(e) => {
-                    const v = e.target.value
-                    setSceneTitle(v)
+                    const v = e.target.value;
+                    setSceneTitle(v);
                     if (activeChapterId && activeSceneId) {
-                      patchSceneInTree(activeChapterId, activeSceneId, { title: v })
+                      patchSceneInTree(activeChapterId, activeSceneId, { title: v });
                     }
                   }}
                   onBlur={() => saveSceneNow(activeSceneId, sceneTitle, sceneContent)}
-                  placeholder="Szenen-Titel"
+                  placeholder={t('writing.sceneTitlePlaceholder')}
                 />
                 <div style={{marginLeft:'auto', fontSize:12, color:'var(--muted)'}}>
-                  {lastSavedAt ? <>Gespeichert {lastSavedAt.toLocaleTimeString()}</> : '—'}
+                  {lastSavedAt ? <>{t('writing.savedAt', { time: lastSavedAt.toLocaleTimeString() })}</> : '—'}
                 </div>
               </div>
               <textarea
@@ -562,7 +560,7 @@ export default function ProjectView() {
                 onChange={(e) => setSceneContent(e.target.value)}
                 onBlur={() => saveSceneNow(activeSceneId, sceneTitle, sceneContent)}
                 onContextMenu={handleContextMenu}
-                placeholder="Dein Text…"
+                placeholder={t('writing.sceneContentPlaceholder')}
               />
             </>
           ) : (
@@ -570,7 +568,7 @@ export default function ProjectView() {
           activeChapterId ? (
             <ChapterOverview
               chapterTitle={chapterTitle}
-              setChapterTitle={(v) => { setChapterTitle(v); patchChapterInList(activeChapterId, { title: v }) }}
+              setChapterTitle={(v) => { setChapterTitle(v); patchChapterInList(activeChapterId, { title: v }); }}
               lastChapterSavedAt={lastChapterSavedAt}
               saveChapter={() => saveChapterNow(activeChapterId, chapterTitle)}
               scenesOfActive={scenesOfActive}
@@ -582,8 +580,8 @@ export default function ProjectView() {
           ) : (
             // Modus 3: Gar kein Kapitel
             <div className="empty-state">
-              <div className="empty-title">Kein Kapitel vorhanden.</div>
-              <div className="empty-sub">Lege zuerst ein Kapitel an.</div>
+              <div className="empty-title">{t('writing.noChapters')}</div>
+              <div className="empty-sub">{t('writing.createFirstChapter')}</div>
             </div>
           ))}
         </div>
@@ -600,7 +598,7 @@ export default function ProjectView() {
         />
       )}
     </div>
-  )
+  );
 }
 
 /* Ausgelagerter Überblicks-Block für bessere Lesbarkeit */
@@ -608,6 +606,7 @@ function ChapterOverview({
   chapterTitle, setChapterTitle, lastChapterSavedAt, saveChapter,
   scenesOfActive, scenePreviewById, openScene, deleteScene, addScene
 }) {
+  const { t } = useTranslation();
   return (
     <div className="chapter-overview">
       <div className="chapter-head">
@@ -616,17 +615,17 @@ function ChapterOverview({
           value={chapterTitle}
           onChange={(e) => setChapterTitle(e.target.value)}
           onBlur={saveChapter}
-          placeholder="Kapitel-Titel"
+          placeholder={t('writing.chapterTitlePlaceholder')}
         />
         <div className="chapter-meta">
-          {lastChapterSavedAt ? <>Gespeichert {lastChapterSavedAt.toLocaleTimeString()}</> : ' '}
+          {lastChapterSavedAt ? <>{t('writing.savedAt', { time: lastChapterSavedAt.toLocaleTimeString() })}</> : ' '}
         </div>
       </div>
 
       {scenesOfActive.length ? (
         <div className="scene-grid">
           {scenesOfActive.map(s => {
-            const preview = scenePreviewById[s.id] ?? ''
+            const preview = scenePreviewById[s.id] ?? '';
             return (
               <div
                 key={s.id}
@@ -638,34 +637,34 @@ function ChapterOverview({
                 <div className="scene-card-delete">
                   <button
                     className="icon-btn danger"
-                    title="Szene löschen"
-                    onClick={(e) => { e.stopPropagation(); deleteScene(s.id) }}
+                    title={t('writing.deleteScene')}
+                    onClick={(e) => { e.stopPropagation(); deleteScene(s.id); }}
                   >
                     <BsTrash />
                   </button>
                 </div>
                 <div className="scene-card-title">{s.title}</div>
                 <div className="scene-card-preview">
-                  {preview ? preview : <span className="muted">Kein Inhalt</span>}
+                  {preview ? preview : <span className="muted">{t('writing.noContent')}</span>}
                 </div>
               </div>
-            )
+            );
           })}
           {/* „Neue Szene“ als Kachel am Ende der letzten Reihe */}
-          <button className="scene-card add-card" onClick={addScene} title="Szene hinzufügen">
+          <button className="scene-card add-card" onClick={addScene} title={t('writing.addScene')}>
             <BsPlus className="icon" />
-            <span>Szene hinzufügen</span>
+            <span>{t('writing.addScene')}</span>
           </button>
         </div>
       ) : (
         <div className="overview-empty">
-          <div className="empty-title">Noch keine Szenen.</div>
-          <div className="empty-sub">Lege die erste an.</div>
+          <div className="empty-title">{t('writing.noScenesYet')}</div>
+          <div className="empty-sub">{t('writing.createFirstScene')}</div>
           <button className="btn btn-cta" onClick={addScene}>
-            <BsPlus className="icon" /> Szene hinzufügen
+            <BsPlus className="icon" /> {t('writing.addScene')}
           </button>
         </div>
       )}
     </div>
-  )
+  );
 }

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import "../modal.css";
 import "./CreateProjectModal.css";
 
@@ -9,6 +10,7 @@ import "./CreateProjectModal.css";
  * @param {function} onCancel - Callback wenn abgebrochen
  */
 export default function CreateProjectModal({ onConfirm, onCancel }) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState("");
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -34,18 +36,17 @@ export default function CreateProjectModal({ onConfirm, onCancel }) {
   const handleFileChange = (e) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      // Prüfe Dateityp
       const ext = selectedFile.name.toLowerCase();
-      if (ext.endsWith('.docx') || ext.endsWith('.doc')) {
+      if (ext.endsWith(".docx") || ext.endsWith(".doc")) {
         setFile(selectedFile);
         // Auto-fill title wenn leer
         if (!title.trim()) {
-          const nameWithoutExt = selectedFile.name.replace(/\.(docx?|txt)$/i, '');
+          const nameWithoutExt = selectedFile.name.replace(/\.(docx?|txt)$/i, "");
           setTitle(nameWithoutExt);
         }
       } else {
-        alert('Bitte wähle ein Word-Dokument (.docx oder .doc) aus.');
-        e.target.value = '';
+        alert(t("dashboard.createModal.invalidFileType"));
+        e.target.value = "";
       }
     }
   };
@@ -53,7 +54,7 @@ export default function CreateProjectModal({ onConfirm, onCancel }) {
   const handleRemoveFile = () => {
     setFile(null);
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
@@ -74,11 +75,13 @@ export default function CreateProjectModal({ onConfirm, onCancel }) {
       <div className="modal-dialog modal-dialog-md">
         <form onSubmit={handleSubmit}>
           <div className="modal-header">
-            <h3 className="modal-title">Neues Projekt erstellen</h3>
+            <h3 className="modal-title">{t("dashboard.createModal.title")}</h3>
           </div>
           <div className="modal-body">
             <div className="form-group">
-              <label htmlFor="project-title">Projektname *</label>
+              <label htmlFor="project-title">
+                {t("dashboard.createModal.projectNameLabel")} <span aria-hidden="true">*</span>
+              </label>
               <input
                 id="project-title"
                 ref={inputRef}
@@ -86,15 +89,15 @@ export default function CreateProjectModal({ onConfirm, onCancel }) {
                 className="modal-input"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Mein neues Buch"
+                placeholder={t("dashboard.createModal.projectNamePlaceholder")}
                 required
               />
             </div>
 
             <div className="form-group">
-              <label htmlFor="project-file">Word-Dokument hochladen (optional)</label>
+              <label htmlFor="project-file">{t("dashboard.createModal.wordUploadLabel")}</label>
               <p className="form-hint">
-                Lade ein bestehendes Word-Dokument hoch. Es wird automatisch in Kapitel und Szenen aufgeteilt.
+                {t("dashboard.createModal.wordUploadHint")}
               </p>
 
               {!file ? (
@@ -113,8 +116,8 @@ export default function CreateProjectModal({ onConfirm, onCancel }) {
                       <polyline points="17 8 12 3 7 8" />
                       <line x1="12" y1="3" x2="12" y2="15" />
                     </svg>
-                    <span className="upload-text">Word-Dokument auswählen</span>
-                    <span className="upload-subtext">.doc oder .docx</span>
+                    <span className="upload-text">{t("dashboard.createModal.chooseWord")}</span>
+                    <span className="upload-subtext">{t("dashboard.createModal.extHint")}</span>
                   </label>
                 </div>
               ) : (
@@ -126,10 +129,18 @@ export default function CreateProjectModal({ onConfirm, onCancel }) {
                     </svg>
                     <div className="file-details">
                       <div className="file-name">{file.name}</div>
-                      <div className="file-size">{(file.size / 1024).toFixed(1)} KB</div>
+                      <div className="file-size">
+                        {t("dashboard.createModal.fileSizeKB", { size: (file.size / 1024).toFixed(1) })}
+                      </div>
                     </div>
                   </div>
-                  <button type="button" className="btn-remove" onClick={handleRemoveFile}>
+                  <button
+                    type="button"
+                    className="btn-remove"
+                    onClick={handleRemoveFile}
+                    aria-label={t("dashboard.createModal.removeFile")}
+                    title={t("dashboard.createModal.removeFile")}
+                  >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <line x1="18" y1="6" x2="6" y2="18" />
                       <line x1="6" y1="6" x2="18" y2="18" />
@@ -141,10 +152,10 @@ export default function CreateProjectModal({ onConfirm, onCancel }) {
           </div>
           <div className="modal-footer">
             <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={uploading}>
-              Abbrechen
+              {t("common.cancel")}
             </button>
             <button type="submit" className="btn btn-primary" disabled={!title.trim() || uploading}>
-              {uploading ? 'Wird erstellt...' : 'Erstellen'}
+              {uploading ? t("dashboard.createModal.creating") : t("dashboard.createModal.create")}
             </button>
           </div>
         </form>

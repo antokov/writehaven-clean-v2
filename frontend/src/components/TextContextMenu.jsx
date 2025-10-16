@@ -1,17 +1,16 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { BsPerson, BsGlobe } from 'react-icons/bs';
+import { useTranslation } from 'react-i18next';
 import './TextContextMenu.css';
 
 /**
  * Context Menu für Text-Selection
- * Erscheint beim Rechtsklick auf markierten Text
- *
- * @param {object} position - { x, y } position auf dem Screen
- * @param {string} selectedText - Der markierte Text
- * @param {function} onCreateCharacter - Callback zum Erstellen eines Charakters
- * @param {function} onCreateWorldElement - Callback zum Erstellen eines Weltelements
- * @param {function} onClose - Callback zum Schließen
+ * @param {object} position - { x, y }
+ * @param {string} selectedText
+ * @param {function} onCreateCharacter
+ * @param {function} onCreateWorldElement
+ * @param {function} onClose
  */
 export default function TextContextMenu({
   position,
@@ -20,13 +19,12 @@ export default function TextContextMenu({
   onCreateWorldElement,
   onClose
 }) {
+  const { t } = useTranslation();
+
   useEffect(() => {
     const handleClickOutside = () => onClose();
-    const handleEscape = (e) => {
-      if (e.key === 'Escape') onClose();
-    };
+    const handleEscape = (e) => { if (e.key === 'Escape') onClose(); };
 
-    // Kleine Verzögerung, damit der initiale Rechtsklick nicht sofort schließt
     setTimeout(() => {
       document.addEventListener('click', handleClickOutside);
       document.addEventListener('contextmenu', handleClickOutside);
@@ -48,10 +46,7 @@ export default function TextContextMenu({
   return createPortal(
     <div
       className="text-context-menu"
-      style={{
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-      }}
+      style={{ left: `${position.x}px`, top: `${position.y}px` }}
       onClick={(e) => e.stopPropagation()}
       onContextMenu={(e) => e.preventDefault()}
     >
@@ -62,16 +57,20 @@ export default function TextContextMenu({
         <button
           className="context-menu-item"
           onClick={() => handleItemClick(onCreateCharacter)}
+          aria-label={t('writing.context.createCharacter')}
+          title={t('writing.context.createCharacter')}
         >
           <BsPerson className="context-menu-icon" />
-          <span>Neuer Charakter</span>
+          <span>{t('writing.context.createCharacter')}</span>
         </button>
         <button
           className="context-menu-item"
           onClick={() => handleItemClick(onCreateWorldElement)}
+          aria-label={t('writing.context.createWorldElement')}
+          title={t('writing.context.createWorldElement')}
         >
           <BsGlobe className="context-menu-icon" />
-          <span>Neues Weltelement</span>
+          <span>{t('writing.context.createWorldElement')}</span>
         </button>
       </div>
     </div>,
