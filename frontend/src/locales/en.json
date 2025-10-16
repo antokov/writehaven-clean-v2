@@ -74,7 +74,8 @@
     "loginPrompt": "Log in to your account",
     "registerPrompt": "Create a new account",
     "alreadyHaveAccount": "Already have an account?",
-    "dontHaveAccount": "Don't have an account yet?"
+    "dontHaveAccount": "Don't have an account yet?",
+    "welcomeBack": "Welcome Back"
   },
   "navigation": {
     "dashboard": "Dashboard",

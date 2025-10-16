@@ -1,6 +1,7 @@
 # backend/models.py
 from sqlalchemy.sql import func
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy import text as sqltext
 
 try:
     # Paket-Start (z.B. gunicorn) -> backend.extensions
@@ -26,11 +27,15 @@ class Project(db.Model):
     # Projekteinstellungen
     author = db.Column(db.String(200), default="")
     genre = db.Column(db.String(100), default="")
-    language = db.Column(db.String(10), default="en")
+    language = db.Column(db.String(10), default="de")  # Konsistent mit API/Migration
     target_audience = db.Column(db.String(100), default="")
     estimated_word_count = db.Column(db.Integer, default=0)
     cover_image_url = db.Column(db.String(500), default="")
-    share_with_community = db.Column(db.Boolean, default=False)
+    share_with_community = db.Column(
+        db.Boolean,
+        nullable=False,
+        server_default=sqltext('false')  # serverseitiger Default für Postgres
+    )
 
     # Relationships
     user = db.relationship("User", backref="projects")
@@ -118,14 +123,14 @@ class WorldNode(db.Model):
 
 
 class User(db.Model):
-    __tablename__ = "user"
+    __tablename__ = "user"  # reserviertes Wort, daher in Migration immer quoten
     __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     name = db.Column(db.String(200))
-    language = db.Column(db.String(10), default="en")
+    language = db.Column(db.String(10), default="de")
     created_at = db.Column(db.DateTime, server_default=func.now())
 
     def set_password(self, password):

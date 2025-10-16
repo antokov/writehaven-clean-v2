@@ -106,9 +106,7 @@ def create_app():
 
         # --- sehr kleine "Migration": character.profile_json nachrüsten ---
         try:
-            # Erst alle offenen Transaktionen zurückrollen
             db.session.rollback()
-
             # Postgres-spezifischer Check
             check_query = """
                 SELECT EXISTS (
@@ -138,8 +136,6 @@ def create_app():
         # --- Migration: worldnode.relations_json nachrüsten ---
         try:
             db.session.rollback()
-
-            # Postgres-spezifischer Check
             check_query = """
                 SELECT EXISTS (
                     SELECT 1
@@ -169,8 +165,6 @@ def create_app():
         # --- Migration: project.user_id nachrüsten ---
         try:
             db.session.rollback()
-
-            # Check ob user_id existiert
             check_query = """
                 SELECT EXISTS (
                     SELECT 1
@@ -220,14 +214,12 @@ def create_app():
             ("target_audience", "TEXT DEFAULT ''"),
             ("estimated_word_count", "INTEGER DEFAULT 0"),
             ("cover_image_url", "TEXT DEFAULT ''"),
-            ("share_with_community", "BOOLEAN DEFAULT 0")
+            ("share_with_community", "BOOLEAN DEFAULT false")
         ]
 
         for col_name, col_type in settings_columns:
             try:
                 db.session.rollback()
-
-                # Check ob Spalte existiert
                 check_query = f"""
                     SELECT EXISTS (
                         SELECT 1
@@ -254,10 +246,57 @@ def create_app():
                 db.session.rollback()
                 print(f"Migration error for project.{col_name} (can be ignored if column exists): {str(e)}")
 
+        # --- Fixup: project.share_with_community -> boolean + DEFAULT false (nur Postgres) ---
+        try:
+            if app.config["SQLALCHEMY_DATABASE_URI"].startswith("postgresql"):
+                db.session.rollback()
+                has_column = db.session.execute(text("""
+                    SELECT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_schema = 'public'
+                          AND table_name = 'project'
+                          AND column_name = 'share_with_community'
+                    )
+                """)).scalar()
+                if has_column:
+                    ctype = db.session.execute(text("""
+                        SELECT data_type FROM information_schema.columns
+                        WHERE table_schema='public'
+                          AND table_name='project'
+                          AND column_name='share_with_community'
+                    """)).scalar()
+                    if ctype != 'boolean':
+                        db.session.execute(text("""
+                            ALTER TABLE project
+                            ALTER COLUMN share_with_community
+                            TYPE boolean
+                            USING CASE
+                                WHEN share_with_community IN (1, '1', true, 't') THEN true
+                                ELSE false
+                            END
+                        """))
+                    # Default & NOT NULL sicherstellen
+                    db.session.execute(text("""
+                        ALTER TABLE project
+                        ALTER COLUMN share_with_community SET DEFAULT false
+                    """))
+                    db.session.execute(text("""
+                        UPDATE project
+                        SET share_with_community = false
+                        WHERE share_with_community IS NULL
+                    """))
+                    db.session.execute(text("""
+                        ALTER TABLE project
+                        ALTER COLUMN share_with_community SET NOT NULL
+                    """))
+                    db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print(f"Fixup project.share_with_community failed (ignored): {e}")
+
         # --- Migration: user.language nachrüsten ---
         try:
             db.session.rollback()
-
             check_query = """
                 SELECT EXISTS (
                     SELECT 1
@@ -277,7 +316,7 @@ def create_app():
                 """)).scalar()
 
             if not has_column:
-                db.session.execute(text("ALTER TABLE user ADD COLUMN language TEXT DEFAULT 'de'"))
+                db.session.execute(text('ALTER TABLE "user" ADD COLUMN language TEXT DEFAULT \'de\''))
                 db.session.commit()
                 print("Migration: user.language column added")
         except Exception as e:
@@ -768,9 +807,6 @@ def create_app():
         else:
             # … oder inkrementell (zur Abwärtskompatibilität)
             prof = _loads(c.profile_json or "{}")
-            # bekannte Felder aus alten Clients mappen – optional
-            # Beispiel: basic.first_name etc. kannst du hier zusammenführen
-            # Wenn nichts kommt, bleibt prof wie es ist.
             c.profile_json = _dumps(prof)
 
         db.session.commit()
