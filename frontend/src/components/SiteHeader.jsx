@@ -1,42 +1,44 @@
 ﻿// src/components/SiteHeader.jsx
-import { useState, useRef, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { MessageSquare, User, Settings, LogOut, ChevronDown } from 'lucide-react'
-import { useAuth } from '../context/AuthContext'
-import FeedbackModal from './FeedbackModal'
-import logoUrl from '../assets/logo.png'
-import './UserMenu.css'
+import { useState, useRef, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { MessageSquare, User, Settings, LogOut, ChevronDown } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import FeedbackModal from './FeedbackModal';
+import logoUrl from '../assets/logo.png';
+import './UserMenu.css';
+import { useTranslation } from 'react-i18next';
 
 export default function SiteHeader() {
-  const { user, logout } = useAuth()
-  const navigate = useNavigate()
-  const [showUserMenu, setShowUserMenu] = useState(false)
-  const [showFeedback, setShowFeedback] = useState(false)
-  const menuRef = useRef(null)
+  const { t } = useTranslation();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const menuRef = useRef(null);
 
   const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
+    logout();
+    navigate('/login');
+  };
 
   // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setShowUserMenu(false)
+        setShowUserMenu(false);
       }
-    }
+    };
 
     if (showUserMenu) {
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [showUserMenu])
+  }, [showUserMenu]);
 
   return (
     <>
       <header className="site-header">
-        <Link className="brand" to="/app" aria-label="Zum Dashboard">
+        <Link className="brand" to="/app" aria-label={t('common.backToHome')}>
           <span className="brand-icon natural">
             <img className="brand-logo" src={logoUrl} alt="Writehaven" />
           </span>
@@ -48,10 +50,10 @@ export default function SiteHeader() {
             className="btn ghost btn-icon-text"
             type="button"
             onClick={() => setShowFeedback(true)}
-            title="Feedback geben"
+            title={t('common.giveFeedback', 'Give feedback')}
           >
             <MessageSquare size={18} />
-            <span className="btn-text">Feedback</span>
+            <span className="btn-text">{t('common.feedback', 'Feedback')}</span>
           </button>
 
           {/* User Menu */}
@@ -86,12 +88,12 @@ export default function SiteHeader() {
                     className="user-menu-item"
                     type="button"
                     onClick={() => {
-                      setShowUserMenu(false)
-                      navigate('/app/settings')
+                      setShowUserMenu(false);
+                      navigate('/app/settings');
                     }}
                   >
                     <Settings size={16} />
-                    <span>Einstellungen</span>
+                    <span>{t('navigation.settings')}</span>
                   </button>
 
                   <div className="user-menu-divider" />
@@ -100,12 +102,12 @@ export default function SiteHeader() {
                     className="user-menu-item logout"
                     type="button"
                     onClick={() => {
-                      setShowUserMenu(false)
-                      handleLogout()
+                      setShowUserMenu(false);
+                      handleLogout();
                     }}
                   >
                     <LogOut size={16} />
-                    <span>Abmelden</span>
+                    <span>{t('auth.logout')}</span>
                   </button>
                 </div>
               )}
@@ -119,5 +121,5 @@ export default function SiteHeader() {
         onClose={() => setShowFeedback(false)}
       />
     </>
-  )
+  );
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 
 const LANGUAGES = [
   { code: 'de', name: 'Deutsch' },
@@ -9,7 +10,7 @@ const LANGUAGES = [
   { code: 'fr', name: 'Français' },
   { code: 'it', name: 'Italiano' },
   { code: 'pt', name: 'Português' }
-]
+];
 
 function getPath(obj, path, fallback = "") {
   if (!obj) return fallback;
@@ -35,9 +36,9 @@ function setPathIn(obj, path, val) {
 }
 
 const TABS = [
-  { key: "general", label: "Allgemein" },
-  { key: "metadata", label: "Metadaten" },
-  { key: "community", label: "Community" },
+  { key: "general",   labelKey: "projectSettings.general" },
+  { key: "metadata",  labelKey: "projectSettings.metadata" },
+  { key: "community", labelKey: "projectSettings.community" },
 ];
 
 const SettingsEditor = React.memo(function SettingsEditor({
@@ -47,19 +48,23 @@ const SettingsEditor = React.memo(function SettingsEditor({
   activeTab,
   setActiveTab
 }) {
+  const { t } = useTranslation();
+
   return (
     <div className="panel">
       <nav className="tabs tabs-inline">
-        {TABS.map(t => (
+        {TABS.map(tab => (
           <button
-            key={t.key}
+            key={tab.key}
             type="button"
-            className={`tab ${activeTab === t.key ? "active" : ""}`}
-            onClick={() => setActiveTab(t.key)}
-          >{t.label}</button>
+            className={`tab ${activeTab === tab.key ? "active" : ""}`}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            {t(tab.labelKey)}
+          </button>
         ))}
         <div className="tabs-meta">
-          {lastSavedAt ? <>Gespeichert {lastSavedAt.toLocaleTimeString()}</> : "—"}
+          {lastSavedAt ? <>{t('common.saved', { time: lastSavedAt.toLocaleTimeString() })}</> : "—"}
         </div>
       </nav>
 
@@ -67,32 +72,32 @@ const SettingsEditor = React.memo(function SettingsEditor({
         <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label className="small muted">Titel</label>
+              <label className="small muted">{t('projectSettings.bookTitle')}</label>
               <input
                 className="input"
                 value={getPath(settings, "title", "")}
                 onChange={e => onChangeSetting("title", e.target.value)}
-                placeholder="Titel deines Buches"
+                placeholder={t('projectSettings.bookTitlePlaceholder')}
               />
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label className="small muted">Autor/in</label>
+              <label className="small muted">{t('projectSettings.author')}</label>
               <input
                 className="input"
                 value={getPath(settings, "author", "")}
                 onChange={e => onChangeSetting("author", e.target.value)}
-                placeholder="Dein Name"
+                placeholder={t('projectSettings.authorPlaceholder')}
               />
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label className="small muted">Beschreibung / Klappentext</label>
+              <label className="small muted">{t('projectSettings.description')}</label>
               <textarea
                 className="textarea"
                 value={getPath(settings, "description", "")}
                 onChange={e => onChangeSetting("description", e.target.value)}
-                placeholder="Eine kurze Zusammenfassung deines Buches..."
+                placeholder={t('projectSettings.descriptionPlaceholder')}
                 rows={8}
               />
             </div>
@@ -104,55 +109,53 @@ const SettingsEditor = React.memo(function SettingsEditor({
         <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label className="small muted">Sprache</label>
+              <label className="small muted">{t('projectSettings.bookLanguage')}</label>
               <select
                 className="input"
                 value={getPath(settings, "language", "de")}
                 onChange={e => onChangeSetting("language", e.target.value)}
               >
                 {LANGUAGES.map(lang => (
-                  <option key={lang.code} value={lang.code}>
-                    {lang.name}
-                  </option>
+                  <option key={lang.code} value={lang.code}>{lang.name}</option>
                 ))}
               </select>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label className="small muted">Genre</label>
+              <label className="small muted">{t('projectSettings.genre')}</label>
               <select
                 className="input"
                 value={getPath(settings, "genre", "")}
                 onChange={e => onChangeSetting("genre", e.target.value)}
               >
-                <option value="">-- Wähle ein Genre --</option>
-                <option value="fantasy">Fantasy</option>
-                <option value="scifi">Science Fiction</option>
-                <option value="romance">Romantik</option>
-                <option value="thriller">Thriller</option>
-                <option value="mystery">Krimi/Mystery</option>
-                <option value="historical">Historisch</option>
-                <option value="contemporary">Gegenwartsliteratur</option>
-                <option value="horror">Horror</option>
-                <option value="young_adult">Jugendbuch</option>
-                <option value="children">Kinderbuch</option>
-                <option value="non_fiction">Sachbuch</option>
-                <option value="other">Sonstiges</option>
+                <option value="">{t('projectSettings.selectGenre')}</option>
+                <option value="fantasy">{t('genres.fantasy')}</option>
+                <option value="scifi">{t('genres.scifi')}</option>
+                <option value="romance">{t('genres.romance')}</option>
+                <option value="thriller">{t('genres.thriller')}</option>
+                <option value="mystery">{t('genres.mystery')}</option>
+                <option value="historical">{t('genres.historical')}</option>
+                <option value="contemporary">{t('genres.contemporary')}</option>
+                <option value="horror">{t('genres.horror')}</option>
+                <option value="young_adult">{t('genres.young_adult')}</option>
+                <option value="children">{t('genres.children')}</option>
+                <option value="non_fiction">{t('genres.non_fiction')}</option>
+                <option value="other">{t('genres.other')}</option>
               </select>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label className="small muted">Zielgruppe</label>
+              <label className="small muted">{t('projectSettings.targetAudience')}</label>
               <select
                 className="input"
                 value={getPath(settings, "target_audience", "")}
                 onChange={e => onChangeSetting("target_audience", e.target.value)}
               >
-                <option value="">-- Wähle eine Zielgruppe --</option>
-                <option value="children">Kinder (6-12)</option>
-                <option value="young_adult">Jugendliche (13-17)</option>
-                <option value="adult">Erwachsene (18+)</option>
-                <option value="all_ages">Alle Altersgruppen</option>
+                <option value="">{t('projectSettings.selectAudience')}</option>
+                <option value="children">{t('audiences.children')}</option>
+                <option value="young_adult">{t('audiences.young_adult')}</option>
+                <option value="adult">{t('audiences.adult')}</option>
+                <option value="all_ages">{t('audiences.all_ages')}</option>
               </select>
             </div>
           </div>
@@ -169,11 +172,12 @@ const SettingsEditor = React.memo(function SettingsEditor({
                 onChange={e => onChangeSetting("share_with_community", e.target.checked)}
                 style={{ width: '18px', height: '18px', cursor: 'pointer' }}
               />
-              <span style={{ fontSize: '1rem', fontWeight: 500 }}>Mit Community teilen</span>
+              <span style={{ fontSize: '1rem', fontWeight: 500 }}>
+                {t('projectSettings.shareWithCommunity')}
+              </span>
             </label>
             <p className="small muted" style={{ marginLeft: '30px' }}>
-              Wenn aktiviert, wird dein Projekt in der öffentlichen Community-Galerie angezeigt.
-              Andere können dein Werk entdecken und Feedback geben.
+              {t('projectSettings.communityDescription')}
             </p>
           </div>
         </div>

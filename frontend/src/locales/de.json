@@ -7,23 +7,77 @@
     "create": "Erstellen",
     "close": "Schließen",
     "search": "Suchen",
-    "loading": "Lädt...",
+    "loading": "Laden...",
     "saved": "Gespeichert {{time}}",
-    "language": "Sprache"
+    "language": "Sprache",
+    "backToHome": "Zurück zur Startseite",
+    "error": {
+      "generic": "Etwas ist schiefgelaufen"
+    },
+    "open": "Öffnen",
+    "rename": "Umbenennen",
+    "remove": "Entfernen",
+    "feedback": "Feedback",
+    "giveFeedback": "Feedback geben"
+  },
+  "writing": {
+    "structure": "Struktur",
+    "addChapter": "Kapitel hinzufügen",
+    "addScene": "Szene hinzufügen",
+    "showChapter": "Kapitel anzeigen",
+    "noScenes": "Keine Szenen",
+    "noContent": "Kein Inhalt",
+    "sceneTitlePlaceholder": "Szenentitel",
+    "sceneContentPlaceholder": "Dein Text…",
+    "chapterTitlePlaceholder": "Kapiteltitel",
+    "savedAt": "Gespeichert {{time}}",
+    "noChapters": "Noch keine Kapitel.",
+    "createFirstChapter": "Erstelle zuerst ein Kapitel.",
+    "deleteChapter": "Kapitel löschen",
+    "deleteChapterMessage_zero": "Möchtest du das Kapitel „{{title}}“ wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteChapterMessage_one": "Möchtest du das Kapitel „{{title}}“ wirklich löschen? Auch {{count}} Szene wird gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteChapterMessage_other": "Möchtest du das Kapitel „{{title}}“ wirklich löschen? Auch alle {{count}} Szenen werden gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteScene": "Szene löschen",
+    "deleteSceneMessage": "Möchtest du die Szene „{{title}}“ wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "defaultChapterTitle": "Kapitel {{index}}",
+    "defaultSceneTitle": "Szene {{index}}",
+    "noScenesYet": "Noch keine Szenen.",
+    "createFirstScene": "Erstelle die erste.",
+    "errors": {
+      "projectNotFound": "Projekt nicht gefunden. Bitte lege zuerst ein Projekt an.",
+      "loadFailedGeneric": "Laden fehlgeschlagen. Bitte versuche es später erneut.",
+      "sceneLoadFailed": "Szene konnte nicht geladen werden.",
+      "chapterCreateFailed": "Kapitel konnte nicht erstellt werden.",
+      "sceneCreateFailed": "Szene konnte nicht erstellt werden.",
+      "chapterDeleteFailed": "Kapitel konnte nicht gelöscht werden.",
+      "sceneDeleteFailed": "Szene konnte nicht gelöscht werden.",
+      "scenesLoadFailed": "Szenen konnten nicht geladen werden.",
+      "characterCreateFailed": "Charakter konnte nicht erstellt werden.",
+      "worldElementCreateFailed": "Weltelement konnte nicht erstellt werden."
+    },
+    "chapters": "Kapitel",
+    "scenes": "Szenen",
+    "newChapter": "Neues Kapitel",
+    "newScene": "Neue Szene",
+    "wordCount": "{{count}} Wörter",
+    "context": {
+      "createCharacter": "Neuer Charakter",
+      "createWorldElement": "Neues Weltelement"
+    }
   },
   "auth": {
-    "login": "Anmeldene",
+    "login": "Anmelden",
     "register": "Registrieren",
     "logout": "Abmelden",
     "email": "E-Mail",
     "password": "Passwort",
     "name": "Name",
-    "welcomeBack": "Willkommen zurück",
     "createAccount": "Konto erstellen",
     "loginPrompt": "Melde dich bei deinem Konto an",
-    "registerPrompt": "Erstelle ein neues Konto",
-    "alreadyHaveAccount": "Bereits ein Konto?",
-    "dontHaveAccount": "Noch kein Konto?"
+    "registerPrompt": "Neues Konto erstellen",
+    "alreadyHaveAccount": "Du hast bereits ein Konto?",
+    "dontHaveAccount": "Noch kein Konto?",
+    "welcomeBack": "Willkommen zurück"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -37,23 +91,47 @@
   "dashboard": {
     "title": "Meine Projekte",
     "newProject": "Neues Projekt",
+    "empty": "Noch keine Projekte — klicke auf die Plus-Karte, um eines zu erstellen.",
+    "openAria": "{{title}} öffnen",
+    "loadFailed": "Projekte konnten nicht geladen werden. Läuft das Backend?",
+    "createFailed": "Projekt konnte nicht erstellt werden.",
+    "renameTitle": "Projekt umbenennen",
+    "renameMessage": "Gib einen neuen Namen für das Projekt ein:",
+    "renameFailed": "Umbenennen fehlgeschlagen.",
+    "deleteTitle": "Projekt löschen",
+    "deleteMessage": "Möchtest du das Projekt „{{title}}“ wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteFailed": "Löschen fehlgeschlagen.",
     "importWord": "Word-Dokument importieren",
     "projectTitle": "Projekttitel",
     "projectDescription": "Beschreibung (optional)",
     "wordFile": "Word-Dokument",
     "selectFile": "Datei auswählen",
     "createProject": "Projekt erstellen",
-    "importing": "Importiere..."
+    "importing": "Importiere...",
+    "createModal": {
+      "title": "Neues Projekt erstellen",
+      "projectNameLabel": "Projektname",
+      "projectNamePlaceholder": "Mein neues Buch",
+      "wordUploadLabel": "Word-Dokument hochladen (optional)",
+      "wordUploadHint": "Lade ein bestehendes Word-Dokument hoch. Es wird automatisch in Kapitel und Szenen aufgeteilt.",
+      "chooseWord": "Word-Dokument auswählen",
+      "extHint": ".doc oder .docx",
+      "invalidFileType": "Bitte wähle ein Word-Dokument (.docx oder .doc).",
+      "fileSizeKB": "{{size}} KB",
+      "removeFile": "Datei entfernen",
+      "create": "Erstellen",
+      "creating": "Erstelle..."
+    }
   },
   "settings": {
     "title": "Einstellungen",
     "userProfile": "Benutzerprofil",
-    "preferences": "Präferenzen",
-    "accountInfo": "Account-Informationen",
+    "preferences": "Voreinstellungen",
+    "accountInfo": "Kontoinformationen",
     "userId": "Benutzer-ID",
     "accountCreated": "Konto erstellt",
     "notSpecified": "Nicht angegeben",
-    "moreSettingsSoon": "Weitere Einstellungen und Profil-Bearbeitung werden in einer zukünftigen Version verfügbar sein."
+    "moreSettingsSoon": "Weitere Einstellungen und Profilbearbeitung folgen in einer späteren Version."
   },
   "projectSettings": {
     "title": "Projekteinstellungen",
@@ -76,10 +154,10 @@
   },
   "genres": {
     "fantasy": "Fantasy",
-    "scifi": "Science Fiction",
+    "scifi": "Science-Fiction",
     "romance": "Romantik",
     "thriller": "Thriller",
-    "mystery": "Krimi/Mystery",
+    "mystery": "Mystery/Krimi",
     "historical": "Historisch",
     "contemporary": "Gegenwartsliteratur",
     "horror": "Horror",
@@ -89,39 +167,311 @@
     "other": "Sonstiges"
   },
   "audiences": {
-    "children": "Kinder (6-12)",
-    "young_adult": "Jugendliche (13-17)",
+    "children": "Kinder (6–12)",
+    "young_adult": "Jugendliche (13–17)",
     "adult": "Erwachsene (18+)",
     "all_ages": "Alle Altersgruppen"
   },
   "characters": {
     "title": "Charaktere",
+    "add": "Charakter hinzufügen",
     "newCharacter": "Neuer Charakter",
     "unnamed": "Unbenannt",
+    "empty": "Noch keine Charaktere",
+    "noneSelected": "Kein Charakter ausgewählt.",
     "tabs": {
-      "basic": "Grunddaten",
-      "appearance": "Äußeres",
+      "basic": "Grundlagen",
+      "appearance": "Aussehen",
       "personality": "Persönlichkeit",
       "background": "Hintergrund",
       "skills": "Fähigkeiten",
       "relationships": "Beziehungen",
       "notes": "Notizen"
+    },
+    "skills": {
+      "label": "Fähigkeiten",
+      "placeholder": "Drücke ENTER oder KOMMA, um eine Fähigkeit hinzuzufügen…"
+    },
+    "relations": {
+      "new": "Neue Beziehung",
+      "existing": "Bestehende Beziehungen",
+      "targetPlaceholder": "– Ziel-Charakter –",
+      "notePlaceholder": "Notiz (optional)",
+      "add": "Hinzufügen",
+      "none": "Keine Beziehungen",
+      "types": {
+        "friendship": "Freundschaft",
+        "family": "Familie",
+        "enmity": "Feindschaft",
+        "mentor": "Mentor",
+        "student": "Schüler/in",
+        "business_partner": "Geschäftspartner",
+        "rivalry": "Rivalität",
+        "romance": "Liebesbeziehung"
+      }
+    },
+    "graph": {
+      "title": "Beziehungs-Graph",
+      "open": "Beziehungs-Graph öffnen",
+      "loading": "Lade Beziehungen...",
+      "hint": "Klicke auf einen Charakter, um zu seinem Profil zu springen",
+      "emptyTitle": "Noch keine Beziehungen",
+      "emptySub": "Füge im Tab „Beziehungen“ Verbindungen hinzu, um sie hier zu visualisieren."
+    },
+    "worldGraph": {
+      "title": "Beziehungsübersicht — alle Charaktere",
+      "open": "Mind-Map (alle Beziehungen)",
+      "loading": "Lade Beziehungen...",
+      "count": "{{count}} {{count, plural, one {Beziehung} other {Beziehungen}}}",
+      "none": "Keine Beziehungen"
+    },
+    "notes": {
+      "label": "Notizen"
+    },
+    "delete": {
+      "title": "Charakter löschen",
+      "message": "Möchtest du den Charakter „{{name}}“ wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+    },
+    "errors": {
+      "createFailed": "Charakter konnte nicht erstellt werden.",
+      "deleteFailed": "Charakter konnte nicht gelöscht werden."
+    },
+    "attributes": {
+      "add": "Attribut hinzufügen",
+      "select": "Attribut wählen",
+      "removeField": "Feld entfernen"
+    },
+    "fields": {
+      "basic": {
+        "first_name": "Vorname",
+        "last_name": "Nachname",
+        "nickname": "Spitzname(n)",
+        "gender": "Geschlecht",
+        "birth_date": "Geburtsdatum",
+        "birth_date_placeholder": "z. B. 1. Wintermond / 2001-12-05",
+        "age": "Alter",
+        "residence": "Wohnort",
+        "nationality": "Nationalität",
+        "religion": "Religion"
+      },
+      "appearance": {
+        "hair_color": "Haarfarbe",
+        "eye_color": "Augenfarbe",
+        "height": "Größe",
+        "weight": "Gewicht",
+        "build": "Körperbau",
+        "skin_color": "Hautfarbe",
+        "distinguishing_features": "Besondere Merkmale",
+        "clothing_style": "Kleidungsstil",
+        "accessories": "Accessoires",
+        "body_language": "Körpersprache/Haltung",
+        "general_impression": "Gesamteindruck & Details"
+      },
+      "personality": {
+        "traits": "Auffällige Eigenschaften (positiv & negativ)",
+        "strengths": "Stärken",
+        "weaknesses": "Schwächen",
+        "intelligence": "Intelligenz",
+        "humor": "Humor",
+        "interests": "Interessen",
+        "likes": "Vorlieben",
+        "dislikes": "Abneigungen",
+        "morals": "Moralische Ansichten & Haltung",
+        "fears": "Ängste/Phobien",
+        "goals_motivation": "Ziele & Motivation",
+        "unresolved_problems": "Ungelöste Probleme",
+        "inner_conflicts": "Innere Konflikte",
+        "wishes_dreams": "(Geheime) Wünsche & Träume",
+        "patterns_in_situations": "Wiederkehrende Verhaltensmuster",
+        "traumas": "Traumata",
+        "setbacks": "Schmerzhafte Rückschläge & Ereignisse",
+        "experiences": "Prägende Erlebnisse",
+        "view_on_life": "Sicht auf das Leben",
+        "view_on_death": "Sicht auf den Tod"
+      },
+      "background": {
+        "family_background": "Familienhintergrund",
+        "childhood": "Kindheit",
+        "education": "Ausbildung",
+        "occupation": "Beruf",
+        "social_status": "Sozialer Status"
+      }
     }
   },
   "world": {
     "title": "Welt",
     "newElement": "Neues Element",
+    "empty": "Noch keine Elemente",
+    "noneSelected": "Kein Element ausgewählt.",
+    "unnamed": "Unbenannt",
+    "selectType": "Typ wählen",
+    "searchPlaceholder": "Suchen…",
+    "noResults": "Keine Ergebnisse",
     "tabs": {
       "details": "Details",
       "relationships": "Beziehungen",
       "notes": "Notizen"
+    },
+    "details": {
+      "nameLabel": "Name",
+      "typeLabel": "Typ",
+      "notesLabel": "Notizen & Details",
+      "notesPlaceholder": "Beschreibe dieses Weltelement..."
+    },
+    "relations": {
+      "new": "Neue Beziehung",
+      "existing": "Bestehende Beziehungen",
+      "none": "Keine Beziehungen",
+      "targetPlaceholder": "– Ziel-Element –",
+      "notePlaceholder": "Notiz (optional)",
+      "add": "Hinzufügen",
+      "categories": {
+        "simple": "Einfach",
+        "geographic": "Geografisch",
+        "political": "Politisch",
+        "economic": "Wirtschaftlich",
+        "religion_culture": "Religiös & Kulturell",
+        "military": "Militärisch",
+        "magic": "Magisch",
+        "historical": "Historisch",
+        "organizational": "Organisatorisch",
+        "other": "Sonstiges"
+      },
+      "types": {
+        "hat": "hat",
+        "ist": "ist",
+        "will": "will",
+        "kann": "kann",
+        "soll": "soll",
+        "muss": "muss",
+        "braucht": "braucht",
+        "kennt": "kennt",
+        "liebt": "liebt",
+        "hasst": "hasst",
+        "fuerchtet": "fürchtet",
+        "beschuetzt": "beschützt",
+        "ist_teil_von": "ist Teil von",
+        "liegt_in": "liegt in",
+        "grenzt_an": "grenzt an",
+        "enthaelt": "enthält",
+        "verbindet": "verbindet",
+        "fuehrt_nach": "führt nach",
+        "regiert": "regiert",
+        "regiert_von": "regiert von",
+        "vasall_von": "Vasall von",
+        "buendnis_mit": "Bündnis mit",
+        "im_krieg_mit": "im Krieg mit",
+        "pakt_mit": "Pakt mit",
+        "rivalisiert_mit": "rivalisiert mit",
+        "tributpflichtig": "tributpflichtig gegenüber",
+        "handelt_mit": "handelt mit",
+        "liefert_an": "liefert an",
+        "produziert": "produziert",
+        "verbraucht": "verbraucht",
+        "exportiert_nach": "exportiert nach",
+        "importiert_von": "importiert von",
+        "verehrt": "verehrt",
+        "patron_von": "Patron von",
+        "heilig_fuer": "heilig für",
+        "verflucht_von": "verflucht von",
+        "spricht": "spricht",
+        "feiert": "feiert",
+        "verteidigt": "verteidigt",
+        "bedroht": "bedroht",
+        "belagert": "belagert",
+        "garnison_in": "Garnison in",
+        "befehligt": "befehligt",
+        "kaempft_gegen": "kämpft gegen",
+        "verstarkt": "verstärkt",
+        "schwacht": "schwächt",
+        "neutralisiert": "neutralisiert",
+        "wirkt_auf": "wirkt auf",
+        "magieknoten_in": "Magieknoten in",
+        "verbirgt": "verbirgt",
+        "nachfolger_von": "Nachfolger von",
+        "entstanden_aus": "entstanden aus",
+        "erbaut_von": "erbaut von",
+        "zerstoert_durch": "zerstört durch",
+        "gefunden_in": "gefunden in",
+        "ereignete_sich_in": "ereignete sich in",
+        "mitglied_von": "Mitglied von",
+        "angefuehrt_von": "angeführt von",
+        "gegruendet_von": "gegründet von",
+        "kontrolliert": "kontrolliert",
+        "untersteht": "untersteht",
+        "haengt_zusammen_mit": "hängt zusammen mit",
+        "gegensatz_zu": "Gegensatz zu",
+        "aehnlich_wie": "ähnlich wie",
+        "ziel_von": "Ziel von",
+        "ursache_fuer": "Ursache für",
+        "folge_von": "Folge von"
+      }
+    },
+    "graph": {
+      "title": "Beziehungs-Graph",
+      "open": "Beziehungs-Graph öffnen",
+      "loading": "Lade Beziehungen...",
+      "hint": "Klicke auf ein Element, um zu dessen Profil zu springen",
+      "emptyTitle": "Noch keine Beziehungen",
+      "emptySub": "Füge im Tab „Beziehungen“ Verbindungen hinzu, um sie hier zu visualisieren."
+    },
+    "worldGraph": {
+      "title": "Beziehungsübersicht — alle Elemente",
+      "open": "Mind-Map (alle Beziehungen)",
+      "loading": "Lade Beziehungen...",
+      "count": "{{count}} {{count, plural, one {Beziehung} other {Beziehungen}}}",
+      "none": "Keine Beziehungen"
+    },
+    "errors": {
+      "createFailed": "Element konnte nicht erstellt werden.",
+      "deleteFailed": "Element konnte nicht gelöscht werden."
+    },
+    "delete": {
+      "title": "Element löschen",
+      "message": "Möchtest du das Element „{{title}}“ wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+    },
+    "typeCategories": {
+      "geo": "Orte & Geografie",
+      "infrastructure": "Infrastruktur",
+      "politics": "Politik & Verwaltung",
+      "society": "Gesellschaft & Kultur",
+      "economy": "Wirtschaft & Alltag",
+      "military": "Militär & Macht",
+      "knowledge": "Wissen & Magie",
+      "nature": "Natur & Lebewesen",
+      "law": "Recht & Ordnung",
+      "history": "Geschichte & Zeit",
+      "orgs": "Organisationen",
+      "tech": "Technik & Baukunst",
+      "plot": "Plot-Elemente"
     }
   },
-  "writing": {
+  "export": {
+    "loading": "Lade Buchdaten...",
+    "noData": "Keine Buchdaten gefunden.",
+    "subtitle": "Roman",
+    "bookDefaultTitle": "Buch",
+    "bookDefaultFilename": "buch",
+    "chaptersCount_one": "1 Kapitel",
+    "chaptersCount_other": "{{count}} Kapitel",
     "chapters": "Kapitel",
-    "scenes": "Szenen",
-    "newChapter": "Neues Kapitel",
-    "newScene": "Neue Szene",
-    "wordCount": "{{count}} Wörter"
+    "chapter": "Kapitel",
+    "chaptersCount": "{{count}} {{count, plural, one {Kapitel} other {Kapitel}}}",
+    "printPdf": "Als PDF drucken",
+    "downloadHtml": "HTML herunterladen"
+  },
+  "feedback": {
+    "title": "Feedback geben",
+    "typeLabel": "Art des Feedbacks",
+    "messageLabel": "Deine Nachricht",
+    "placeholder": "Beschreibe dein Anliegen oder deine Idee...",
+    "submit": "Feedback senden",
+    "success": "Vielen Dank für dein Feedback!",
+    "types": {
+      "bug": "Bug melden",
+      "improvement": "Verbesserungsvorschlag",
+      "feature": "Feature-Wunsch",
+      "other": "Sonstiges"
+    }
   }
 }

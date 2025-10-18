@@ -14,10 +14,16 @@ import ReactFlow, {
   Panel,
 } from "reactflow";
 import "reactflow/dist/style.css";
+import { useTranslation } from "react-i18next";
 
-// Relationship types for world elements - gruppiert und lesbar
+/* -------------------------------- Relationship config --------------------------------
+ * Wichtig: Wir benutzen i18n-Keys, aber behalten die 'key' Werte stabil
+ * (das sind die gespeicherten Werte in deiner DB). Für Labels nutzen wir
+ * t('world.relations.types.<key>', FallbackLabel).
+ */
 const REL_CATEGORIES = [
   {
+    key: "simple",
     name: "Einfache Beziehungen",
     types: [
       { key: "hat", label: "hat" },
@@ -35,6 +41,7 @@ const REL_CATEGORIES = [
     ]
   },
   {
+    key: "geographic",
     name: "Geografisch",
     types: [
       { key: "ist_teil_von", label: "ist Teil von" },
@@ -46,6 +53,7 @@ const REL_CATEGORIES = [
     ]
   },
   {
+    key: "political",
     name: "Politisch",
     types: [
       { key: "regiert", label: "regiert" },
@@ -59,6 +67,7 @@ const REL_CATEGORIES = [
     ]
   },
   {
+    key: "economic",
     name: "Wirtschaftlich",
     types: [
       { key: "handelt_mit", label: "handelt mit" },
@@ -70,6 +79,7 @@ const REL_CATEGORIES = [
     ]
   },
   {
+    key: "religion_culture",
     name: "Religiös & Kulturell",
     types: [
       { key: "verehrt", label: "verehrt" },
@@ -81,6 +91,7 @@ const REL_CATEGORIES = [
     ]
   },
   {
+    key: "military",
     name: "Militärisch",
     types: [
       { key: "verteidigt", label: "verteidigt" },
@@ -92,6 +103,7 @@ const REL_CATEGORIES = [
     ]
   },
   {
+    key: "magic",
     name: "Magisch",
     types: [
       { key: "verstarkt", label: "verstärkt" },
@@ -103,6 +115,7 @@ const REL_CATEGORIES = [
     ]
   },
   {
+    key: "historical",
     name: "Historisch",
     types: [
       { key: "nachfolger_von", label: "Nachfolger von" },
@@ -114,6 +127,7 @@ const REL_CATEGORIES = [
     ]
   },
   {
+    key: "organizational",
     name: "Organisatorisch",
     types: [
       { key: "mitglied_von", label: "Mitglied von" },
@@ -124,6 +138,7 @@ const REL_CATEGORIES = [
     ]
   },
   {
+    key: "other",
     name: "Sonstiges",
     types: [
       { key: "haengt_zusammen_mit", label: "hängt zusammen mit" },
@@ -136,325 +151,277 @@ const REL_CATEGORIES = [
   }
 ];
 
-// Flache Liste aller Typen für Kompatibilität
 const REL_TYPES = REL_CATEGORIES.flatMap(cat => cat.types.map(t => t.key));
 
-// Reciprocal mappings - symmetrische und asymmetrische Beziehungen
+/* ---------------- Reciprocal map bleibt unverändert (Keys sind DB-Werte) ---------------- */
 const RECIPROCAL = {
-  // Einfache (meist symmetrisch)
-  "hat": "gehoert_zu",
-  "gehoert_zu": "hat",
-  "ist": "ist",
-  "will": "wird_gewollt_von",
-  "wird_gewollt_von": "will",
-  "kann": "kann",
-  "soll": "soll",
-  "muss": "muss",
-  "braucht": "wird_gebraucht_von",
-  "wird_gebraucht_von": "braucht",
-  "kennt": "kennt",
-  "liebt": "liebt",
-  "hasst": "hasst",
-  "fuerchtet": "wird_gefuerchtet_von",
-  "wird_gefuerchtet_von": "fuerchtet",
-  "beschuetzt": "wird_beschuetzt_von",
-  "wird_beschuetzt_von": "beschuetzt",
+  hat: "gehoert_zu",
+  gehoert_zu: "hat",
+  ist: "ist",
+  will: "wird_gewollt_von",
+  wird_gewollt_von: "will",
+  kann: "kann",
+  soll: "soll",
+  muss: "muss",
+  braucht: "wird_gebraucht_von",
+  wird_gebraucht_von: "braucht",
+  kennt: "kennt",
+  liebt: "liebt",
+  hasst: "hasst",
+  fuerchtet: "wird_gefuerchtet_von",
+  wird_gefuerchtet_von: "fuerchtet",
+  beschuetzt: "wird_beschuetzt_von",
+  wird_beschuetzt_von: "beschuetzt",
 
-  // Geografisch
-  "ist_teil_von": "besteht_aus",
-  "besteht_aus": "ist_teil_von",
-  "liegt_in": "enthaelt",
-  "enthaelt": "liegt_in",
-  "grenzt_an": "grenzt_an",
-  "verbindet": "verbindet",
-  "fuehrt_nach": "fuehrt_von",
-  "fuehrt_von": "fuehrt_nach",
+  ist_teil_von: "besteht_aus",
+  besteht_aus: "ist_teil_von",
+  liegt_in: "enthaelt",
+  enthaelt: "liegt_in",
+  grenzt_an: "grenzt_an",
+  verbindet: "verbindet",
+  fuehrt_nach: "fuehrt_von",
+  fuehrt_von: "fuehrt_nach",
 
-  // Politisch
-  "regiert": "regiert_von",
-  "regiert_von": "regiert",
-  "vasall_von": "lehnsherr_von",
-  "lehnsherr_von": "vasall_von",
-  "buendnis_mit": "buendnis_mit",
-  "im_krieg_mit": "im_krieg_mit",
-  "pakt_mit": "pakt_mit",
-  "rivalisiert_mit": "rivalisiert_mit",
-  "tributpflichtig": "erhaelt_tribut_von",
-  "erhaelt_tribut_von": "tributpflichtig",
+  regiert: "regiert_von",
+  regiert_von: "regiert",
+  vasall_von: "lehnsherr_von",
+  lehnsherr_von: "vasall_von",
+  buendnis_mit: "buendnis_mit",
+  im_krieg_mit: "im_krieg_mit",
+  pakt_mit: "pakt_mit",
+  rivalisiert_mit: "rivalisiert_mit",
+  tributpflichtig: "erhaelt_tribut_von",
+  erhaelt_tribut_von: "tributpflichtig",
 
-  // Wirtschaftlich
-  "handelt_mit": "handelt_mit",
-  "liefert_an": "erhaelt_von",
-  "erhaelt_von": "liefert_an",
-  "produziert": "produziert_von",
-  "produziert_von": "produziert",
-  "verbraucht": "verbraucht_von",
-  "verbraucht_von": "verbraucht",
-  "exportiert_nach": "importiert_von",
-  "importiert_von": "exportiert_nach",
+  handelt_mit: "handelt_mit",
+  liefert_an: "erhaelt_von",
+  erhaelt_von: "liefert_an",
+  produziert: "produziert_von",
+  produziert_von: "produziert",
+  verbraucht: "verbraucht_von",
+  verbraucht_von: "verbraucht",
+  exportiert_nach: "importiert_von",
+  importiert_von: "exportiert_nach",
 
-  // Religiös & Kulturell
-  "verehrt": "verehrt_von",
-  "verehrt_von": "verehrt",
-  "patron_von": "geschuetzt_von",
-  "geschuetzt_von": "patron_von",
-  "heilig_fuer": "heiligt",
-  "heiligt": "heilig_fuer",
-  "verflucht_von": "verflucht",
-  "verflucht": "verflucht_von",
-  "spricht": "wird_gesprochen_in",
-  "wird_gesprochen_in": "spricht",
-  "feiert": "wird_gefeiert_von",
-  "wird_gefeiert_von": "feiert",
+  verehrt: "verehrt_von",
+  verehrt_von: "verehrt",
+  patron_von: "geschuetzt_von",
+  geschuetzt_von: "patron_von",
+  heilig_fuer: "heiligt",
+  heiligt: "heilig_fuer",
+  verflucht_von: "verflucht",
+  verflucht: "verflucht_von",
+  spricht: "wird_gesprochen_in",
+  wird_gesprochen_in: "spricht",
+  feiert: "wird_gefeiert_von",
+  wird_gefeiert_von: "feiert",
 
-  // Militärisch
-  "verteidigt": "verteidigt_von",
-  "verteidigt_von": "verteidigt",
-  "bedroht": "bedroht_von",
-  "bedroht_von": "bedroht",
-  "belagert": "belagert_von",
-  "belagert_von": "belagert",
-  "garnison_in": "beherbergt_garnison",
-  "beherbergt_garnison": "garnison_in",
-  "befehligt": "befehligt_von",
-  "befehligt_von": "befehligt",
-  "kaempft_gegen": "kaempft_gegen",
+  verteidigt: "verteidigt_von",
+  verteidigt_von: "verteidigt",
+  bedroht: "bedroht_von",
+  bedroht_von: "bedroht",
+  belagert: "belagert_von",
+  belagert_von: "belagert",
+  garnison_in: "beherbergt_garnison",
+  beherbergt_garnison: "garnison_in",
+  befehligt: "befehligt_von",
+  befehligt_von: "befehligt",
+  kaempft_gegen: "kaempft_gegen",
 
-  // Magisch
-  "verstarkt": "verstarkt_von",
-  "verstarkt_von": "verstarkt",
-  "schwacht": "geschwacht_von",
-  "geschwacht_von": "schwacht",
-  "neutralisiert": "neutralisiert_von",
-  "neutralisiert_von": "neutralisiert",
-  "wirkt_auf": "beeinflusst_von",
-  "beeinflusst_von": "wirkt_auf",
-  "magieknoten_in": "hat_magieknoten",
-  "hat_magieknoten": "magieknoten_in",
-  "verbirgt": "verborgen_in",
-  "verborgen_in": "verbirgt",
+  verstarkt: "verstarkt_von",
+  verstarkt_von: "verstarkt",
+  schwacht: "geschwacht_von",
+  geschwacht_von: "schwacht",
+  neutralisiert: "neutralisiert_von",
+  neutralisiert_von: "neutralisiert",
+  wirkt_auf: "beeinflusst_von",
+  beeinflusst_von: "wirkt_auf",
+  magieknoten_in: "hat_magieknoten",
+  hat_magieknoten: "magieknoten_in",
+  verbirgt: "verborgen_in",
+  verborgen_in: "verbirgt",
 
-  // Historisch
-  "nachfolger_von": "vorgaenger_von",
-  "vorgaenger_von": "nachfolger_von",
-  "entstanden_aus": "fuehrte_zu",
-  "fuehrte_zu": "entstanden_aus",
-  "erbaut_von": "erbaute",
-  "erbaute": "erbaut_von",
-  "zerstoert_durch": "zerstoerte",
-  "zerstoerte": "zerstoert_durch",
-  "gefunden_in": "fundort_von",
-  "fundort_von": "gefunden_in",
-  "ereignete_sich_in": "schauplatz_von",
-  "schauplatz_von": "ereignete_sich_in",
+  nachfolger_von: "vorgaenger_von",
+  vorgaenger_von: "nachfolger_von",
+  entstanden_aus: "fuehrte_zu",
+  fuehrte_zu: "entstanden_aus",
+  erbaut_von: "erbaute",
+  erbaute: "erbaut_von",
+  zerstoert_durch: "zerstoerte",
+  zerstoerte: "zerstoert_durch",
+  gefunden_in: "fundort_von",
+  fundort_von: "gefunden_in",
+  ereignete_sich_in: "schauplatz_von",
+  schauplatz_von: "ereignete_sich_in",
 
-  // Organisatorisch
-  "mitglied_von": "hat_mitglied",
-  "hat_mitglied": "mitglied_von",
-  "angefuehrt_von": "fuehrt_an",
-  "fuehrt_an": "angefuehrt_von",
-  "gegruendet_von": "gruendete",
-  "gruendete": "gegruendet_von",
-  "kontrolliert": "kontrolliert_von",
-  "kontrolliert_von": "kontrolliert",
-  "untersteht": "hat_untergebenen",
-  "hat_untergebenen": "untersteht",
+  mitglied_von: "hat_mitglied",
+  hat_mitglied: "mitglied_von",
+  angefuehrt_von: "fuehrt_an",
+  fuehrt_an: "angefuehrt_von",
+  gegruendet_von: "gruendete",
+  gruendete: "gegruendet_von",
+  kontrolliert: "kontrolliert_von",
+  kontrolliert_von: "kontrolliert",
+  untersteht: "hat_untergebenen",
+  hat_untergebenen: "untersteht",
 
-  // Sonstiges
-  "haengt_zusammen_mit": "haengt_zusammen_mit",
-  "gegensatz_zu": "gegensatz_zu",
-  "aehnlich_wie": "aehnlich_wie",
-  "ziel_von": "hat_zum_ziel",
-  "hat_zum_ziel": "ziel_von",
-  "ursache_fuer": "folge_von",
-  "folge_von": "ursache_fuer"
+  haengt_zusammen_mit: "haengt_zusammen_mit",
+  gegensatz_zu: "gegensatz_zu",
+  aehnlich_wie: "aehnlich_wie",
+  ziel_von: "hat_zum_ziel",
+  hat_zum_ziel: "ziel_von",
+  ursache_fuer: "folge_von",
+  folge_von: "ursache_fuer"
 };
 
-// Element-Typen gruppiert nach Kategorien
+/* ---------------- Element-Typen (für Selector) ----------------
+ * Auch hier: Keys bleiben stabil. Labels bekommen t(..., FallbackLabel).
+ */
 const ELEMENT_TYPES = [
-  {
-    category: "Orte & Geografie",
-    items: [
-      { key: "Welt", label: "Welt/Planet" },
-      { key: "Kontinent", label: "Kontinent" },
-      { key: "Region", label: "Region" },
-      { key: "Land", label: "Land/Staat" },
-      { key: "Provinz", label: "Provinz/Herzogtum" },
-      { key: "Stadt", label: "Stadt" },
-      { key: "Dorf", label: "Dorf/Siedlung" },
-      { key: "Stadtviertel", label: "Stadtviertel" },
-      { key: "Landmarke-Berg", label: "Landmarke: Berg" },
-      { key: "Landmarke-Fluss", label: "Landmarke: Fluss" },
-      { key: "Landmarke-See", label: "Landmarke: See" },
-      { key: "Landmarke-Wald", label: "Landmarke: Wald" },
-      { key: "Landmarke-Wüste", label: "Landmarke: Wüste" },
-      { key: "Landmarke-Küste", label: "Landmarke: Küste" },
-      { key: "Landmarke-Insel", label: "Landmarke: Insel" },
-      { key: "Landmarke-Höhle", label: "Landmarke: Höhle" }
-    ]
-  },
-  {
-    category: "Infrastruktur",
-    items: [
-      { key: "Strasse", label: "Straße/Route" },
-      { key: "Brücke", label: "Brücke" },
-      { key: "Hafen", label: "Hafen" },
-      { key: "Kanal", label: "Kanal" },
-      { key: "Aquädukt", label: "Aquädukt" },
-      { key: "Mine", label: "Mine" },
-      { key: "Mühle", label: "Mühle" }
-    ]
-  },
-  {
-    category: "Politik & Verwaltung",
-    items: [
-      { key: "Reich", label: "Reich/Imperium" },
-      { key: "Königreich", label: "Königreich/Republik" },
-      { key: "Stadtstaat", label: "Stadtstaat" },
-      { key: "Lehen", label: "Lehen/Grafschaft" },
-      { key: "Bündnis", label: "Bündnis/Föderation" },
-      { key: "Amt", label: "Amt/Behörde" },
-      { key: "Gesetz", label: "Gesetz/Edikt" },
-      { key: "Grenze", label: "Grenze/Territorium" },
-      { key: "Titel", label: "Titel/Rang" }
-    ]
-  },
-  {
-    category: "Gesellschaft & Kultur",
-    items: [
-      { key: "Volk", label: "Volk/Ethnie" },
-      { key: "Clan", label: "Clan/Stamm" },
-      { key: "Sprache", label: "Sprache/Dialekt" },
-      { key: "Schrift", label: "Schrift/Alphabet" },
-      { key: "Religion", label: "Religion/Kult" },
-      { key: "Gottheit", label: "Gottheit" },
-      { key: "Tempel", label: "Tempel/Schrein" },
-      { key: "Ritual", label: "Ritual/Fest" },
-      { key: "Kalender", label: "Kalender/Feiertag" },
-      { key: "Sitte", label: "Sitte/Tabu" },
-      { key: "Mode", label: "Mode/Kleidung" },
-      { key: "Küche", label: "Küche/Speise" },
-      { key: "Kunst", label: "Kunst/Stil" },
-      { key: "Musik", label: "Musik" },
-      { key: "Legende", label: "Legende/Mythos" }
-    ]
-  },
-  {
-    category: "Wirtschaft & Alltag",
-    items: [
-      { key: "Ressource", label: "Ressource" },
-      { key: "Handelsgut", label: "Handelsgut/Ware" },
-      { key: "Währung", label: "Währung" },
-      { key: "Beruf", label: "Beruf/Handwerk" },
-      { key: "Zunft", label: "Zunft/Gilde" },
-      { key: "Manufaktur", label: "Manufaktur/Betrieb" },
-      { key: "Markt", label: "Markt/Marktplatz" },
-      { key: "Handelsroute", label: "Handelsroute" },
-      { key: "Bank", label: "Bank/Wechselstube" },
-      { key: "Hof", label: "Hof/Farm/Gehöft" },
-      { key: "Gasthaus", label: "Gasthaus/Taverne" },
-      { key: "Schmiede", label: "Schmiede/Werkstatt" }
-    ]
-  },
-  {
-    category: "Militär & Macht",
-    items: [
-      { key: "Armee", label: "Armee/Legion" },
-      { key: "Orden", label: "Orden/Bruderschaft" },
-      { key: "Söldner", label: "Söldnerkompanie" },
-      { key: "Festung", label: "Festung/Burg" },
-      { key: "Garnison", label: "Garnison/Arsenal" },
-      { key: "Waffengattung", label: "Waffengattung" },
-      { key: "Taktik", label: "Taktik/Doktrin" },
-      { key: "Konflikt", label: "Konflikt" },
-      { key: "Vertrag", label: "Vertrag/Frieden" }
-    ]
-  },
-  {
-    category: "Wissen & Magie",
-    items: [
-      { key: "Magiesystem", label: "Magiesystem/Regeln" },
-      { key: "Magieschule", label: "Schule/Tradition" },
-      { key: "Zauber", label: "Disziplin/Zauber" },
-      { key: "Magiequelle", label: "Quelle/Knoten/Leitlinien" },
-      { key: "Artefakt", label: "Artefakt/Relikt" },
-      { key: "Bibliothek", label: "Bibliothek/Archiv" },
-      { key: "Universität", label: "Universität/Akademie" },
-      { key: "Gelehrte", label: "Gelehrtengesellschaft" },
-      { key: "Forschung", label: "Forschung/Entdeckung" },
-      { key: "Verbotenekunst", label: "Verbotene Künste" }
-    ]
-  },
-  {
-    category: "Natur & Lebewesen",
-    items: [
-      { key: "Spezies", label: "Spezies/Rasse" },
-      { key: "Unterart", label: "Unterart/Volk" },
-      { key: "Tier", label: "Tier" },
-      { key: "Pflanze", label: "Pflanze" },
-      { key: "Monster", label: "Monster/Wesen" },
-      { key: "Krankheit", label: "Krankheit/Seuche" },
-      { key: "Wetter", label: "Wetterphänomen" },
-      { key: "Naturgefahr", label: "Naturgefahr" }
-    ]
-  },
-  {
-    category: "Recht & Ordnung",
-    items: [
-      { key: "Rechtsordnung", label: "Rechtsordnung" },
-      { key: "Gericht", label: "Gericht/Tribunal" },
-      { key: "Strafe", label: "Strafe/Urteil" },
-      { key: "Zoll", label: "Zoll/Maut" },
-      { key: "Steuer", label: "Steuer/Abgabe" }
-    ]
-  },
-  {
-    category: "Geschichte & Zeit",
-    items: [
-      { key: "Epoche", label: "Epoche/Zeitalter" },
-      { key: "Dynastie", label: "Dynastie" },
-      { key: "Ereignis", label: "Ereignis" },
-      { key: "Prophezeiung", label: "Prophezeiung" },
-      { key: "Chronik", label: "Überlieferung/Chronik" }
-    ]
-  },
-  {
-    category: "Organisationen",
-    items: [
-      { key: "Geheimbund", label: "Geheimbund/Zirkel" },
-      { key: "Kirche", label: "Kirche/Orden" },
-      { key: "Händlergilde", label: "Händlergilde" },
-      { key: "Agentennetz", label: "Agentennetz/Spionage" },
-      { key: "Piratenbande", label: "Piratenbande" },
-      { key: "Widerstand", label: "Widerstandsgruppe" },
-      { key: "Adelshaus", label: "Haus/Familie/Adelshaus" }
-    ]
-  },
-  {
-    category: "Technik & Baukunst",
-    items: [
-      { key: "Technologie", label: "Technologie/Erfindung" },
-      { key: "Werkzeug", label: "Werkzeug/Waffe" },
-      { key: "Theater", label: "Bauwerk: Theater" },
-      { key: "Arena", label: "Bauwerk: Arena" },
-      { key: "Leuchtturm", label: "Bauwerk: Leuchtturm" },
-      { key: "Kanalisation", label: "Bauwerk: Kanalisation" },
-      { key: "Transport", label: "Transportmittel" }
-    ]
-  },
-  {
-    category: "Plot-Elemente",
-    items: [
-      { key: "Geheimnis", label: "Geheimnis/Mysterium" },
-      { key: "Gerücht", label: "Gerücht" },
-      { key: "Quest", label: "Quest/Plot-Hook" },
-      { key: "MacGuffin", label: "MacGuffin" },
-      { key: "Timer", label: "Frist/Timer" }
-    ]
-  }
+  { key: "geo", category: "Orte & Geografie", items: [
+    { key: "Welt", label: "Welt/Planet" },
+    { key: "Kontinent", label: "Kontinent" },
+    { key: "Region", label: "Region" },
+    { key: "Land", label: "Land/Staat" },
+    { key: "Provinz", label: "Provinz/Herzogtum" },
+    { key: "Stadt", label: "Stadt" },
+    { key: "Dorf", label: "Dorf/Siedlung" },
+    { key: "Stadtviertel", label: "Stadtviertel" },
+    { key: "Landmarke-Berg", label: "Landmarke: Berg" },
+    { key: "Landmarke-Fluss", label: "Landmarke: Fluss" },
+    { key: "Landmarke-See", label: "Landmarke: See" },
+    { key: "Landmarke-Wald", label: "Landmarke: Wald" },
+    { key: "Landmarke-Wüste", label: "Landmarke: Wüste" },
+    { key: "Landmarke-Küste", label: "Landmarke: Küste" },
+    { key: "Landmarke-Insel", label: "Landmarke: Insel" },
+    { key: "Landmarke-Höhle", label: "Landmarke: Höhle" },
+  ]},
+  { key: "infrastructure", category: "Infrastruktur", items: [
+    { key: "Strasse", label: "Straße/Route" },
+    { key: "Brücke", label: "Brücke" },
+    { key: "Hafen", label: "Hafen" },
+    { key: "Kanal", label: "Kanal" },
+    { key: "Aquädukt", label: "Aquädukt" },
+    { key: "Mine", label: "Mine" },
+    { key: "Mühle", label: "Mühle" },
+  ]},
+  { key: "politics", category: "Politik & Verwaltung", items: [
+    { key: "Reich", label: "Reich/Imperium" },
+    { key: "Königreich", label: "Königreich/Republik" },
+    { key: "Stadtstaat", label: "Stadtstaat" },
+    { key: "Lehen", label: "Lehen/Grafschaft" },
+    { key: "Bündnis", label: "Bündnis/Föderation" },
+    { key: "Amt", label: "Amt/Behörde" },
+    { key: "Gesetz", label: "Gesetz/Edikt" },
+    { key: "Grenze", label: "Grenze/Territorium" },
+    { key: "Titel", label: "Titel/Rang" },
+  ]},
+  { key: "society", category: "Gesellschaft & Kultur", items: [
+    { key: "Volk", label: "Volk/Ethnie" },
+    { key: "Clan", label: "Clan/Stamm" },
+    { key: "Sprache", label: "Sprache/Dialekt" },
+    { key: "Schrift", label: "Schrift/Alphabet" },
+    { key: "Religion", label: "Religion/Kult" },
+    { key: "Gottheit", label: "Gottheit" },
+    { key: "Tempel", label: "Tempel/Schrein" },
+    { key: "Ritual", label: "Ritual/Fest" },
+    { key: "Kalender", label: "Kalender/Feiertag" },
+    { key: "Sitte", label: "Sitte/Tabu" },
+    { key: "Mode", label: "Mode/Kleidung" },
+    { key: "Küche", label: "Küche/Speise" },
+    { key: "Kunst", label: "Kunst/Stil" },
+    { key: "Musik", label: "Musik" },
+    { key: "Legende", label: "Legende/Mythos" },
+  ]},
+  { key: "economy", category: "Wirtschaft & Alltag", items: [
+    { key: "Ressource", label: "Ressource" },
+    { key: "Handelsgut", label: "Handelsgut/Ware" },
+    { key: "Währung", label: "Währung" },
+    { key: "Beruf", label: "Beruf/Handwerk" },
+    { key: "Zunft", label: "Zunft/Gilde" },
+    { key: "Manufaktur", label: "Manufaktur/Betrieb" },
+    { key: "Markt", label: "Markt/Marktplatz" },
+    { key: "Handelsroute", label: "Handelsroute" },
+    { key: "Bank", label: "Bank/Wechselstube" },
+    { key: "Hof", label: "Hof/Farm/Gehöft" },
+    { key: "Gasthaus", label: "Gasthaus/Taverne" },
+    { key: "Schmiede", label: "Schmiede/Werkstatt" },
+  ]},
+  { key: "military", category: "Militär & Macht", items: [
+    { key: "Armee", label: "Armee/Legion" },
+    { key: "Orden", label: "Orden/Bruderschaft" },
+    { key: "Söldner", label: "Söldnerkompanie" },
+    { key: "Festung", label: "Festung/Burg" },
+    { key: "Garnison", label: "Garnison/Arsenal" },
+    { key: "Waffengattung", label: "Waffengattung" },
+    { key: "Taktik", label: "Taktik/Doktrin" },
+    { key: "Konflikt", label: "Konflikt" },
+    { key: "Vertrag", label: "Vertrag/Frieden" },
+  ]},
+  { key: "knowledge", category: "Wissen & Magie", items: [
+    { key: "Magiesystem", label: "Magiesystem/Regeln" },
+    { key: "Magieschule", label: "Schule/Tradition" },
+    { key: "Zauber", label: "Disziplin/Zauber" },
+    { key: "Magiequelle", label: "Quelle/Knoten/Leitlinien" },
+    { key: "Artefakt", label: "Artefakt/Relikt" },
+    { key: "Bibliothek", label: "Bibliothek/Archiv" },
+    { key: "Universität", label: "Universität/Akademie" },
+    { key: "Gelehrte", label: "Gelehrtengesellschaft" },
+    { key: "Forschung", label: "Forschung/Entdeckung" },
+    { key: "Verbotenekunst", label: "Verbotene Künste" },
+  ]},
+  { key: "nature", category: "Natur & Lebewesen", items: [
+    { key: "Spezies", label: "Spezies/Rasse" },
+    { key: "Unterart", label: "Unterart/Volk" },
+    { key: "Tier", label: "Tier" },
+    { key: "Pflanze", label: "Pflanze" },
+    { key: "Monster", label: "Monster/Wesen" },
+    { key: "Krankheit", label: "Krankheit/Seuche" },
+    { key: "Wetter", label: "Wetterphänomen" },
+    { key: "Naturgefahr", label: "Naturgefahr" },
+  ]},
+  { key: "law", category: "Recht & Ordnung", items: [
+    { key: "Rechtsordnung", label: "Rechtsordnung" },
+    { key: "Gericht", label: "Gericht/Tribunal" },
+    { key: "Strafe", label: "Strafe/Urteil" },
+    { key: "Zoll", label: "Zoll/Maut" },
+    { key: "Steuer", label: "Steuer/Abgabe" },
+  ]},
+  { key: "history", category: "Geschichte & Zeit", items: [
+    { key: "Epoche", label: "Epoche/Zeitalter" },
+    { key: "Dynastie", label: "Dynastie" },
+    { key: "Ereignis", label: "Ereignis" },
+    { key: "Prophezeiung", label: "Prophezeiung" },
+    { key: "Chronik", label: "Überlieferung/Chronik" },
+  ]},
+  { key: "orgs", category: "Organisationen", items: [
+    { key: "Geheimbund", label: "Geheimbund/Zirkel" },
+    { key: "Kirche", label: "Kirche/Orden" },
+    { key: "Händlergilde", label: "Händlergilde" },
+    { key: "Agentennetz", label: "Agentennetz/Spionage" },
+    { key: "Piratenbande", label: "Piratenbande" },
+    { key: "Widerstand", label: "Widerstandsgruppe" },
+    { key: "Adelshaus", label: "Haus/Familie/Adelshaus" },
+  ]},
+  { key: "tech", category: "Technik & Baukunst", items: [
+    { key: "Technologie", label: "Technologie/Erfindung" },
+    { key: "Werkzeug", label: "Werkzeug/Waffe" },
+    { key: "Theater", label: "Bauwerk: Theater" },
+    { key: "Arena", label: "Bauwerk: Arena" },
+    { key: "Leuchtturm", label: "Bauwerk: Leuchtturm" },
+    { key: "Kanalisation", label: "Bauwerk: Kanalisation" },
+    { key: "Transport", label: "Transportmittel" },
+  ]},
+  { key: "plot", category: "Plot-Elemente", items: [
+    { key: "Geheimnis", label: "Geheimnis/Mysterium" },
+    { key: "Gerücht", label: "Gerücht" },
+    { key: "Quest", label: "Quest/Plot-Hook" },
+    { key: "MacGuffin", label: "MacGuffin" },
+    { key: "Timer", label: "Frist/Timer" },
+  ]},
 ];
 
-/* ------------ Helpers ------------ */
+/* ---------------- Helpers ---------------- */
 function getPath(obj, path, fallback = "") {
   if (!obj) return fallback;
   let cur = obj;
@@ -464,7 +431,6 @@ function getPath(obj, path, fallback = "") {
   }
   return cur ?? fallback;
 }
-
 function setPathIn(obj, path, val) {
   const parts = path.split(".");
   const next = { ...(obj || {}) };
@@ -477,7 +443,6 @@ function setPathIn(obj, path, val) {
   cur[parts[parts.length - 1]] = val;
   return next;
 }
-
 function uniqBy(arr, keyFn) {
   const seen = new Set();
   return arr.filter(item => {
@@ -487,19 +452,15 @@ function uniqBy(arr, keyFn) {
     return true;
   });
 }
-
 function counterpartTypesForDelete(type) {
   const reciprocal = RECIPROCAL[type];
-  if (reciprocal === type) {
-    return [type];
-  }
-  return [reciprocal];
+  return reciprocal === type ? [type] : [reciprocal];
 }
 
 /* ---------------- Tabs ---------------- */
 const TABS = [
-  { key: "details", label: "Details" },
-  { key: "relations", label: "Beziehungen" }
+  { key: "details", labelKey: "world.tabs.details" },
+  { key: "relations", labelKey: "world.tabs.relationships" },
 ];
 
 /* ---------------- Modal ---------------- */
@@ -536,17 +497,17 @@ function Modal({ open, onClose, title, children }) {
   return createPortal(overlay, document.body);
 }
 
-/* ---------------- Beziehungen UI ---------------- */
-// Helper: Get label for relationship type
-function getRelLabel(typeKey) {
-  for (const cat of REL_CATEGORIES) {
-    const found = cat.types.find(t => t.key === typeKey);
-    if (found) return found.label;
-  }
-  return typeKey;
+/* ---------------- Beziehung-Labels via i18n ---------------- */
+function relLabel(t, typeKey, fallback) {
+  return t(`world.relations.types.${typeKey}`, fallback ?? typeKey);
+}
+function catLabel(t, cat) {
+  return t(`world.relations.categories.${cat.key}`, cat.name);
 }
 
+/* ---------------- Beziehungen UI ---------------- */
 function RelationEditor({ currentId, allElements, onAdd }) {
+  const { t } = useTranslation();
   const [targetId, setTargetId] = useState("");
   const [type, setType] = useState(REL_CATEGORIES[0].types[0].key);
   const [note, setNote] = useState("");
@@ -555,39 +516,51 @@ function RelationEditor({ currentId, allElements, onAdd }) {
   return (
     <div style={{display:"grid", gridTemplateColumns:"1.5fr 1.2fr 1fr auto", gap:8}}>
       <select className="input" value={targetId} onChange={e=>setTargetId(Number(e.target.value))}>
-        <option value="">– Ziel-Element –</option>
-        {options.map(el => <option key={el.id} value={el.id}>{el.title || "Unbenannt"}</option>)}
+        <option value="">{t('world.relations.targetPlaceholder')}</option>
+        {options.map(el => <option key={el.id} value={el.id}>{el.title || t('world.unnamed')}</option>)}
       </select>
+
       <select className="input" value={type} onChange={e=>setType(e.target.value)}>
         {REL_CATEGORIES.map(cat => (
-          <optgroup key={cat.name} label={cat.name}>
-            {cat.types.map(t => (
-              <option key={t.key} value={t.key}>{t.label}</option>
+          <optgroup key={cat.key} label={catLabel(t, cat)}>
+            {cat.types.map(ti => (
+              <option key={ti.key} value={ti.key}>{relLabel(t, ti.key, ti.label)}</option>
             ))}
           </optgroup>
         ))}
       </select>
-      <input className="input" placeholder="Notiz (optional)" value={note} onChange={e=>setNote(e.target.value)} />
-      <button className="btn" onClick={()=> targetId && onAdd({ target_id: targetId, type, note })}>Hinzufügen</button>
+
+      <input
+        className="input"
+        placeholder={t('world.relations.notePlaceholder')}
+        value={note}
+        onChange={e=>setNote(e.target.value)}
+      />
+      <button className="btn" onClick={()=> targetId && onAdd({ target_id: targetId, type, note })}>
+        {t('world.relations.add')}
+      </button>
     </div>
   );
 }
 
 function RelationList({ element, allElements, onRemove }) {
+  const { t } = useTranslation();
   const links = getPath(element, "relations.connections", []) || [];
   const validLinks = links.filter(r => allElements.find(el => el.id === r.target_id));
 
-  if (!validLinks.length) return <div className="small muted">Keine Verbindungen</div>;
+  if (!validLinks.length) return <div className="small muted">{t('world.relations.none')}</div>;
   const nameOf = (id) => (allElements.find(el=>el.id===id)?.title) || `#${id}`;
   return (
     <ul style={{listStyle:"none", padding:0, margin:0, display:"grid", gap:8}}>
       {validLinks.map((r, idx) => (
         <li key={idx} className="panel" style={{padding:"8px 10px"}}>
           <div style={{display:"flex", alignItems:"center", gap:12}}>
-            <div style={{flex: "0 0 auto", fontWeight: 600, color: "var(--brand)"}}>{getRelLabel(r.type)}</div>
+            <div style={{flex: "0 0 auto", fontWeight: 600, color: "var(--brand)"}}>
+              {relLabel(t, r.type)}
+            </div>
             <div style={{flex: "1 1 auto", color:"var(--muted, #64748b)"}}>{nameOf(r.target_id)}</div>
             {r.note ? <div className="small muted" style={{flex:"2 1 auto"}}>{r.note}</div> : null}
-            <button className="btn btn-danger-quiet" onClick={()=>onRemove(r)}>Entfernen</button>
+            <button className="btn btn-danger-quiet" onClick={()=>onRemove(r)}>{t('common.delete')}</button>
           </div>
         </li>
       ))}
@@ -595,8 +568,9 @@ function RelationList({ element, allElements, onRemove }) {
   );
 }
 
-/* ------------- Graph Modal (Ego-Netz) mit ReactFlow ------------- */
+/* ------------- Graph Modal (Ego-Netz) ------------- */
 function RelationsGraphModal({ open, onClose, activeId, allElements, onJumpToElement }) {
+  const { t } = useTranslation();
   const [graphData, setGraphData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -608,16 +582,13 @@ function RelationsGraphModal({ open, onClose, activeId, allElements, onJumpToEle
       try {
         const response = await axios.get(`/api/world/${activeId}`);
         const elementData = response.data || {};
-
-        let rels = getPath(elementData, "relations.connections", []) || [];
-
+        const rels = getPath(elementData, "relations.connections", []) || [];
         const validRels = rels.filter(r => allElements.find(el => el.id === r.target_id));
 
         const nameOf = (id) => allElements.find(el => el.id === id)?.title || `#${id}`;
         const nodes = [];
         const edges = [];
 
-        // Center node (ego)
         nodes.push({
           id: String(activeId),
           type: "default",
@@ -643,7 +614,6 @@ function RelationsGraphModal({ open, onClose, activeId, allElements, onJumpToEle
           const x = radius * Math.cos(angle);
           const y = radius * Math.sin(angle);
 
-          // Add connected node
           nodes.push({
             id: String(r.target_id),
             type: "default",
@@ -661,10 +631,9 @@ function RelationsGraphModal({ open, onClose, activeId, allElements, onJumpToEle
           });
 
           const isSym = (RECIPROCAL[r.type] || r.type) === r.type;
-          const typeLabel = getRelLabel(r.type);
+          const typeLabel = relLabel(t, r.type);
           const label = r.note ? `${typeLabel} (${r.note})` : typeLabel;
 
-          // Add edge
           edges.push({
             id: `e-${activeId}-${r.target_id}`,
             source: String(activeId),
@@ -675,20 +644,14 @@ function RelationsGraphModal({ open, onClose, activeId, allElements, onJumpToEle
             style: { stroke: "#64748b", strokeWidth: 2 },
             labelStyle: { fill: "#0f172a", fontWeight: 500, fontSize: 11 },
             labelBgStyle: { fill: "#ffffff", fillOpacity: 0.9 },
-            markerEnd: {
-              type: MarkerType.ArrowClosed,
-              color: "#64748b",
-            },
-            markerStart: isSym ? {
-              type: MarkerType.ArrowClosed,
-              color: "#64748b",
-            } : undefined,
+            markerEnd: { type: MarkerType.ArrowClosed, color: "#64748b" },
+            markerStart: isSym ? { type: MarkerType.ArrowClosed, color: "#64748b" } : undefined,
           });
         });
 
         setGraphData({ nodes, edges });
       } catch (error) {
-        console.error("Fehler beim Laden der Beziehungen:", error);
+        console.error("Relations load failed", error);
         setGraphData({ nodes: [], edges: [] });
       } finally {
         setLoading(false);
@@ -696,7 +659,7 @@ function RelationsGraphModal({ open, onClose, activeId, allElements, onJumpToEle
     }
 
     loadRelations();
-  }, [open, activeId, allElements]);
+  }, [open, activeId, allElements, t]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -720,7 +683,7 @@ function RelationsGraphModal({ open, onClose, activeId, allElements, onJumpToEle
 
   if (loading) {
     return (
-      <Modal open={open} onClose={onClose} title="Beziehungs-Graph">
+      <Modal open={open} onClose={onClose} title={t('world.graph.title')}>
         <div style={{
           display: "flex",
           alignItems: "center",
@@ -729,7 +692,7 @@ function RelationsGraphModal({ open, onClose, activeId, allElements, onJumpToEle
           color: "#64748b",
           background: "#f8fafc"
         }}>
-          Lade Beziehungen...
+          {t('world.graph.loading')}
         </div>
       </Modal>
     );
@@ -738,7 +701,7 @@ function RelationsGraphModal({ open, onClose, activeId, allElements, onJumpToEle
   const hasRelations = edges.length > 0;
 
   return (
-    <Modal open={open} onClose={onClose} title="Beziehungs-Graph">
+    <Modal open={open} onClose={onClose} title={t('world.graph.title')}>
       <div style={{ width: "100%", height: "100%", background: "#f8fafc" }}>
         {hasRelations ? (
           <ReactFlow
@@ -766,7 +729,7 @@ function RelationsGraphModal({ open, onClose, activeId, allElements, onJumpToEle
                 fontSize: 13,
                 color: "#64748b"
               }}>
-                Klicke auf ein Element um zu dessen Profil zu springen
+                {t('world.graph.hint')}
               </div>
             </Panel>
           </ReactFlow>
@@ -781,9 +744,9 @@ function RelationsGraphModal({ open, onClose, activeId, allElements, onJumpToEle
             color: "#64748b"
           }}>
             <div style={{ fontSize: 48 }}>🔗</div>
-            <div style={{ fontSize: 16, fontWeight: 500 }}>Keine Beziehungen vorhanden</div>
+            <div style={{ fontSize: 16, fontWeight: 500 }}>{t('world.graph.emptyTitle')}</div>
             <div style={{ fontSize: 14, textAlign: "center", maxWidth: 400 }}>
-              Füge Beziehungen im Tab "Beziehungen" hinzu, um sie hier zu visualisieren.
+              {t('world.graph.emptySub')}
             </div>
           </div>
         )}
@@ -792,8 +755,9 @@ function RelationsGraphModal({ open, onClose, activeId, allElements, onJumpToEle
   );
 }
 
-/* ------------- Weltweite Beziehungs-Übersicht ------------- */
+/* ------------- Globale Übersicht ------------- */
 function WorldGraphModal({ open, onClose, elements, activeId, onJumpToElement }) {
+  const { t } = useTranslation();
   const [relationData, setRelationData] = useState(null);
 
   useEffect(() => {
@@ -838,7 +802,7 @@ function WorldGraphModal({ open, onClose, elements, activeId, onJumpToElement })
 
   if (!relationData) {
     return (
-      <Modal open={open} onClose={onClose} title="Beziehungsübersicht – alle Elemente">
+      <Modal open={open} onClose={onClose} title={t('world.worldGraph.title')}>
         <div style={{
           display: "flex",
           alignItems: "center",
@@ -847,7 +811,7 @@ function WorldGraphModal({ open, onClose, elements, activeId, onJumpToElement })
           color: "#64748b",
           background: "#f8fafc"
         }}>
-          Lade Beziehungen...
+          {t('world.worldGraph.loading')}
         </div>
       </Modal>
     );
@@ -856,7 +820,7 @@ function WorldGraphModal({ open, onClose, elements, activeId, onJumpToElement })
   const { profiles, relMap } = relationData;
 
   return (
-    <Modal open={open} onClose={onClose} title="Beziehungsübersicht – alle Elemente">
+    <Modal open={open} onClose={onClose} title={t('world.worldGraph.title')}>
       <div style={{
         width: "100%",
         height: "100%",
@@ -909,11 +873,7 @@ function WorldGraphModal({ open, onClose, elements, activeId, onJumpToElement })
                     background: isActive ? "#22c55e" : "#94a3b8",
                     flexShrink: 0
                   }} />
-                  <div style={{
-                    fontSize: 16,
-                    fontWeight: isActive ? 600 : 500,
-                    color: isActive ? "#15803d" : "#0f172a"
-                  }}>
+                  <div style={{ fontSize: 16, fontWeight: isActive ? 600 : 500, color: isActive ? "#15803d" : "#0f172a" }}>
                     {p.title}
                   </div>
                   {relations.length > 0 && (
@@ -925,12 +885,12 @@ function WorldGraphModal({ open, onClose, elements, activeId, onJumpToElement })
                       padding: "2px 8px",
                       borderRadius: 12
                     }}>
-                      {relations.length} {relations.length === 1 ? "Beziehung" : "Beziehungen"}
+                      {t('world.worldGraph.count', { count: relations.length })}
                     </div>
                   )}
                 </div>
 
-                {relations.length > 0 && (
+                {relations.length > 0 ? (
                   <div style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
@@ -955,43 +915,24 @@ function WorldGraphModal({ open, onClose, elements, activeId, onJumpToElement })
                           onJumpToElement(rel.targetId);
                         }}
                       >
-                        <span style={{
-                          color: "#0ea5e9",
-                          fontWeight: 500,
-                          flexShrink: 0
-                        }}>
-                          {getRelLabel(rel.type)}
+                        <span style={{ color: "#0ea5e9", fontWeight: 500, flexShrink: 0 }}>
+                          {relLabel(t, rel.type)}
                         </span>
                         <span style={{ color: "#64748b" }}>→</span>
-                        <span style={{
-                          color: "#0f172a",
-                          fontWeight: 500
-                        }}>
+                        <span style={{ color: "#0f172a", fontWeight: 500 }}>
                           {rel.targetName}
                         </span>
                         {rel.note && (
-                          <span style={{
-                            color: "#64748b",
-                            fontSize: 12,
-                            marginLeft: "auto",
-                            fontStyle: "italic"
-                          }}>
+                          <span style={{ color: "#64748b", fontSize: 12, marginLeft: "auto", fontStyle: "italic" }}>
                             ({rel.note})
                           </span>
                         )}
                       </div>
                     ))}
                   </div>
-                )}
-
-                {relations.length === 0 && (
-                  <div style={{
-                    paddingLeft: 22,
-                    fontSize: 13,
-                    color: "#94a3b8",
-                    fontStyle: "italic"
-                  }}>
-                    Keine Beziehungen
+                ) : (
+                  <div style={{ paddingLeft: 22, fontSize: 13, color: "#94a3b8", fontStyle: "italic" }}>
+                    {t('world.worldGraph.none')}
                   </div>
                 )}
               </div>
@@ -1005,130 +946,93 @@ function WorldGraphModal({ open, onClose, elements, activeId, onJumpToElement })
 
 /* ---------------- Suchbares Dropdown ---------------- */
 const SearchableSelect = React.memo(function SearchableSelect({ value, onChange }) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const ref = useRef(null);
 
-  // Schließen wenn außerhalb geklickt wird
   useEffect(() => {
     if (!isOpen) return;
     function handleClick(e) {
-      if (ref.current && !ref.current.contains(e.target)) {
-        setIsOpen(false);
-      }
+      if (ref.current && !ref.current.contains(e.target)) setIsOpen(false);
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [isOpen]);
 
-  // Filtern der Optionen
   const options = useMemo(() => {
     const searchLower = search.toLowerCase();
     const matches = [];
-
     for (const category of ELEMENT_TYPES) {
       const matchingItems = category.items.filter(item =>
-        item.label.toLowerCase().includes(searchLower) ||
+        t(`world.elementTypes.${item.key}`, item.label).toLowerCase().includes(searchLower) ||
         item.key.toLowerCase().includes(searchLower)
       );
-
       if (matchingItems.length > 0) {
-        matches.push({
-          category: category.category,
-          items: matchingItems
-        });
+        matches.push({ category, items: matchingItems });
       }
     }
-
     return matches;
-  }, [search]);
+  }, [search, t]);
 
-  // Aktuell ausgewähltes Element finden
   const selectedLabel = useMemo(() => {
     for (const category of ELEMENT_TYPES) {
       const item = category.items.find(item => item.key === value);
-      if (item) return item.label;
+      if (item) return t(`world.elementTypes.${item.key}`, item.label);
     }
     return "";
-  }, [value]);
+  }, [value, t]);
 
   return (
     <div className="searchable-select" ref={ref} style={{ position: "relative" }}>
-      <div
-        className="input"
-        onClick={() => setIsOpen(true)}
-        style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
-      >
-        {selectedLabel || "Typ wählen"}
+      <div className="input" onClick={() => setIsOpen(true)} style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
+        {selectedLabel || t('world.selectType')}
       </div>
 
       {isOpen && (
         <div style={{
-          position: "absolute",
-          top: "100%",
-          left: 0,
-          right: 0,
-          maxHeight: "400px",
-          overflowY: "auto",
-          background: "white",
-          border: "1px solid #e5e7eb",
-          borderRadius: "6px",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-          zIndex: 10
+          position: "absolute", top: "100%", left: 0, right: 0, maxHeight: 400, overflowY: "auto",
+          background: "white", border: "1px solid #e5e7eb", borderRadius: 6, boxShadow: "0 4px 12px rgba(0,0,0,0.1)", zIndex: 10
         }}>
-          <div style={{ padding: "8px", borderBottom: "1px solid #e5e7eb" }}>
+          <div style={{ padding: 8, borderBottom: "1px solid #e5e7eb" }}>
             <div style={{ position: "relative" }}>
               <input
                 type="text"
                 className="input"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Suchen..."
+                placeholder={t('world.searchPlaceholder')}
                 autoFocus
-                style={{ paddingLeft: "32px" }}
+                style={{ paddingLeft: 32 }}
               />
-              <BsSearch style={{
-                position: "absolute",
-                left: "10px",
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: "#94a3b8"
-              }} />
+              <BsSearch style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
             </div>
           </div>
 
           <div style={{ padding: "4px 0" }}>
-            {options.map(category => (
-              <div key={category.category}>
+            {options.map(({ category, items }) => (
+              <div key={category.key}>
                 <div style={{
-                  padding: "4px 12px",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  color: "#64748b",
-                  background: "#f8fafc"
+                  padding: "4px 12px", fontSize: 12, fontWeight: 600, color: "#64748b", background: "#f8fafc"
                 }}>
-                  {category.category}
+                  {t(`world.typeCategories.${category.key}`, category.category)}
                 </div>
-                {category.items.map(item => (
+                {items.map(item => (
                   <div
                     key={item.key}
                     onClick={() => { onChange(item.key); setIsOpen(false); }}
-                    style={{
-                      padding: "6px 12px",
-                      cursor: "pointer",
-                      background: item.key === value ? "#f1f5f9" : "transparent"
-                    }}
+                    style={{ padding: "6px 12px", cursor: "pointer", background: item.key === value ? "#f1f5f9" : "transparent" }}
                     onMouseEnter={e => e.currentTarget.style.background = "#f1f5f9"}
                     onMouseLeave={e => e.currentTarget.style.background = item.key === value ? "#f1f5f9" : "transparent"}
                   >
-                    {item.label}
+                    {t(`world.elementTypes.${item.key}`, item.label)}
                   </div>
                 ))}
               </div>
             ))}
             {options.length === 0 && (
               <div style={{ padding: "8px 12px", color: "#94a3b8" }}>
-                Keine Ergebnisse
+                {t('world.noResults')}
               </div>
             )}
           </div>
@@ -1151,35 +1055,38 @@ const WorldElementEditor = React.memo(function WorldElementEditor({
   onRemoveRelation,
   onOpenGraph
 }) {
+  const { t } = useTranslation();
   return (
     <div className="panel" key={elementId}>
       <nav className="tabs tabs-inline">
-        {TABS.map(t => (
+        {TABS.map(tab => (
           <button
-            key={t.key}
+            key={tab.key}
             type="button"
-            className={`tab ${activeTab === t.key ? "active" : ""}`}
-            onClick={() => setActiveTab(t.key)}
-          >{t.label}</button>
+            className={`tab ${activeTab === tab.key ? "active" : ""}`}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            {t(tab.labelKey)}
+          </button>
         ))}
         <div className="tabs-meta">
-          {lastSavedAt ? <>Gespeichert {lastSavedAt.toLocaleTimeString()}</> : "—"}
+          {lastSavedAt ? <>{t('common.saved', { time: lastSavedAt.toLocaleTimeString() })}</> : "—"}
         </div>
       </nav>
 
       {activeTab === "details" && (
-        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label className="small muted">Name</label>
+        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <label className="small muted">{t('world.details.nameLabel')}</label>
               <input
                 className="input"
                 value={getPath(element, "title", "")}
                 onChange={e => onChangeElement("title", e.target.value)}
               />
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label className="small muted">Typ</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <label className="small muted">{t('world.details.typeLabel')}</label>
               <SearchableSelect
                 value={getPath(element, "kind", "Stadt")}
                 onChange={value => onChangeElement("kind", value)}
@@ -1187,12 +1094,12 @@ const WorldElementEditor = React.memo(function WorldElementEditor({
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label className="small muted">Notizen & Details</label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 20 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <label className="small muted">{t('world.details.notesLabel')}</label>
               <textarea
                 className="textarea"
-                placeholder="Beschreibe dieses Welt-Element..."
+                placeholder={t('world.details.notesPlaceholder')}
                 value={getPath(element, "summary", "")}
                 onChange={e => onChangeElement("summary", e.target.value)}
                 rows={12}
@@ -1203,42 +1110,27 @@ const WorldElementEditor = React.memo(function WorldElementEditor({
       )}
 
       {activeTab === "relations" && (
-        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label className="small muted">Neue Verbindung</label>
-            <RelationEditor
-              currentId={elementId}
-              allElements={allElements}
-              onAdd={onAddRelation}
-            />
+        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 24 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <label className="small muted">{t('world.relations.new')}</label>
+            <RelationEditor currentId={elementId} allElements={allElements} onAdd={onAddRelation} />
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label className="small muted">Bestehende Verbindungen</label>
-            <RelationList
-              element={element}
-              allElements={allElements}
-              onRemove={onRemoveRelation}
-            />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <label className="small muted">{t('world.relations.existing')}</label>
+            <RelationList element={element} allElements={allElements} onRemove={onRemoveRelation} />
           </div>
 
           <div style={{ display: "flex", justifyContent: "center", width: "100%", marginTop: 8 }}>
             <button
               type="button"
               onClick={onOpenGraph}
-              title="Beziehungs-Graph öffnen"
-              aria-label="Beziehungs-Graph öffnen"
+              title={t('world.graph.open')}
+              aria-label={t('world.graph.open')}
               style={{
-                width: 48,
-                height: 48,
-                borderRadius: "9999px",
-                border: "1px solid #e5e7eb",
-                background: "#ffffff",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 4px 14px rgba(15,23,42,.10)",
-                cursor: "pointer"
+                width: 48, height: 48, borderRadius: "9999px", border: "1px solid #e5e7eb",
+                background: "#ffffff", display: "inline-flex", alignItems: "center", justifyContent: "center",
+                boxShadow: "0 4px 14px rgba(15,23,42,.10)", cursor: "pointer"
               }}
               onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 6px 16px rgba(15,23,42,.16)")}
               onMouseLeave={e => (e.currentTarget.style.boxShadow = "0 4px 14px rgba(15,23,42,.10)")}
@@ -1256,6 +1148,7 @@ const WorldElementEditor = React.memo(function WorldElementEditor({
 export default function World() {
   const { id } = useParams();
   const { state } = useLocation();
+  const { t } = useTranslation();
   const pid = Number(id);
 
   const [list, setList] = useState([]);
@@ -1267,10 +1160,8 @@ export default function World() {
   const [showWorldGraph, setShowWorldGraph] = useState(false);
   const [confirmModal, setConfirmModal] = useState(null);
 
-  // Ref um zu tracken ob wir schon initial geladen haben
   const hasHandledNewElement = useRef(false);
 
-  // Liste der Welt-Elemente laden
   useEffect(() => {
     let cancel = false;
     async function load() {
@@ -1280,24 +1171,20 @@ export default function World() {
         const items = r.data || [];
         setList(items);
 
-        // Prüfe ob ein neues Element aus dem navigation state übergeben wurde (nur einmal)
         const newElId = state?.newElementId;
         if (newElId && items.find(el => el.id === newElId) && !hasHandledNewElement.current) {
           hasHandledNewElement.current = true;
           setActiveId(newElId);
-          return; // Früher return um weitere Logik zu vermeiden
+          return;
         }
 
-        if (!activeId && items.length) {
-          setActiveId(items[0].id);
-        }
+        if (!activeId && items.length) setActiveId(items[0].id);
       } catch (e) { console.warn(e); }
     }
     if (pid) load();
     return () => { cancel = true; };
   }, [pid, activeId, state?.newElementId]);
 
-  // Aktives Element laden
   useEffect(() => {
     if (!activeId) { setElement({}); return; }
     let cancel = false;
@@ -1376,7 +1263,6 @@ export default function World() {
     } catch (e) { console.warn(e); }
   }, [activeId, element]);
 
-  // Autosave
   const saveTimer = useRef(null);
   const saveNow = useCallback(async () => {
     if (!activeId) return;
@@ -1384,10 +1270,10 @@ export default function World() {
       await axios.put(`/api/world/${activeId}`, element);
       setLastSavedAt(new Date());
       setList(prev => prev.map(el =>
-        el.id === activeId ? { ...el, title: element.title || "Neues Element" } : el
+        el.id === activeId ? { ...el, title: element.title || t('world.newElement') } : el
       ));
     } catch (e) { console.warn("save failed", e); }
-  }, [activeId, element]);
+  }, [activeId, element, t]);
 
   useEffect(() => {
     if (!activeId) return;
@@ -1396,43 +1282,43 @@ export default function World() {
     return () => clearTimeout(saveTimer.current);
   }, [activeId, element, saveNow]);
 
-  // Aktionen
   const addElement = async () => {
     try {
       const r = await axios.post(`/api/projects/${pid}/world`, {
-        title: "Neues Element",
+        title: t('world.newElement'),
         kind: "Ort",
         summary: ""
       });
       const el = r.data;
       setList(prev => [...prev, el]);
       setActiveId(el.id);
-      setElement({ title: "Neues Element", kind: "Ort", summary: "" });
+      setElement({ title: t('world.newElement'), kind: "Ort", summary: "" });
     } catch (e) {
       console.error(e);
-      alert("Element konnte nicht angelegt werden.");
+      alert(t('world.errors.createFailed'));
     }
   };
 
   const deleteElement = async (eid) => {
-    const element = list.find(el => el.id === eid);
+    const el = list.find(x => x.id === eid);
     setConfirmModal({
-      title: 'Weltelement löschen',
-      message: `Möchtest du das Element "${element?.title || 'Unbenannt'}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`,
-      confirmText: 'Löschen',
+      title: t('world.delete.title'),
+      message: t('world.delete.message', { title: el?.title || t('world.unnamed') }),
+      confirmText: t('common.delete'),
+      cancelText: t('common.cancel'),
       variant: 'danger',
       onConfirm: async () => {
         setConfirmModal(null);
         try {
           await axios.delete(`/api/world/${eid}`);
-          setList(prev => prev.filter(el => el.id !== eid));
+          setList(prev => prev.filter(x => x.id !== eid));
           if (activeId === eid) {
-            const next = list.find(el => el.id !== eid);
+            const next = list.find(x => x.id !== eid);
             setActiveId(next?.id ?? null);
           }
         } catch (e) {
           console.error(e);
-          alert("Element konnte nicht gelöscht werden.");
+          alert(t('world.errors.deleteFailed'));
         }
       },
       onCancel: () => setConfirmModal(null)
@@ -1444,15 +1330,15 @@ export default function World() {
       <aside className="side">
         <div className="tree">
           <div className="tree-head">
-            <span className="tree-title">Welt-Elemente</span>
+            <span className="tree-title">{t('world.title')}</span>
             <button
               className="icon-btn"
-              title="Mindmap (alle Beziehungen)"
+              title={t('world.worldGraph.open')}
               onClick={() => setShowWorldGraph(true)}
             >
               <TbTopologyStar3 />
             </button>
-            <button className="icon-btn" title="Element hinzufügen" onClick={addElement}>
+            <button className="icon-btn" title={t('world.newElement')} onClick={addElement}>
               <BsPlus />
             </button>
           </div>
@@ -1461,16 +1347,16 @@ export default function World() {
               <li key={el.id} className={`tree-scene ${activeId === el.id ? "active" : ""}`}>
                 <div className="tree-row scene-row" onClick={() => setActiveId(el.id)} title={el.name}>
                   <span className="tree-dot" aria-hidden />
-                  <span className="tree-name">{el.title || "Neues Element"}</span>
+                  <span className="tree-name">{el.title || t('world.newElement')}</span>
                   <div className="row-actions" onClick={e => e.stopPropagation()}>
-                    <button className="icon-btn danger" title="Löschen" onClick={() => deleteElement(el.id)}>
+                    <button className="icon-btn danger" title={t('common.delete')} onClick={() => deleteElement(el.id)}>
                       <BsTrash />
                     </button>
                   </div>
                 </div>
               </li>
             ))}
-            {!list.length && <li className="tree-empty">Noch keine Elemente</li>}
+            {!list.length && <li className="tree-empty">{t('world.empty')}</li>}
           </ul>
         </div>
       </aside>
@@ -1478,9 +1364,9 @@ export default function World() {
       <main className="main">
         {!activeId ? (
           <div className="panel" style={{ padding: "1rem" }}>
-            <strong>Kein Element ausgewählt.</strong><br />
+            <strong>{t('world.noneSelected')}</strong><br />
             <button className="btn btn-primary-quiet" onClick={addElement} style={{ marginTop: 8 }}>
-              + Element anlegen
+              + {t('world.newElement')}
             </button>
           </div>
         ) : (
