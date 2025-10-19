@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import "../modal.css";
+import "../styles/modal.css";
 
 /**
  * Confirm Modal – generic confirmation dialog

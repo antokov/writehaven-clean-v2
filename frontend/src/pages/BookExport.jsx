@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import { useTranslation } from "react-i18next";
-import "../bookexport.css";
+import "../styles/bookexport.css";
 
 // ---------- Helpers ----------
 const escapeHtml = (s = "") =>

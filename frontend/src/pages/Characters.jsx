@@ -73,7 +73,15 @@ function setPathIn(obj, path, val) {
     cur[k] = { ...(cur[k] || {}) };
     cur = cur[k];
   }
-  cur[parts[parts.length - 1]] = val;
+  const lastKey = parts[parts.length - 1];
+
+  // Wenn val undefined ist, lösche das Feld
+  if (val === undefined) {
+    delete cur[lastKey];
+  } else {
+    cur[lastKey] = val;
+  }
+
   return next;
 }
 

@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { BsPerson, BsGlobe } from 'react-icons/bs';
 import { useTranslation } from 'react-i18next';
-import './TextContextMenu.css';
+import '../styles/TextContextMenu.css';
 
 /**
  * Context Menu für Text-Selection

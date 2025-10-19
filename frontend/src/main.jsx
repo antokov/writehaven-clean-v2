@@ -16,15 +16,15 @@ import World from './pages/World.jsx'
 import BookExport from './pages/BookExport.jsx'
 import ProjectSettings from './pages/ProjectSettings.jsx'
 
-import './styles.css'
-import './layout-2col.css'
-import './projectview.css'
-import './header.css'
-import './topnav.css'
-import './dashboard.css'
-import "./characters.css";
-import "./bookexport.css";
-import './landing.css';
+import './styles/styles.css'
+import './styles/layout-2col.css'
+import './styles/projectview.css'
+import './styles/header.css'
+import './styles/topnav.css'
+import './styles/dashboard.css'
+import "./styles/characters.css";
+import "./styles/bookexport.css";
+import './styles/landing.css';
 
 import axios from 'axios'
 import './i18n' // Initialize i18n

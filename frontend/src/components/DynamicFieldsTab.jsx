@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BsPlus, BsX } from 'react-icons/bs';
 import { useTranslation } from 'react-i18next';
-import './DynamicFieldsTab.css';
+import '../styles/DynamicFieldsTab.css';
 
 /**
  * Dynamic Fields Tab Component
@@ -15,22 +15,30 @@ import './DynamicFieldsTab.css';
 export default function DynamicFieldsTab({ fieldConfig, profile, onChangeProfilePath, getPath }) {
   const { t } = useTranslation();
 
-  const [activeFields, setActiveFields] = useState(() => {
-    // Initialisiere activeFields mit Feldern, die bereits Werte haben
-    const initial = new Set();
-    fieldConfig.optional.forEach(field => {
-      const value = getPath(profile, field.path, '');
-      if (value && value.toString().trim()) {
-        initial.add(field.key);
-      }
-    });
-    return initial;
-  });
-
+  const [activeFields, setActiveFields] = useState(new Set());
   const [showAddMenu, setShowAddMenu] = useState(false);
 
+  // Aktualisiere activeFields wenn sich das Profil ändert
+  useEffect(() => {
+    const newActiveFields = new Set();
+    fieldConfig.optional.forEach(field => {
+      // Prüfe ohne default value, ob das Feld im Profil existiert
+      const value = getPath(profile, field.path, undefined);
+      // Ein Feld ist aktiv, wenn es explizit gesetzt wurde (auch wenn leer)
+      if (value !== undefined) {
+        newActiveFields.add(field.key);
+      }
+    });
+    setActiveFields(newActiveFields);
+  }, [profile, fieldConfig, getPath]);
+
   const addField = (fieldKey) => {
-    setActiveFields(prev => new Set([...prev, fieldKey]));
+    const field = fieldConfig.optional.find(f => f.key === fieldKey);
+    if (field) {
+      // Setze einen leeren String, damit das Feld als "definiert" gilt
+      onChangeProfilePath(field.path, '');
+      setActiveFields(prev => new Set([...prev, fieldKey]));
+    }
     setShowAddMenu(false);
   };
 
@@ -41,8 +49,8 @@ export default function DynamicFieldsTab({ fieldConfig, profile, onChangeProfile
       next.delete(fieldKey);
       return next;
     });
-    // Lösche den Wert
-    onChangeProfilePath(fieldPath, '');
+    // Lösche den Wert vollständig (setze auf undefined)
+    onChangeProfilePath(fieldPath, undefined);
   };
 
   const renderField = (field, canRemove = false) => {

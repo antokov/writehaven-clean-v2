@@ -2,20 +2,16 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { User, Mail, Calendar, Globe } from 'lucide-react'
 import axios from 'axios'
-import './UserSettings.css'
+import '../styles/UserSettings.css'
 
 const LANGUAGES = [
-  { code: 'de', name: 'Deutsch' },
   { code: 'en', name: 'English' },
-  { code: 'es', name: 'Español' },
-  { code: 'fr', name: 'Français' },
-  { code: 'it', name: 'Italiano' },
-  { code: 'pt', name: 'Português' }
+  { code: 'de', name: 'Deutsch' }
 ]
 
 export default function UserSettings() {
   const { user, updateUser } = useAuth()
-  const [language, setLanguage] = useState('de')
+  const [language, setLanguage] = useState('en')
   const [isSaving, setIsSaving] = useState(false)
   const [lastSavedAt, setLastSavedAt] = useState(null)
 
@@ -37,7 +33,7 @@ export default function UserSettings() {
     } catch (error) {
       console.error('Fehler beim Speichern der Sprache:', error)
       // Bei Fehler zurücksetzen
-      setLanguage(user?.language || 'de')
+      setLanguage(user?.language || 'en')
     } finally {
       setIsSaving(false)
     }

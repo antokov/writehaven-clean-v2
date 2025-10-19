@@ -1,7 +1,7 @@
 // src/components/FeedbackModal.jsx
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import './FeedbackModal.css';
+import '../styles/FeedbackModal.css';
 import { useTranslation } from 'react-i18next';
 
 export default function FeedbackModal({ isOpen, onClose }) {

@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import logoUrl from '../assets/logo.png';
 import backgroundUrl from '../assets/background.png';
 import { useTranslation } from 'react-i18next';
-import './Login.css';
+import '../styles/Login.css';
 
 export default function Login() {
   const { t } = useTranslation();

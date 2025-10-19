@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import '../landing.css'
+import '../styles/landing.css'
 import logoUrl from '../assets/logo.png'
 
 const BMAC_URL = import.meta.env.VITE_BMAC_URL || 'https://www.buymeacoffee.com/yourname' // TODO

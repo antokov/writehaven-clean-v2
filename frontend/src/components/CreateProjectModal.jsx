@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import "../modal.css";
-import "./CreateProjectModal.css";
+import "../styles/modal.css";
+import "../styles/CreateProjectModal.css";
 
 /**
  * Create Project Modal - mit optionalem Word-Upload

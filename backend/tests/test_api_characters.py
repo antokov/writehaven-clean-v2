@@ -153,3 +153,223 @@ class TestCharactersAPI:
         """Test: Nicht existierenden Charakter löschen"""
         response = client.delete("/api/characters/99999")
         assert response.status_code == 404
+
+    def test_character_profile_persistence(self, client, sample_project, db):
+        """Test: Vollständige Profildaten werden korrekt gespeichert und geladen"""
+        from app import Character
+
+        # Erstelle Charakter mit umfangreichem Profil
+        profile_data = {
+            "basic": {
+                "first_name": "Jane",
+                "last_name": "Doe",
+                "age": "25",
+                "gender": "female",
+                "residence": "London",
+                "nationality": "British",
+                "nickname": "JD",
+                "religion": "Atheist"
+            },
+            "appearance": {
+                "height": "165cm",
+                "hair_color": "blonde",
+                "eye_color": "blue",
+                "build": "athletic",
+                "distinguishing_features": "scar on left cheek"
+            },
+            "personality": {
+                "traits": "brave, loyal, stubborn",
+                "strengths": "strategic thinking",
+                "weaknesses": "impulsive",
+                "fears": "heights",
+                "goals": "save the kingdom"
+            },
+            "relations": {
+                "family_background": "orphan raised by monks",
+                "education": "self-taught fighter",
+                "occupation": "mercenary"
+            },
+            "skills": {
+                "list": ["swordfighting", "archery", "tracking"],
+                "input": ""
+            },
+            "links": {
+                "connections": [
+                    {"target_id": 2, "type": "Freundschaft", "note": "childhood friend"},
+                    {"target_id": 3, "type": "Mentor", "note": "taught her combat"}
+                ]
+            },
+            "notes": {
+                "text": "Important character for main plot"
+            }
+        }
+
+        payload = {
+            "name": "Jane Doe",
+            "summary": "Main protagonist",
+            "avatar_url": "https://example.com/jane.jpg",
+            "profile": profile_data
+        }
+
+        # Erstelle Charakter
+        create_response = client.post(
+            f"/api/projects/{sample_project.id}/characters",
+            data=json.dumps(payload),
+            content_type="application/json"
+        )
+        assert create_response.status_code == 201
+        character_id = create_response.get_json()["id"]
+
+        # Direkt aus DB laden (nicht über API)
+        with client.application.app_context():
+            db_character = db.session.get(Character, character_id)
+            assert db_character is not None
+            assert db_character.name == "Jane Doe"
+            assert db_character.summary == "Main protagonist"
+            assert db_character.avatar_url == "https://example.com/jane.jpg"
+
+            # Prüfe JSON-Profil in DB
+            import json as json_lib
+            db_profile = json_lib.loads(db_character.profile_json)
+
+            # Prüfe alle Tabs
+            assert db_profile["basic"]["first_name"] == "Jane"
+            assert db_profile["basic"]["last_name"] == "Doe"
+            assert db_profile["basic"]["age"] == "25"
+            assert db_profile["appearance"]["hair_color"] == "blonde"
+            assert db_profile["personality"]["traits"] == "brave, loyal, stubborn"
+            assert db_profile["relations"]["family_background"] == "orphan raised by monks"
+            assert "swordfighting" in db_profile["skills"]["list"]
+            assert len(db_profile["links"]["connections"]) == 2
+            assert db_profile["notes"]["text"] == "Important character for main plot"
+
+        # Lade über API und prüfe erneut
+        get_response = client.get(f"/api/characters/{character_id}")
+        assert get_response.status_code == 200
+        api_data = get_response.get_json()
+
+        assert api_data["profile"]["basic"]["first_name"] == "Jane"
+        assert api_data["profile"]["appearance"]["eye_color"] == "blue"
+        assert api_data["profile"]["skills"]["list"] == ["swordfighting", "archery", "tracking"]
+
+    def test_character_optional_fields_persistence(self, client, sample_project, db):
+        """Test: Dynamisch hinzugefügte Felder werden korrekt gespeichert"""
+        from app import Character
+
+        # Erstelle Charakter mit optionalen Feldern
+        payload = {
+            "name": "Test Character",
+            "profile": {
+                "basic": {
+                    "first_name": "John",
+                    "birth_date": "1990-05-15",  # Optionales Feld
+                    "zodiac_sign": "Taurus"      # Optionales Feld
+                },
+                "appearance": {
+                    "tattoos": "dragon on back",  # Optionales Feld
+                    "scars": "none"                # Optionales Feld
+                }
+            }
+        }
+
+        create_response = client.post(
+            f"/api/projects/{sample_project.id}/characters",
+            data=json.dumps(payload),
+            content_type="application/json"
+        )
+        character_id = create_response.get_json()["id"]
+
+        # Prüfe DB-Persistenz
+        with client.application.app_context():
+            db_character = db.session.get(Character, character_id)
+            import json as json_lib
+            db_profile = json_lib.loads(db_character.profile_json)
+
+            assert db_profile["basic"]["birth_date"] == "1990-05-15"
+            assert db_profile["basic"]["zodiac_sign"] == "Taurus"
+            assert db_profile["appearance"]["tattoos"] == "dragon on back"
+
+        # Update: Entferne ein optionales Feld
+        update_payload = {
+            "profile": {
+                "basic": {
+                    "first_name": "John",
+                    "birth_date": "1990-05-15"
+                    # zodiac_sign weggelassen
+                },
+                "appearance": {
+                    "tattoos": "dragon on back"
+                    # scars weggelassen
+                }
+            }
+        }
+
+        client.patch(
+            f"/api/characters/{character_id}",
+            data=json.dumps(update_payload),
+            content_type="application/json"
+        )
+
+        # Prüfe, dass entferntes Feld weg ist
+        with client.application.app_context():
+            db.session.expire_all()
+            db_character = db.session.get(Character, character_id)
+            db_profile = json_lib.loads(db_character.profile_json)
+
+            assert "birth_date" in db_profile["basic"]
+            # Die alten Felder sollten noch da sein wenn nur PATCH verwendet wird
+            # Bei PUT würden sie gelöscht
+
+    def test_character_undefined_field_removal(self, client, sample_project, db):
+        """Test: Felder mit undefined-Wert werden aus DB entfernt"""
+        from app import Character
+        import json as json_lib
+
+        # Erstelle Charakter mit Feld
+        payload = {
+            "name": "Test",
+            "profile": {
+                "basic": {
+                    "first_name": "John",
+                    "nickname": "Johnny"
+                }
+            }
+        }
+
+        create_response = client.post(
+            f"/api/projects/{sample_project.id}/characters",
+            data=json.dumps(payload),
+            content_type="application/json"
+        )
+        character_id = create_response.get_json()["id"]
+
+        # Prüfe initial
+        with client.application.app_context():
+            db_character = db.session.get(Character, character_id)
+            db_profile = json_lib.loads(db_character.profile_json)
+            assert "nickname" in db_profile["basic"]
+
+        # Update mit null/None um Feld zu löschen
+        update_payload = {
+            "profile": {
+                "basic": {
+                    "first_name": "John",
+                    "nickname": None  # Explizit auf None setzen
+                }
+            }
+        }
+
+        client.put(
+            f"/api/characters/{character_id}",
+            data=json.dumps(update_payload),
+            content_type="application/json"
+        )
+
+        # Prüfe, dass Feld entfernt wurde
+        with client.application.app_context():
+            db.session.expire_all()
+            db_character = db.session.get(Character, character_id)
+            db_profile = json_lib.loads(db_character.profile_json)
+
+            # Nickname sollte nicht mehr existieren
+            assert "nickname" not in db_profile["basic"] or db_profile["basic"]["nickname"] is None

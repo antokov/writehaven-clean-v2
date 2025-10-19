@@ -9,6 +9,11 @@ import tempfile
 # Sicherstellen, dass das backend-Modul importiert werden kann
 sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 
+# Cleanup: Entferne gecachte Module um Doppel-Imports zu vermeiden
+for mod in list(sys.modules.keys()):
+    if mod.startswith('models') or mod.startswith('backend.models'):
+        del sys.modules[mod]
+
 
 @pytest.fixture(scope="session")
 def app():
@@ -59,51 +64,65 @@ def db(app):
     """
     from extensions import db as _db
 
+    # Stelle sicher, dass wir im App-Kontext sind
     with app.app_context():
-        # Alles löschen vor jedem Test
+        # Cleanup vor dem Test
         try:
-            _db.session.rollback()
+            _db.session.remove()
         except:
             pass
 
+        # Alle Tabellen leeren - mit besserer Fehlerbehandlung
         try:
-            _db.session.close()
-        except:
-            pass
-
-        # Alle Tabellen leeren - verwende SQL direkt statt Model-Imports
-        try:
+            # Lösche in der richtigen Reihenfolge (Foreign Keys beachten)
             _db.session.execute(_db.text("DELETE FROM scene"))
             _db.session.execute(_db.text("DELETE FROM chapter"))
             _db.session.execute(_db.text("DELETE FROM worldnode"))
             _db.session.execute(_db.text("DELETE FROM character"))
             _db.session.execute(_db.text("DELETE FROM project"))
+            _db.session.execute(_db.text("DELETE FROM \"user\""))  # user ist reserviertes Wort
             _db.session.commit()
         except Exception as e:
-            print(f"Warning during DB cleanup: {e}")
             _db.session.rollback()
+            # Ignoriere Fehler wenn Tabellen nicht existieren beim ersten Durchlauf
+            if "no such table" not in str(e).lower():
+                print(f"Warning during DB cleanup: {e}")
 
         yield _db
 
         # Nach dem Test cleanup
         try:
-            _db.session.rollback()
-        except:
-            pass
-
-        try:
-            _db.session.close()
+            _db.session.remove()
         except:
             pass
 
 
 @pytest.fixture
-def sample_project(db, app):
-    """Erstellt ein Test-Projekt"""
+def sample_user(db, app):
+    """Erstellt einen Test-Benutzer"""
+    # Importiere Models aus app, nicht lokal
+    from app import User
+
     with app.app_context():
-        # Import nur innerhalb des app context
-        from models import Project
+        user = User(
+            email="test@example.com",
+            name="Test User"
+        )
+        user.set_password("testpassword123")
+        db.session.add(user)
+        db.session.commit()
+        db.session.refresh(user)
+        return user
+
+
+@pytest.fixture
+def sample_project(db, sample_user, app):
+    """Erstellt ein Test-Projekt"""
+    from app import Project
+
+    with app.app_context():
         project = Project(
+            user_id=sample_user.id,
             title="Test Project",
             description="A test project description"
         )
@@ -116,8 +135,9 @@ def sample_project(db, app):
 @pytest.fixture
 def sample_chapter(db, sample_project, app):
     """Erstellt ein Test-Kapitel"""
+    from app import Chapter
+
     with app.app_context():
-        from models import Chapter
         chapter = Chapter(
             project_id=sample_project.id,
             title="Test Chapter",
@@ -133,8 +153,9 @@ def sample_chapter(db, sample_project, app):
 @pytest.fixture
 def sample_scene(db, sample_chapter, app):
     """Erstellt eine Test-Szene"""
+    from app import Scene
+
     with app.app_context():
-        from models import Scene
         scene = Scene(
             chapter_id=sample_chapter.id,
             title="Test Scene",
@@ -150,10 +171,10 @@ def sample_scene(db, sample_chapter, app):
 @pytest.fixture
 def sample_character(db, sample_project, app):
     """Erstellt einen Test-Charakter"""
-    with app.app_context():
-        from models import Character
-        import json
+    from app import Character
+    import json
 
+    with app.app_context():
         character = Character(
             project_id=sample_project.id,
             name="John Doe",
@@ -173,10 +194,10 @@ def sample_character(db, sample_project, app):
 @pytest.fixture
 def sample_worldnode(db, sample_project, app):
     """Erstellt ein Test-World-Element"""
-    with app.app_context():
-        from models import WorldNode
-        import json
+    from app import WorldNode
+    import json
 
+    with app.app_context():
         worldnode = WorldNode(
             project_id=sample_project.id,
             title="Test Location",

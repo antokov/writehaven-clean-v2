@@ -5,7 +5,7 @@ import { MessageSquare, User, Settings, LogOut, ChevronDown } from 'lucide-react
 import { useAuth } from '../context/AuthContext';
 import FeedbackModal from './FeedbackModal';
 import logoUrl from '../assets/logo.png';
-import './UserMenu.css';
+import '../styles/UserMenu.css';
 import { useTranslation } from 'react-i18next';
 
 export default function SiteHeader() {
