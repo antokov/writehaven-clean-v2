@@ -208,7 +208,9 @@ function RelationList({ profile, allCharacters, onRemove }) {
       {validLinks.map((r, idx) => (
         <li key={idx} className="panel" style={{padding:"8px 10px"}}>
           <div style={{display:"flex", alignItems:"center", gap:12}}>
-            <div style={{flex: "0 0 auto"}}>{relTypeLabel(r.type, t)}</div>
+            <div style={{flex: "0 0 auto", fontWeight: 600, color: "var(--brand)"}}>
+              {relTypeLabel(r.type, t)}
+            </div>
             <div style={{flex: "1 1 auto", color:"var(--muted, #64748b)"}}>{nameOf(r.target_id)}</div>
             {r.note ? <div className="small muted" style={{flex:"2 1 auto"}}>{r.note}</div> : null}
             <button className="btn btn-danger-quiet" onClick={()=>onRemove(r)}>{t('common.delete')}</button>
@@ -664,42 +666,46 @@ const CharacterEditor = React.memo(function CharacterEditor({
       )}
 
       {activeTab === "skills" && (
-        <div className="form-grid">
-          <div className="form-row" style={{ gridColumn: "span 12" }}>
-            <div className="form-field">
-              <label className="small muted">{t('characters.skills.label')}</label>
-              <textarea
-                className="textarea"
-                placeholder={t('characters.skills.placeholder')}
-                value={getPath(profile, "skills.input", "")}
-                onChange={e => {
-                  const val = e.target.value;
-                  if (val.endsWith(",") || val.endsWith("\n")) {
-                    const skillText = val.slice(0, -1).trim();
-                    if (skillText) {
-                      const currentSkills = getPath(profile, "skills.list", []);
-                      const updatedSkills = Array.from(new Set([...currentSkills, skillText]));
-                      onChangeProfilePath("skills.list", updatedSkills);
-                      onChangeProfilePath("skills.input", "");
+        <div className="dynamic-fields-tab">
+          <div className="fields-grid">
+            <div className="dynamic-field">
+              <label className="dynamic-field-label">
+                <span>{t('characters.skills.label')}</span>
+              </label>
+              <div className="dynamic-field-input-wrapper">
+                <textarea
+                  className="input textarea"
+                  placeholder={t('characters.skills.placeholder')}
+                  value={getPath(profile, "skills.input", "")}
+                  onChange={e => {
+                    const val = e.target.value;
+                    if (val.endsWith(",") || val.endsWith("\n")) {
+                      const skillText = val.slice(0, -1).trim();
+                      if (skillText) {
+                        const currentSkills = getPath(profile, "skills.list", []);
+                        const updatedSkills = Array.from(new Set([...currentSkills, skillText]));
+                        onChangeProfilePath("skills.list", updatedSkills);
+                        onChangeProfilePath("skills.input", "");
+                      }
+                    } else {
+                      onChangeProfilePath("skills.input", val);
                     }
-                  } else {
-                    onChangeProfilePath("skills.input", val);
-                  }
-                }}
-                onKeyDown={e => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    const val = getPath(profile, "skills.input", "").trim();
-                    if (val) {
-                      const currentSkills = getPath(profile, "skills.list", []);
-                      const updatedSkills = Array.from(new Set([...currentSkills, val]));
-                      onChangeProfilePath("skills.list", updatedSkills);
-                      onChangeProfilePath("skills.input", "");
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const val = getPath(profile, "skills.input", "").trim();
+                      if (val) {
+                        const currentSkills = getPath(profile, "skills.list", []);
+                        const updatedSkills = Array.from(new Set([...currentSkills, val]));
+                        onChangeProfilePath("skills.list", updatedSkills);
+                        onChangeProfilePath("skills.input", "");
+                      }
                     }
-                  }
-                }}
-                rows={3}
-              />
+                  }}
+                  rows={3}
+                />
+              </div>
               <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {getPath(profile, "skills.list", []).map((skill, index) => (
                   <span key={index} style={{
@@ -749,54 +755,48 @@ const CharacterEditor = React.memo(function CharacterEditor({
       )}
 
       {activeTab === "links" && (
-        <div className="form-grid">
-          <div className="form-row" style={{ gridColumn: "span 12", display:"flex", alignItems:"center" }}>
-            <div className="form-field" style={{flex:1}}>
-              <label className="small muted">{t('characters.relations.new')}</label>
-              <RelationEditor
-                currentId={characterId}
-                allCharacters={allCharacters}
-                onAdd={onAddRelation}
-              />
-            </div>
+        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 24 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <label className="small muted">{t('characters.relations.new')}</label>
+            <RelationEditor
+              currentId={characterId}
+              allCharacters={allCharacters}
+              onAdd={onAddRelation}
+            />
           </div>
 
-          <div className="form-row" style={{ gridColumn: "span 12" }}>
-            <div className="form-field">
-              <label className="small muted">{t('characters.relations.existing')}</label>
-              <RelationList
-                profile={profile}
-                allCharacters={allCharacters}
-                onRemove={onRemoveRelation}
-              />
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <label className="small muted">{t('characters.relations.existing')}</label>
+            <RelationList
+              profile={profile}
+              allCharacters={allCharacters}
+              onRemove={onRemoveRelation}
+            />
           </div>
 
-          <div className="form-row" style={{ gridColumn: "span 12" }}>
-            <div style={{ display: "flex", justifyContent: "center", width: "100%", marginTop: 8 }}>
-              <button
-                type="button"
-                onClick={onOpenGraph}
-                title={t('characters.graph.open')}
-                aria-label={t('characters.graph.open')}
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: "9999px",
-                  border: "1px solid #e5e7eb",
-                  background: "#ffffff",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  boxShadow: "0 4px 14px rgba(15,23,42,.10)",
-                  cursor: "pointer"
-                }}
-                onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 6px 16px rgba(15,23,42,.16)")}
-                onMouseLeave={e => (e.currentTarget.style.boxShadow = "0 4px 14px rgba(15,23,42,.10)")}
-              >
-                <TbNetwork size={22} color="#0f172a" />
-              </button>
-            </div>
+          <div style={{ display: "flex", justifyContent: "center", width: "100%", marginTop: 8 }}>
+            <button
+              type="button"
+              onClick={onOpenGraph}
+              title={t('characters.graph.open')}
+              aria-label={t('characters.graph.open')}
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: "9999px",
+                border: "1px solid #e5e7eb",
+                background: "#ffffff",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 4px 14px rgba(15,23,42,.10)",
+                cursor: "pointer"
+              }}
+              onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 6px 16px rgba(15,23,42,.16)")}
+              onMouseLeave={e => (e.currentTarget.style.boxShadow = "0 4px 14px rgba(15,23,42,.10)")}
+            >
+              <TbNetwork size={22} color="#0f172a" />
+            </button>
           </div>
         </div>
       )}
@@ -811,14 +811,20 @@ const CharacterEditor = React.memo(function CharacterEditor({
       )}
 
       {activeTab === "notes" && (
-        <div className="form-grid">
-          <div className="form-row" style={{ gridColumn: "span 12" }}>
-            <div className="form-field">
-              <label className="small muted">{t('characters.notes.label')}</label>
-              <textarea className="textarea"
-                value={getPath(profile, "notes.text", "")}
-                onChange={e => onChangeProfilePath("notes.text", e.target.value)}
-              />
+        <div className="dynamic-fields-tab">
+          <div className="fields-grid">
+            <div className="dynamic-field">
+              <label className="dynamic-field-label">
+                <span>{t('characters.notes.label')}</span>
+              </label>
+              <div className="dynamic-field-input-wrapper">
+                <textarea
+                  className="input textarea"
+                  value={getPath(profile, "notes.text", "")}
+                  onChange={e => onChangeProfilePath("notes.text", e.target.value)}
+                  rows={10}
+                />
+              </div>
             </div>
           </div>
         </div>

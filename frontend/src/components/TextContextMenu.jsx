@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { BsPerson, BsGlobe } from 'react-icons/bs';
 import { useTranslation } from 'react-i18next';
@@ -22,18 +22,37 @@ export default function TextContextMenu({
   const { t } = useTranslation();
 
   useEffect(() => {
-    const handleClickOutside = () => onClose();
-    const handleEscape = (e) => { if (e.key === 'Escape') onClose(); };
+    const handleClickOutside = (e) => {
+      // Ignoriere Klicks innerhalb des Menüs
+      if (e.target.closest('.text-context-menu')) {
+        return;
+      }
+      onClose();
+    };
 
-    setTimeout(() => {
-      document.addEventListener('click', handleClickOutside);
-      document.addEventListener('contextmenu', handleClickOutside);
+    const handleContextMenu = (e) => {
+      // Ignoriere Rechtsklicks innerhalb des Menüs
+      if (e.target.closest('.text-context-menu')) {
+        return;
+      }
+      onClose();
+    };
+
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+
+    // Warte einen Frame, damit der aktuelle contextmenu-Event abgeschlossen ist
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('click', handleClickOutside, true);
+      document.addEventListener('contextmenu', handleContextMenu, true);
       document.addEventListener('keydown', handleEscape);
-    }, 100);
+    }, 0);
 
     return () => {
-      document.removeEventListener('click', handleClickOutside);
-      document.removeEventListener('contextmenu', handleClickOutside);
+      clearTimeout(timeoutId);
+      document.removeEventListener('click', handleClickOutside, true);
+      document.removeEventListener('contextmenu', handleContextMenu, true);
       document.removeEventListener('keydown', handleEscape);
     };
   }, [onClose]);
