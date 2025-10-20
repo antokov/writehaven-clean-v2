@@ -105,7 +105,7 @@ export default function Dashboard(){
         <div className="dash-loading">{t('common.loading')}</div>
       ) : (
         <>
-          <div className={`project-grid ${!projects.length ? 'project-grid-empty' : ''}`}>
+          <div className="project-grid">
             {/* Plus-Karte zum Hinzufügen */}
             <article className="project-card project-card-add" onClick={() => setShowCreateModal(true)}>
               <div className="add-card-content">

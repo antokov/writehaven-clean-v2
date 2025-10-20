@@ -3,9 +3,6 @@
   padding: 32px 16px;
   max-width: 1800px;
   margin: 0 auto;
-  min-height: 60vh;
-  display: flex;
-  flex-direction: column;
 }
 .dash-loading{
   opacity:.7;
@@ -21,19 +18,6 @@
   justify-content: center;
   max-width: 1400px;
   margin: 0 auto;
-}
-
-/* Wenn leer: zentriere die "New Project" Karte */
-.project-grid-empty{
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  min-height: 400px;
-}
-.project-grid-empty .project-card-add{
-  max-width: 500px;
-  width: 100%;
 }
 
 @media (min-width: 1400px) {
