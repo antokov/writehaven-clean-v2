@@ -97,17 +97,24 @@ def create_app():
                 cur.execute("PRAGMA foreign_keys=ON")
                 cur.close()
 
-        # Tables anlegen (checkfirst)
-        # SQLite: Automatisch erstellen
-        # PostgreSQL (AWS RDS): Erstellt automatisch oder via Migration
-        db.Model.metadata.create_all(bind=db.engine, checkfirst=True)
-
-        # Verifiziere Datenbankverbindung
+        # Tables anlegen (checkfirst) - Non-blocking
+        # Nur beim Start versuchen, nicht crashen wenn DB nicht erreichbar
         try:
+            db.Model.metadata.create_all(bind=db.engine, checkfirst=True)
+            print("Database schema created/verified successfully")
+
+            # Verifiziere Datenbankverbindung
             db.session.execute(text("SELECT 1"))
+            db.session.commit()
             print(f"Database connected successfully: {app.config['SQLALCHEMY_DATABASE_URI'].split('@')[0]}@...")
         except Exception as e:
-            print(f"WARNING: Database connection failed: {e}")
+            print(f"WARNING: Database connection failed during startup: {e}")
+            print("Server will start anyway. Database errors will occur on API calls.")
+            # Rollback um die Session zu cleanen
+            try:
+                db.session.rollback()
+            except:
+                pass
 
     # ---------- SPA fallback (für Deep Links) - nur wenn Frontend existiert ----------
     @app.before_request
