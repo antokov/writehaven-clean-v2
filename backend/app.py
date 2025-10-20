@@ -78,34 +78,13 @@ def create_app():
         except:
             return send_from_directory('static', path)
 
-    # CORS - Robuste Konfiguration für AWS
-    allowed_origins = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "*").split(",")]
+    # CORS
+    allowed = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "*").split(",")]
     CORS(app,
-         resources={r"/api/*": {
-             "origins": allowed_origins,
-             "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-             "allow_headers": ["Content-Type", "Authorization"],
-             "expose_headers": ["Content-Type", "Authorization"],
-             "supports_credentials": False,
-             "max_age": 3600
-         }})
-
-    # Zusätzlicher CORS-Handler für alle Responses
-    @app.after_request
-    def add_cors_headers(response):
-        origin = request.headers.get('Origin')
-        # Erlaube Origin wenn in allowed_origins Liste oder wenn * gesetzt ist
-        if origin and (origin in allowed_origins or '*' in allowed_origins):
-            response.headers['Access-Control-Allow-Origin'] = origin
-            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
-            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
-            response.headers['Access-Control-Max-Age'] = '3600'
-        elif '*' in allowed_origins:
-            response.headers['Access-Control-Allow-Origin'] = '*'
-            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
-            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
-            response.headers['Access-Control-Max-Age'] = '3600'
-        return response
+         resources={r"/api/*": {"origins": allowed}},
+         supports_credentials=False,
+         allow_headers=["Content-Type", "Authorization"],
+         methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
 
     # DB init
     db.init_app(app)
