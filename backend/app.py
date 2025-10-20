@@ -101,19 +101,17 @@ def create_app():
                 cur.execute("PRAGMA foreign_keys=ON")
                 cur.close()
 
-        # Tables anlegen (checkfirst) - nur für SQLite
-        # Für PostgreSQL/Supabase: Verwende `supabase db push` stattdessen
-        if app.config["SQLALCHEMY_DATABASE_URI"].startswith("sqlite"):
-            db.Model.metadata.create_all(bind=db.engine, checkfirst=True)
-            print("SQLite: Tables created via SQLAlchemy")
-        else:
-            print("PostgreSQL detected: Use 'supabase db push' or 'supabase migration up' to create tables")
-            # Verifiziere dass Tabellen existieren
-            try:
-                db.session.execute(text("SELECT 1 FROM project LIMIT 1"))
-                print("Database schema verified: tables exist")
-            except Exception as e:
-                print(f"WARNING: Database schema not initialized. Run 'supabase db push' first. Error: {e}")
+        # Tables anlegen (checkfirst)
+        # SQLite: Automatisch erstellen
+        # PostgreSQL (AWS RDS): Erstellt automatisch oder via Migration
+        db.Model.metadata.create_all(bind=db.engine, checkfirst=True)
+
+        # Verifiziere Datenbankverbindung
+        try:
+            db.session.execute(text("SELECT 1"))
+            print(f"Database connected successfully: {app.config['SQLALCHEMY_DATABASE_URI'].split('@')[0]}@...")
+        except Exception as e:
+            print(f"WARNING: Database connection failed: {e}")
 
     # ---------- SPA fallback (für Deep Links) ----------
     @app.before_request
