@@ -135,7 +135,8 @@ class User(db.Model):
 
     def set_password(self, password):
         """Hash und speichere Passwort"""
-        self.password_hash = generate_password_hash(password)
+        # pbkdf2:sha256 funktioniert mit Python 3.8+, scrypt braucht 3.9+
+        self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
 
     def check_password(self, password):
         """Prüfe Passwort gegen Hash"""
