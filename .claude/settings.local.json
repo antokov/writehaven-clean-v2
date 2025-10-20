@@ -10,7 +10,14 @@
       "Bash(npm install:*)",
       "Bash(del es.json fr.json it.json pt.json)",
       "Bash(python -m pytest --version)",
-      "Bash(git rm --cached backend/app.db snapshot.md)"
+      "Bash(git rm --cached backend/app.db snapshot.md)",
+      "Bash(git rm -r --cached backend/.venv/)",
+      "Bash(where supabase)",
+      "Bash(git rm SUPABASE_SETUP.md supabase/.gitignore supabase/config.toml supabase/migrations/20250101000000_initial_schema.sql supabase/migrations/20250102000000_enable_rls.sql supabase/seed.sql)",
+      "Bash(python -m py_compile app.py)",
+      "Bash(where python)",
+      "Bash(git mv backend/apprunner.yaml apprunner.yaml)",
+      "Bash(git mv apprunner.yaml backend/apprunner.yaml)"
     ],
     "deny": [],
     "ask": []

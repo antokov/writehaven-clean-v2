@@ -1,0 +1,23 @@
+# Backend-only Dockerfile für AWS App Runner
+FROM python:3.11-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+WORKDIR /app
+
+# System dependencies für psycopg
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential gcc \
+ && rm -rf /var/lib/apt/lists/*
+
+# Python dependencies installieren
+COPY backend/requirements.txt ./backend/requirements.txt
+RUN python -m pip install --upgrade pip setuptools wheel \
+ && pip install -r backend/requirements.txt
+
+# Backend-Code kopieren
+COPY backend ./backend
+
+ENV PORT=8080
+EXPOSE 8080
+
+# Starte Backend via gunicorn
+CMD ["gunicorn", "-k", "gthread", "-w", "2", "-b", "0.0.0.0:8080", "--timeout", "60", "--access-logfile", "-", "--error-logfile", "-", "backend.wsgi:app"]
