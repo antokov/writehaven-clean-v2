@@ -67,16 +67,12 @@ def create_app():
         "isolation_level": "AUTOCOMMIT"  # Verhindert hängende Transaktionen
     }
     
-    # Serve index.html for all non-API routes
-    @app.route('/', defaults={'path': ''})
-    @app.route('/<path:path>')
-    def serve(path):
-        if path.startswith('api/'):
-            return {"error": "Not Found"}, 404
-        try:
+    # Root route - zeige API Info wenn kein Frontend vorhanden
+    @app.route('/')
+    def index():
+        if app.static_folder and os.path.exists(os.path.join(app.static_folder, 'index.html')):
             return send_from_directory('static', 'index.html')
-        except:
-            return send_from_directory('static', path)
+        return {"message": "WriteHaven API", "version": "1.0", "health": "/api/health"}, 200
 
     # CORS
     allowed = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "*").split(",")]
@@ -113,19 +109,26 @@ def create_app():
         except Exception as e:
             print(f"WARNING: Database connection failed: {e}")
 
-    # ---------- SPA fallback (für Deep Links) ----------
+    # ---------- SPA fallback (für Deep Links) - nur wenn Frontend existiert ----------
     @app.before_request
     def spa_fallback():
+        # Nur für GET-Requests
         if request.method != "GET":
             return None
+        # API-Routes und Root überspringen
         p = request.path or "/"
         if p.startswith("/api") or p == "/":
             return None
+        # Nur fallback wenn static folder existiert
+        if not app.static_folder or not os.path.exists(os.path.join(app.static_folder, 'index.html')):
+            return None
+        # Prüfe ob die Datei existiert
         rel = p.lstrip("/")
         if app.static_folder:
             full = os.path.join(app.static_folder, rel)
             if os.path.isfile(full):
                 return None
+        # Fallback zu index.html
         return send_from_directory(app.static_folder, "index.html")
 
     # ---------- Small helpers ----------
