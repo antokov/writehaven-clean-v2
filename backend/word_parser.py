@@ -33,7 +33,10 @@ def parse_word_document(file_stream) -> Dict[str, Any]:
         }
     """
     try:
-        doc = Document(file_stream)
+        # Read file into BytesIO to avoid SpooledTemporaryFile issues
+        from io import BytesIO
+        file_bytes = file_stream.read()
+        doc = Document(BytesIO(file_bytes))
     except Exception as e:
         raise ValueError(f"Konnte Word-Dokument nicht lesen: {str(e)}")
 
@@ -177,7 +180,10 @@ def parse_word_document(file_stream) -> Dict[str, Any]:
 def extract_plain_text(file_stream) -> str:
     """Extrahiert nur den reinen Text aus einem Word-Dokument"""
     try:
-        doc = Document(file_stream)
+        # Read file into BytesIO to avoid SpooledTemporaryFile issues
+        from io import BytesIO
+        file_bytes = file_stream.read()
+        doc = Document(BytesIO(file_bytes))
         return '\n\n'.join(para.text.strip() for para in doc.paragraphs if para.text.strip())
     except Exception as e:
         raise ValueError(f"Konnte Word-Dokument nicht lesen: {str(e)}")
