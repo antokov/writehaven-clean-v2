@@ -78,13 +78,28 @@ def create_app():
         except:
             return send_from_directory('static', path)
 
-    # CORS
+    # CORS - Robuste Konfiguration für AWS
     allowed = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "*").split(",")]
     CORS(app,
-         resources={r"/api/*": {"origins": allowed}},
-         supports_credentials=False,
-         allow_headers=["Content-Type", "Authorization"],
-         methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
+         resources={r"/api/*": {
+             "origins": allowed,
+             "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+             "allow_headers": ["Content-Type", "Authorization"],
+             "expose_headers": ["Content-Type", "Authorization"],
+             "supports_credentials": False,
+             "max_age": 3600
+         }})
+
+    # Zusätzlicher CORS-Handler für Preflight-Requests
+    @app.after_request
+    def after_request(response):
+        origin = request.headers.get('Origin')
+        if origin in allowed or '*' in allowed:
+            response.headers['Access-Control-Allow-Origin'] = origin if origin in allowed else allowed[0]
+            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+            response.headers['Access-Control-Max-Age'] = '3600'
+        return response
 
     # DB init
     db.init_app(app)
