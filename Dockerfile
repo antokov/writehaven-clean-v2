@@ -1,7 +1,7 @@
 # ----- Stage 1: Frontend bauen -----
 FROM node:20-alpine AS web
 WORKDIR /app/frontend
-ARG VITE_API_BASE_URL
+ARG VITE_API_BASE_URL=""
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 COPY frontend/package*.json ./
 RUN npm ci
