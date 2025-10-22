@@ -1,7 +1,22 @@
 # backend/models.py
 from sqlalchemy.sql import func
 from sqlalchemy import text as sqltext
-from flask_security import UserMixin, RoleMixin
+
+# Optional Flask-Security imports
+try:
+    from flask_security import UserMixin, RoleMixin
+    FLASK_SECURITY_AVAILABLE = True
+except ImportError:
+    # Fallback: Simple base classes
+    class UserMixin:
+        """Fallback UserMixin when Flask-Security is not available"""
+        pass
+
+    class RoleMixin:
+        """Fallback RoleMixin when Flask-Security is not available"""
+        pass
+
+    FLASK_SECURITY_AVAILABLE = False
 
 try:
     # Paket-Start (z.B. gunicorn) -> backend.extensions
