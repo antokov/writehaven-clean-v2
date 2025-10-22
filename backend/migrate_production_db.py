@@ -50,6 +50,7 @@ def migrate_user_table(engine):
 
         # Define columns to add
         columns_to_add = {
+            'username': "ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS username VARCHAR(255);",
             'password': "ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS password VARCHAR(255);",
             'active': "ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE;",
             'fs_uniquifier': "ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS fs_uniquifier VARCHAR(255) UNIQUE;",

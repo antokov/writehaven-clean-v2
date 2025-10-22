@@ -48,6 +48,7 @@ def auto_migrate():
 
                 # Add missing columns (safe with IF NOT EXISTS)
                 migration_sqls = [
+                    "ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS username VARCHAR(255);",
                     "ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS password VARCHAR(255);",
                     "ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE;",
                     "ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS fs_uniquifier VARCHAR(255);",
