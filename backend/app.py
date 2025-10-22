@@ -6,32 +6,23 @@ from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, request, jsonify, send_from_directory, g
 from flask_cors import CORS
+from flask_security import Security, SQLAlchemyUserDatastore, hash_password
+from flask_mailman import Mail
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError, ProgrammingError, OperationalError
-
-# Try to import Flask-Security - gracefully handle if not available
-try:
-    from flask_security import Security, SQLAlchemyUserDatastore, hash_password
-    from flask_mailman import Mail
-    FLASK_SECURITY_AVAILABLE = True
-except ImportError:
-    FLASK_SECURITY_AVAILABLE = False
-    print("WARNING: Flask-Security not available. Using simple auth mode.")
 
 try:
     from backend.extensions import db
     from backend.models import Project, Chapter, Scene, Character, WorldNode, User, Role
     from backend.word_parser import parse_word_document
-    if FLASK_SECURITY_AVAILABLE:
-        from backend.security_config import get_security_config
-        from backend.console_mail import ConsoleMailBackend
+    from backend.security_config import get_security_config
+    from backend.console_mail import ConsoleMailBackend
 except ImportError:
     from extensions import db
     from models import Project, Chapter, Scene, Character, WorldNode, User, Role
     from word_parser import parse_word_document
-    if FLASK_SECURITY_AVAILABLE:
-        from security_config import get_security_config
-        from console_mail import ConsoleMailBackend
+    from security_config import get_security_config
+    from console_mail import ConsoleMailBackend
 
 
 # ---------- DB URI helpers ----------
@@ -69,13 +60,9 @@ def create_app():
     app = Flask(__name__, static_folder="static", static_url_path="")
     app.json.sort_keys = False
 
-    # Load Flask-Security-Too Configuration (if available)
-    if FLASK_SECURITY_AVAILABLE:
-        security_config = get_security_config()
-        app.config.update(security_config)
-    else:
-        # Fallback: Basic config without Flask-Security
-        app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
+    # Load Flask-Security-Too Configuration
+    security_config = get_security_config()
+    app.config.update(security_config)
 
     # SQLAlchemy
     app.config["SQLALCHEMY_DATABASE_URI"] = get_database_uri()
@@ -104,19 +91,18 @@ def create_app():
     # DB init
     db.init_app(app)
 
-    # Flask-Security-Too Setup (optional)
-    if FLASK_SECURITY_AVAILABLE:
-        user_datastore = SQLAlchemyUserDatastore(db, User, Role)
-        security = Security(app, user_datastore)
+    # Flask-Security-Too Setup
+    user_datastore = SQLAlchemyUserDatastore(db, User, Role)
+    security = Security(app, user_datastore)
 
-        # Email Backend Setup
-        email_backend = os.getenv("EMAIL_BACKEND", "console")
-        if email_backend == "console":
-            # Console backend für lokale Entwicklung
-            app.extensions['mail'] = ConsoleMailBackend(app)
-        else:
-            # SMTP für Production
-            mail = Mail(app)
+    # Email Backend Setup
+    email_backend = os.getenv("EMAIL_BACKEND", "console")
+    if email_backend == "console":
+        # Console backend für lokale Entwicklung
+        app.extensions['mail'] = ConsoleMailBackend(app)
+    else:
+        # SMTP für Production
+        mail = Mail(app)
 
     with app.app_context():
         # SQLite FK erzwingen
@@ -279,6 +265,7 @@ def create_app():
         email = data.get("email", "").strip().lower()
         password = data.get("password", "")
         name = data.get("name", "").strip()
+        language = data.get("language", "en")
 
         if not email or not password:
             return ok({"error": "Email und Passwort erforderlich"}, 400)
@@ -287,36 +274,30 @@ def create_app():
             return ok({"error": "Passwort muss mindestens 6 Zeichen lang sein"}, 400)
 
         # Prüfe ob User existiert
-        existing_user = User.query.filter_by(email=email).first()
-        if existing_user:
+        if user_datastore.find_user(email=email):
             return ok({"error": "Email bereits registriert"}, 400)
 
         try:
-            from werkzeug.security import generate_password_hash
+            # Generiere fs_uniquifier für Flask-Security-Too
             import uuid
+            fs_uniquifier = uuid.uuid4().hex
 
-            # Hash das Passwort mit werkzeug (funktioniert immer)
-            hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
+            # Hash das Passwort
+            hashed_password = hash_password(password)
 
-            # Erstelle User
-            user = User(
+            # Erstelle User mit Flask-Security-Too
+            user = user_datastore.create_user(
                 email=email,
-                password_hash=hashed_password,  # Alte Spalte (immer vorhanden)
+                password=hashed_password,
                 name=name or email.split("@")[0],
-                language=language or "en"
+                language=language,
+                active=True,
+                fs_uniquifier=fs_uniquifier,
+                confirmed_at=None if app.config.get("SECURITY_CONFIRMABLE") else datetime.utcnow()
             )
 
-            # Setze Flask-Security Felder wenn verfügbar
-            if hasattr(user, 'password'):
-                user.password = hashed_password
-            if hasattr(user, 'active'):
-                user.active = True
-            if hasattr(user, 'fs_uniquifier'):
-                user.fs_uniquifier = uuid.uuid4().hex
-            if hasattr(user, 'confirmed_at') and not app.config.get("SECURITY_CONFIRMABLE"):
-                user.confirmed_at = datetime.utcnow()
-
-            db.session.add(user)
+            # Backward compatibility: Setze auch password_hash für alte Spalte
+            user.password_hash = hashed_password
             db.session.commit()
 
             # Sende Confirmation Email wenn aktiviert
@@ -374,33 +355,31 @@ def create_app():
         if not email or not password:
             return ok({"error": "Email und Passwort erforderlich"}, 400)
 
-        # Find user - works with or without Flask-Security
-        user = User.query.filter_by(email=email).first()
+        # Find user
+        user = user_datastore.find_user(email=email)
 
         if not user:
             return ok({"error": "Ungültige Anmeldedaten"}, 401)
 
         # Prüfe Passwort - unterstütze alte pbkdf2 UND neue bcrypt Hashes
         password_valid = False
-        from werkzeug.security import check_password_hash
 
-        # Versuche zuerst Flask-Security-Too's verify_and_update_password (wenn verfügbar)
-        if FLASK_SECURITY_AVAILABLE and hasattr(user, 'verify_and_update_password'):
-            try:
-                password_valid = user.verify_and_update_password(password)
-            except:
-                pass
+        # Versuche zuerst Flask-Security-Too's verify_and_update_password
+        try:
+            password_valid = user.verify_and_update_password(password)
+        except:
+            pass
 
-        # Fallback: Werkzeug pbkdf2 Hashes (Standard)
+        # Fallback: Alte Werkzeug pbkdf2 Hashes (von vorher)
         if not password_valid:
+            from werkzeug.security import check_password_hash
             # Prüfe ob password_hash Spalte noch existiert (Legacy)
-            old_hash = getattr(user, 'password_hash', None) or getattr(user, 'password', None)
+            old_hash = getattr(user, 'password_hash', None) or user.password
             if old_hash and check_password_hash(old_hash, password):
                 password_valid = True
-                # Update zu password field wenn Flask-Security verfügbar
-                if FLASK_SECURITY_AVAILABLE and user.password_hash and not user.password:
-                    user.password = hash_password(password)
-                    db.session.commit()
+                # Update zu neuem bcrypt Hash
+                user.password = hash_password(password)
+                db.session.commit()
 
         if not password_valid:
             return ok({"error": "Ungültige Anmeldedaten"}, 401)
@@ -408,10 +387,6 @@ def create_app():
         # Prüfe ob User aktiv (nur wenn Feld existiert)
         if hasattr(user, 'active') and user.active == False:
             return ok({"error": "Account deaktiviert"}, 401)
-
-        # Prüfe Email-Bestätigung (wenn aktiviert)
-        if FLASK_SECURITY_AVAILABLE and app.config.get("SECURITY_CONFIRMABLE") and hasattr(user, 'confirmed_at') and not user.confirmed_at:
-            return ok({"error": "Bitte bestätige zuerst deine Email-Adresse"}, 401)
 
         # Update Login Tracking (only if fields exist)
         if hasattr(user, 'current_login_at'):
@@ -482,7 +457,7 @@ def create_app():
         if not email:
             return ok({"error": "Email erforderlich"}, 400)
 
-        user = User.query.filter_by(email=email).first()
+        user = user_datastore.find_user(email=email)
 
         # Immer success zurückgeben (Security: kein User-Enumeration)
         if user:
