@@ -287,29 +287,36 @@ def create_app():
             return ok({"error": "Passwort muss mindestens 6 Zeichen lang sein"}, 400)
 
         # Prüfe ob User existiert
-        if user_datastore.find_user(email=email):
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
             return ok({"error": "Email bereits registriert"}, 400)
 
         try:
-            # Generiere fs_uniquifier für Flask-Security-Too
+            from werkzeug.security import generate_password_hash
             import uuid
-            fs_uniquifier = uuid.uuid4().hex
 
-            # Hash das Passwort
-            hashed_password = hash_password(password)
+            # Hash das Passwort mit werkzeug (funktioniert immer)
+            hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
 
-            # Erstelle User mit Flask-Security-Too
-            user = user_datastore.create_user(
+            # Erstelle User
+            user = User(
                 email=email,
-                password=hashed_password,
+                password_hash=hashed_password,  # Alte Spalte (immer vorhanden)
                 name=name or email.split("@")[0],
-                active=True,
-                fs_uniquifier=fs_uniquifier,
-                confirmed_at=None if app.config.get("SECURITY_CONFIRMABLE") else datetime.utcnow()
+                language=language or "en"
             )
 
-            # Backward compatibility: Setze auch password_hash für alte Spalte
-            user.password_hash = hashed_password
+            # Setze Flask-Security Felder wenn verfügbar
+            if hasattr(user, 'password'):
+                user.password = hashed_password
+            if hasattr(user, 'active'):
+                user.active = True
+            if hasattr(user, 'fs_uniquifier'):
+                user.fs_uniquifier = uuid.uuid4().hex
+            if hasattr(user, 'confirmed_at') and not app.config.get("SECURITY_CONFIRMABLE"):
+                user.confirmed_at = datetime.utcnow()
+
+            db.session.add(user)
             db.session.commit()
 
             # Sende Confirmation Email wenn aktiviert
@@ -359,7 +366,7 @@ def create_app():
 
     @app.post("/api/auth/login")
     def login():
-        """Login User mit Flask-Security-Too"""
+        """Login User"""
         data = request.get_json() or {}
         email = data.get("email", "").strip().lower()
         password = data.get("password", "")
@@ -367,46 +374,52 @@ def create_app():
         if not email or not password:
             return ok({"error": "Email und Passwort erforderlich"}, 400)
 
-        user = user_datastore.find_user(email=email)
+        # Find user - works with or without Flask-Security
+        user = User.query.filter_by(email=email).first()
 
         if not user:
             return ok({"error": "Ungültige Anmeldedaten"}, 401)
 
         # Prüfe Passwort - unterstütze alte pbkdf2 UND neue bcrypt Hashes
         password_valid = False
+        from werkzeug.security import check_password_hash
 
-        # Versuche zuerst Flask-Security-Too's verify_and_update_password
-        try:
-            password_valid = user.verify_and_update_password(password)
-        except:
-            pass
+        # Versuche zuerst Flask-Security-Too's verify_and_update_password (wenn verfügbar)
+        if FLASK_SECURITY_AVAILABLE and hasattr(user, 'verify_and_update_password'):
+            try:
+                password_valid = user.verify_and_update_password(password)
+            except:
+                pass
 
-        # Fallback: Alte Werkzeug pbkdf2 Hashes (von vorher)
+        # Fallback: Werkzeug pbkdf2 Hashes (Standard)
         if not password_valid:
-            from werkzeug.security import check_password_hash
             # Prüfe ob password_hash Spalte noch existiert (Legacy)
-            old_hash = getattr(user, 'password_hash', None) or user.password
+            old_hash = getattr(user, 'password_hash', None) or getattr(user, 'password', None)
             if old_hash and check_password_hash(old_hash, password):
                 password_valid = True
-                # Update zu neuem bcrypt Hash
-                user.password = hash_password(password)
-                db.session.commit()
+                # Update zu password field wenn Flask-Security verfügbar
+                if FLASK_SECURITY_AVAILABLE and user.password_hash and not user.password:
+                    user.password = hash_password(password)
+                    db.session.commit()
 
         if not password_valid:
             return ok({"error": "Ungültige Anmeldedaten"}, 401)
 
-        # Prüfe ob User aktiv
-        if not user.active:
+        # Prüfe ob User aktiv (nur wenn Feld existiert)
+        if hasattr(user, 'active') and user.active == False:
             return ok({"error": "Account deaktiviert"}, 401)
 
         # Prüfe Email-Bestätigung (wenn aktiviert)
-        if app.config.get("SECURITY_CONFIRMABLE") and not user.confirmed_at:
+        if FLASK_SECURITY_AVAILABLE and app.config.get("SECURITY_CONFIRMABLE") and hasattr(user, 'confirmed_at') and not user.confirmed_at:
             return ok({"error": "Bitte bestätige zuerst deine Email-Adresse"}, 401)
 
-        # Update Login Tracking
-        user.current_login_at = datetime.utcnow()
-        user.current_login_ip = request.remote_addr
-        user.login_count = (user.login_count or 0) + 1
+        # Update Login Tracking (only if fields exist)
+        if hasattr(user, 'current_login_at'):
+            user.current_login_at = datetime.utcnow()
+        if hasattr(user, 'current_login_ip'):
+            user.current_login_ip = request.remote_addr
+        if hasattr(user, 'login_count'):
+            user.login_count = (user.login_count or 0) + 1
         db.session.commit()
 
         # Token generieren (Custom JWT)
@@ -469,7 +482,7 @@ def create_app():
         if not email:
             return ok({"error": "Email erforderlich"}, 400)
 
-        user = user_datastore.find_user(email=email)
+        user = User.query.filter_by(email=email).first()
 
         # Immer success zurückgeben (Security: kein User-Enumeration)
         if user:
@@ -529,7 +542,8 @@ def create_app():
             return ok({"error": "Ungültiger Bestätigungs-Token"}, 400)
 
         # Email bestätigen
-        user_datastore.confirm_user(user)
+        if hasattr(user, 'confirmed_at'):
+            user.confirmed_at = datetime.utcnow()
         db.session.commit()
 
         # Token generieren
