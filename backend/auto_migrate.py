@@ -46,27 +46,34 @@ def auto_migrate():
             if needs_migration:
                 print("🔄 Auto-migration: Updating user table schema...")
 
-                # Add missing columns (safe with IF NOT EXISTS)
-                migration_sqls = [
-                    "ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS username VARCHAR(255);",
-                    "ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS password VARCHAR(255);",
-                    "ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE;",
-                    "ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS fs_uniquifier VARCHAR(255);",
-                    "ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMP;",
-                    "ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP;",
-                    "ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS current_login_at TIMESTAMP;",
-                    "ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS last_login_ip VARCHAR(100);",
-                    "ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS current_login_ip VARCHAR(100);",
-                    "ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS login_count INTEGER DEFAULT 0;",
-                ]
+                # Add missing columns - check each individually for compatibility
+                columns_to_add = {
+                    'username': 'VARCHAR(255)',
+                    'password': 'VARCHAR(255)',
+                    'active': 'BOOLEAN DEFAULT TRUE',
+                    'fs_uniquifier': 'VARCHAR(255)',
+                    'confirmed_at': 'TIMESTAMP',
+                    'last_login_at': 'TIMESTAMP',
+                    'current_login_at': 'TIMESTAMP',
+                    'last_login_ip': 'VARCHAR(100)',
+                    'current_login_ip': 'VARCHAR(100)',
+                    'login_count': 'INTEGER DEFAULT 0',
+                }
 
-                for sql in migration_sqls:
-                    try:
-                        conn.execute(text(sql))
-                        conn.commit()
-                    except ProgrammingError:
-                        # Column might already exist
-                        pass
+                for col_name, col_type in columns_to_add.items():
+                    if col_name not in existing_columns:
+                        try:
+                            sql = f'ALTER TABLE "user" ADD COLUMN {col_name} {col_type};'
+                            print(f"  Adding column: {col_name}")
+                            conn.execute(text(sql))
+                            conn.commit()
+                        except (ProgrammingError, OperationalError) as e:
+                            # Column might already exist or other DB error
+                            print(f"  Warning: Could not add column {col_name}: {e}")
+                            try:
+                                conn.rollback()
+                            except:
+                                pass
 
                 # Migrate data
                 try:
