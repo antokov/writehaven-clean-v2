@@ -178,12 +178,12 @@ function RelationEditor({ currentId, allCharacters, onAdd }) {
 
   return (
     <div style={{display:"grid", gridTemplateColumns:"1.5fr 1.2fr 1fr auto", gap:8}}>
-      <select className="input" value={targetId} onChange={e=>setTargetId(Number(e.target.value))}>
+      <select className="input" value={targetId} onChange={e=>setTargetId(Number(e.target.value))} data-testid="relation-target-select">
         <option value="">{t('characters.relations.targetPlaceholder')}</option>
         {options.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
       </select>
 
-      <select className="input" value={type} onChange={e=>setType(e.target.value)}>
+      <select className="input" value={type} onChange={e=>setType(e.target.value)} data-testid="relation-type-select">
         {REL_OPTIONS.map(o => (
           <option key={o.value} value={o.value}>
             {t(`characters.relations.types.${o.key}`)}
@@ -196,8 +196,9 @@ function RelationEditor({ currentId, allCharacters, onAdd }) {
         placeholder={t('characters.relations.notePlaceholder')}
         value={note}
         onChange={e=>setNote(e.target.value)}
+        data-testid="relation-note-input"
       />
-      <button className="btn" onClick={()=> targetId && onAdd({ target_id: targetId, type, note })}>
+      <button className="btn" onClick={()=> targetId && onAdd({ target_id: targetId, type, note })} data-testid="relation-add-button">
         {t('characters.relations.add')}
       </button>
     </div>
@@ -646,6 +647,7 @@ const CharacterEditor = React.memo(function CharacterEditor({
             type="button"
             className={`tab ${activeTab === ti.key ? "active" : ""}`}
             onClick={() => setActiveTab(ti.key)}
+            data-testid={`character-tab-${ti.key}`}
           >
             {t(ti.labelKey)}
           </button>
@@ -712,6 +714,7 @@ const CharacterEditor = React.memo(function CharacterEditor({
                     }
                   }}
                   rows={3}
+                  data-testid="character-skills-input"
                 />
               </div>
               <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -1060,16 +1063,17 @@ export default function Characters() {
               className="icon-btn"
               title={t('characters.worldGraph.open')}
               onClick={() => setShowWorldGraph(true)}
+              data-testid="open-world-graph-button"
             >
               <TbTopologyStar3 />
             </button>
-            <button className="icon-btn" title={t('characters.add')} onClick={addCharacter}>
+            <button className="icon-btn" title={t('characters.add')} onClick={addCharacter} data-testid="add-character-button">
               <BsPlus />
             </button>
           </div>
           <ul className="tree-list">
             {list.map(ch => (
-              <li key={ch.id} className={`tree-scene ${activeId === ch.id ? "active" : ""}`}>
+              <li key={ch.id} className={`tree-scene ${activeId === ch.id ? "active" : ""}`} data-testid={`character-${ch.id}`}>
                 <div
                   className="tree-row scene-row"
                   onClick={() => setActiveId(ch.id)}
@@ -1078,7 +1082,7 @@ export default function Characters() {
                   <span className="tree-dot" aria-hidden />
                   <span className="tree-name">{displayNameForList(ch, activeId, draftFullName, unnamed)}</span>
                   <div className="row-actions" onClick={e => e.stopPropagation()}>
-                    <button className="icon-btn danger" title={t('common.delete')} onClick={() => deleteCharacter(ch.id)}>
+                    <button className="icon-btn danger" title={t('common.delete')} onClick={() => deleteCharacter(ch.id)} data-testid={`delete-character-${ch.id}`}>
                       <BsTrash />
                     </button>
                   </div>

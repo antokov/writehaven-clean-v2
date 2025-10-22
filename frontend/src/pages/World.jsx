@@ -1063,6 +1063,7 @@ const WorldElementEditor = React.memo(function WorldElementEditor({
           <button
             key={tab.key}
             type="button"
+            data-testid={`world-tab-${tab.key}`}
             className={`tab ${activeTab === tab.key ? "active" : ""}`}
             onClick={() => setActiveTab(tab.key)}
           >
@@ -1081,6 +1082,7 @@ const WorldElementEditor = React.memo(function WorldElementEditor({
               <label className="small muted">{t('world.details.nameLabel')}</label>
               <input
                 className="input"
+                data-testid="world-field-title"
                 value={getPath(element, "title", "")}
                 onChange={e => onChangeElement("title", e.target.value)}
               />
@@ -1099,6 +1101,7 @@ const WorldElementEditor = React.memo(function WorldElementEditor({
               <label className="small muted">{t('world.details.notesLabel')}</label>
               <textarea
                 className="textarea"
+                data-testid="world-field-summary"
                 placeholder={t('world.details.notesPlaceholder')}
                 value={getPath(element, "summary", "")}
                 onChange={e => onChangeElement("summary", e.target.value)}
@@ -1333,23 +1336,24 @@ export default function World() {
             <span className="tree-title">{t('world.title')}</span>
             <button
               className="icon-btn"
+              data-testid="world-graph-button"
               title={t('world.worldGraph.open')}
               onClick={() => setShowWorldGraph(true)}
             >
               <TbTopologyStar3 />
             </button>
-            <button className="icon-btn" title={t('world.newElement')} onClick={addElement}>
+            <button className="icon-btn" data-testid="add-world-button" title={t('world.newElement')} onClick={addElement}>
               <BsPlus />
             </button>
           </div>
           <ul className="tree-list">
             {list.map(el => (
-              <li key={el.id} className={`tree-scene ${activeId === el.id ? "active" : ""}`}>
+              <li key={el.id} data-testid={`world-${el.id}`} className={`tree-scene ${activeId === el.id ? "active" : ""}`}>
                 <div className="tree-row scene-row" onClick={() => setActiveId(el.id)} title={el.name}>
                   <span className="tree-dot" aria-hidden />
                   <span className="tree-name">{el.title || t('world.newElement')}</span>
                   <div className="row-actions" onClick={e => e.stopPropagation()}>
-                    <button className="icon-btn danger" title={t('common.delete')} onClick={() => deleteElement(el.id)}>
+                    <button className="icon-btn danger" data-testid={`delete-world-${el.id}`} title={t('common.delete')} onClick={() => deleteElement(el.id)}>
                       <BsTrash />
                     </button>
                   </div>
