@@ -6,23 +6,32 @@ from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, request, jsonify, send_from_directory, g
 from flask_cors import CORS
-from flask_security import Security, SQLAlchemyUserDatastore, hash_password
-from flask_mailman import Mail
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError, ProgrammingError, OperationalError
+
+# Try to import Flask-Security - gracefully handle if not available
+try:
+    from flask_security import Security, SQLAlchemyUserDatastore, hash_password
+    from flask_mailman import Mail
+    FLASK_SECURITY_AVAILABLE = True
+except ImportError:
+    FLASK_SECURITY_AVAILABLE = False
+    print("WARNING: Flask-Security not available. Using simple auth mode.")
 
 try:
     from backend.extensions import db
     from backend.models import Project, Chapter, Scene, Character, WorldNode, User, Role
     from backend.word_parser import parse_word_document
-    from backend.security_config import get_security_config
-    from backend.console_mail import ConsoleMailBackend
+    if FLASK_SECURITY_AVAILABLE:
+        from backend.security_config import get_security_config
+        from backend.console_mail import ConsoleMailBackend
 except ImportError:
     from extensions import db
     from models import Project, Chapter, Scene, Character, WorldNode, User, Role
     from word_parser import parse_word_document
-    from security_config import get_security_config
-    from console_mail import ConsoleMailBackend
+    if FLASK_SECURITY_AVAILABLE:
+        from security_config import get_security_config
+        from console_mail import ConsoleMailBackend
 
 
 # ---------- DB URI helpers ----------
@@ -91,18 +100,19 @@ def create_app():
     # DB init
     db.init_app(app)
 
-    # Flask-Security-Too Setup
-    user_datastore = SQLAlchemyUserDatastore(db, User, Role)
-    security = Security(app, user_datastore)
+    # Flask-Security-Too Setup (optional)
+    if FLASK_SECURITY_AVAILABLE:
+        user_datastore = SQLAlchemyUserDatastore(db, User, Role)
+        security = Security(app, user_datastore)
 
-    # Email Backend Setup
-    email_backend = os.getenv("EMAIL_BACKEND", "console")
-    if email_backend == "console":
-        # Console backend für lokale Entwicklung
-        app.extensions['mail'] = ConsoleMailBackend(app)
-    else:
-        # SMTP für Production
-        mail = Mail(app)
+        # Email Backend Setup
+        email_backend = os.getenv("EMAIL_BACKEND", "console")
+        if email_backend == "console":
+            # Console backend für lokale Entwicklung
+            app.extensions['mail'] = ConsoleMailBackend(app)
+        else:
+            # SMTP für Production
+            mail = Mail(app)
 
     with app.app_context():
         # SQLite FK erzwingen
