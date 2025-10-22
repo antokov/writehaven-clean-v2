@@ -155,30 +155,38 @@ class Role(db.Model, RoleMixin):
 
 
 class User(db.Model, UserMixin):
-    """Flask-Security-Too User Model"""
+    """User Model - compatible with both simple auth and Flask-Security-Too"""
     __tablename__ = "user"
     __table_args__ = {'extend_existing': True}
 
+    # Core fields (always present)
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
-    username = db.Column(db.String(255))  # Optional, falls gewünscht
-    password = db.Column(db.String(255), nullable=False)  # Flask-Security nutzt 'password', nicht 'password_hash'
-    password_hash = db.Column(db.String(255))  # Backward compatibility mit alter DB-Struktur
+    username = db.Column(db.String(255))  # Optional
     name = db.Column(db.String(200))
     language = db.Column(db.String(10), default="en")
-
-    # Flask-Security-Too required fields
-    active = db.Column(db.Boolean(), default=True)
-    fs_uniquifier = db.Column(db.String(255), unique=True, nullable=False)  # Required for Flask-Security-Too
-    confirmed_at = db.Column(db.DateTime())  # Email confirmation
-
-    # Timestamps
     created_at = db.Column(db.DateTime, server_default=func.now())
-    last_login_at = db.Column(db.DateTime())
-    current_login_at = db.Column(db.DateTime())
-    last_login_ip = db.Column(db.String(100))
-    current_login_ip = db.Column(db.String(100))
-    login_count = db.Column(db.Integer, default=0)
 
-    # Relationships
+    # Password fields - support both old and new schema
+    password = db.Column(db.String(255))  # Flask-Security field (nullable for compatibility)
+    password_hash = db.Column(db.String(255))  # Old schema field (nullable for compatibility)
+
+    # Flask-Security-Too fields (optional - only used when Flask-Security is available)
+    active = db.Column(db.Boolean(), default=True, nullable=True)
+    fs_uniquifier = db.Column(db.String(255), unique=True, nullable=True)  # Nullable for backward compatibility
+    confirmed_at = db.Column(db.DateTime(), nullable=True)  # Email confirmation
+
+    # Login tracking (optional)
+    last_login_at = db.Column(db.DateTime(), nullable=True)
+    current_login_at = db.Column(db.DateTime(), nullable=True)
+    last_login_ip = db.Column(db.String(100), nullable=True)
+    current_login_ip = db.Column(db.String(100), nullable=True)
+    login_count = db.Column(db.Integer, default=0, nullable=True)
+
+    # Relationships (only used when Flask-Security is available)
     roles = db.relationship('Role', secondary=roles_users, backref=db.backref('users', lazy='dynamic'))
+
+    @property
+    def confirmed(self):
+        """Property for backward compatibility"""
+        return self.confirmed_at is not None if self.confirmed_at else True
