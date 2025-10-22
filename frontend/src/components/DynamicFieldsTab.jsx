@@ -75,6 +75,7 @@ export default function DynamicFieldsTab({ fieldConfig, profile, onChangeProfile
               onChange={e => onChangeProfilePath(field.path, e.target.value)}
               placeholder={placeholderText}
               rows={field.rows || 3}
+              data-testid={`character-field-${field.key}`}
             />
           ) : (
             <input
@@ -83,6 +84,7 @@ export default function DynamicFieldsTab({ fieldConfig, profile, onChangeProfile
               value={value}
               onChange={e => onChangeProfilePath(field.path, e.target.value)}
               placeholder={placeholderText}
+              data-testid={`character-field-${field.key}`}
             />
           )}
           {canRemove && (
@@ -91,6 +93,7 @@ export default function DynamicFieldsTab({ fieldConfig, profile, onChangeProfile
               className="remove-field-btn"
               onClick={() => removeField(field.key, field.path)}
               title={t('characters.attributes.removeField', 'Feld entfernen')}
+              data-testid={`remove-field-${field.key}`}
             >
               <BsX />
             </button>
@@ -125,16 +128,17 @@ export default function DynamicFieldsTab({ fieldConfig, profile, onChangeProfile
             type="button"
             className="add-field-btn"
             onClick={() => setShowAddMenu(!showAddMenu)}
+            data-testid="add-attribute-button"
           >
             <BsPlus className="add-icon" />
             <span>{t('characters.attributes.add', 'Merkmal hinzufügen')}</span>
           </button>
 
           {showAddMenu && (
-            <div className="add-field-menu">
+            <div className="add-field-menu" data-testid="add-attribute-menu">
               <div className="add-field-menu-header">
                 <span>{t('characters.attributes.select', 'Merkmal auswählen')}</span>
-                <button className="close-menu-btn" onClick={() => setShowAddMenu(false)}>
+                <button className="close-menu-btn" onClick={() => setShowAddMenu(false)} data-testid="close-attribute-menu">
                   <BsX />
                 </button>
               </div>
@@ -148,6 +152,7 @@ export default function DynamicFieldsTab({ fieldConfig, profile, onChangeProfile
                       type="button"
                       className="add-field-menu-item"
                       onClick={() => addField(field.key)}
+                      data-testid={`add-field-${field.key}`}
                     >
                       <Icon className="menu-item-icon" />
                       <span>{labelText}</span>

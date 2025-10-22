@@ -111,6 +111,13 @@ export default function Login() {
             {!isLogin && (
               <small>{t('auth.passwordHint')}</small>
             )}
+            {isLogin && (
+              <div style={{ marginTop: '8px', textAlign: 'right' }}>
+                <Link to="/forgot-password" className="link-button" style={{ fontSize: '14px' }}>
+                  {t('auth.forgotPassword')}
+                </Link>
+              </div>
+            )}
           </div>
 
           {error && (

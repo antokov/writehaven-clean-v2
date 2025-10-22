@@ -1,7 +1,7 @@
 # backend/models.py
 from sqlalchemy.sql import func
-from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import text as sqltext
+from flask_security import UserMixin, RoleMixin
 
 try:
     # Paket-Start (z.B. gunicorn) -> backend.extensions
@@ -9,6 +9,13 @@ try:
 except Exception:
     # Direktstart (python app.py) -> lokale extensions
     from extensions import db
+
+
+# Flask-Security-Too: Roles-Users Many-to-Many
+roles_users = db.Table('roles_users',
+    db.Column('user_id', db.Integer(), db.ForeignKey('user.id')),
+    db.Column('role_id', db.Integer(), db.ForeignKey('role.id'))
+)
 
 
 class Project(db.Model):
@@ -122,22 +129,41 @@ class WorldNode(db.Model):
     relations_json = db.Column(db.Text, default="{}")
 
 
-class User(db.Model):
-    __tablename__ = "user"  # reserviertes Wort, daher in Migration immer quoten
+class Role(db.Model, RoleMixin):
+    """Flask-Security-Too Role Model"""
+    __tablename__ = "role"
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), unique=True, nullable=False)
+    description = db.Column(db.String(255))
+
+
+class User(db.Model, UserMixin):
+    """Flask-Security-Too User Model"""
+    __tablename__ = "user"
     __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
-    password_hash = db.Column(db.String(255), nullable=False)
+    username = db.Column(db.String(255))  # Optional, falls gewünscht
+    password = db.Column(db.String(255), nullable=False)  # Flask-Security nutzt 'password', nicht 'password_hash'
+    password_hash = db.Column(db.String(255))  # Backward compatibility mit alter DB-Struktur
     name = db.Column(db.String(200))
-    language = db.Column(db.String(10), default="en")  # English as default for international users
+    language = db.Column(db.String(10), default="en")
+
+    # Flask-Security-Too required fields
+    active = db.Column(db.Boolean(), default=True)
+    fs_uniquifier = db.Column(db.String(255), unique=True, nullable=False)  # Required for Flask-Security-Too
+    confirmed_at = db.Column(db.DateTime())  # Email confirmation
+
+    # Timestamps
     created_at = db.Column(db.DateTime, server_default=func.now())
+    last_login_at = db.Column(db.DateTime())
+    current_login_at = db.Column(db.DateTime())
+    last_login_ip = db.Column(db.String(100))
+    current_login_ip = db.Column(db.String(100))
+    login_count = db.Column(db.Integer, default=0)
 
-    def set_password(self, password):
-        """Hash und speichere Passwort"""
-        # pbkdf2:sha256 funktioniert mit Python 3.8+, scrypt braucht 3.9+
-        self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
-
-    def check_password(self, password):
-        """Prüfe Passwort gegen Hash"""
-        return check_password_hash(self.password_hash, password)
+    # Relationships
+    roles = db.relationship('Role', secondary=roles_users, backref=db.backref('users', lazy='dynamic'))

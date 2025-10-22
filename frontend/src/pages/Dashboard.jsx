@@ -107,7 +107,7 @@ export default function Dashboard(){
         <>
           <div className="project-grid">
             {/* Plus-Karte zum Hinzufügen */}
-            <article className="project-card project-card-add" onClick={() => setShowCreateModal(true)}>
+            <article className="project-card project-card-add" onClick={() => setShowCreateModal(true)} data-testid="new-project-button">
               <div className="add-card-content">
                 <BsPlus className="add-icon" />
                 <span className="add-text">{t('dashboard.newProject')}</span>
@@ -115,12 +115,13 @@ export default function Dashboard(){
             </article>
 
             {projects.map(p => (
-              <article key={p.id} className="project-card">
+              <article key={p.id} className="project-card" data-testid={`project-card-${p.id}`}>
                 {/* Cover links (2:3) */}
                 <Link
                   to={`/app/project/${p.id}`}
                   className="project-cover"
                   aria-label={t('dashboard.openAria', { title: p.title })}
+                  data-testid={`project-cover-${p.id}`}
                 >
                   <div className="cover-art">
                     <span className="cover-letter">{(p.title || '?').slice(0,1).toUpperCase()}</span>
@@ -137,17 +138,17 @@ export default function Dashboard(){
 
                   <div className="project-actions">
                     <div className="actions-left">
-                      <Link className="btn btn-primary-quiet" to={`/app/project/${p.id}`}>
+                      <Link className="btn btn-primary-quiet" to={`/app/project/${p.id}`} data-testid={`project-open-${p.id}`}>
                         <BsBoxArrowUpRight className="icon" aria-hidden />
                         <span>{t('common.open')}</span>
                       </Link>
-                      <button className="btn btn-quiet" onClick={()=>renameProject(p)}>
+                      <button className="btn btn-quiet" onClick={()=>renameProject(p)} data-testid={`project-rename-${p.id}`}>
                         <BsPencil className="icon" aria-hidden />
                         <span>{t('common.rename')}</span>
                       </button>
                     </div>
                     <div className="actions-right">
-                      <button className="btn btn-danger-quiet" onClick={()=>removeProject(p)}>
+                      <button className="btn btn-danger-quiet" onClick={()=>removeProject(p)} data-testid={`project-delete-${p.id}`}>
                         <BsTrash className="icon" aria-hidden />
                         <span>{t('common.delete')}</span>
                       </button>

@@ -1,22 +1,28 @@
 # backend/app.py
 import os
 import json
-import jwt
+import jwt as pyjwt
 from datetime import datetime, timedelta
 from functools import wraps
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, g
 from flask_cors import CORS
+from flask_security import Security, SQLAlchemyUserDatastore, hash_password
+from flask_mailman import Mail
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError, ProgrammingError, OperationalError
 
 try:
     from backend.extensions import db
-    from backend.models import Project, Chapter, Scene, Character, WorldNode, User
+    from backend.models import Project, Chapter, Scene, Character, WorldNode, User, Role
     from backend.word_parser import parse_word_document
+    from backend.security_config import get_security_config
+    from backend.console_mail import ConsoleMailBackend
 except ImportError:
     from extensions import db
-    from models import Project, Chapter, Scene, Character, WorldNode, User
+    from models import Project, Chapter, Scene, Character, WorldNode, User, Role
     from word_parser import parse_word_document
+    from security_config import get_security_config
+    from console_mail import ConsoleMailBackend
 
 
 # ---------- DB URI helpers ----------
@@ -54,9 +60,9 @@ def create_app():
     app = Flask(__name__, static_folder="static", static_url_path="")
     app.json.sort_keys = False
 
-    # JWT Secret Key
-    app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
-    app.config["JWT_EXPIRATION_HOURS"] = int(os.getenv("JWT_EXPIRATION_HOURS", "24"))
+    # Load Flask-Security-Too Configuration
+    security_config = get_security_config()
+    app.config.update(security_config)
 
     # SQLAlchemy
     app.config["SQLALCHEMY_DATABASE_URI"] = get_database_uri()
@@ -84,6 +90,19 @@ def create_app():
 
     # DB init
     db.init_app(app)
+
+    # Flask-Security-Too Setup
+    user_datastore = SQLAlchemyUserDatastore(db, User, Role)
+    security = Security(app, user_datastore)
+
+    # Email Backend Setup
+    email_backend = os.getenv("EMAIL_BACKEND", "console")
+    if email_backend == "console":
+        # Console backend für lokale Entwicklung
+        app.extensions['mail'] = ConsoleMailBackend(app)
+    else:
+        # SMTP für Production
+        mail = Mail(app)
 
     with app.app_context():
         # SQLite FK erzwingen
@@ -170,29 +189,19 @@ def create_app():
             return None
         return world if verify_project_ownership(world.project_id, user_id) else None
 
-    # ---------- Health ----------
-    @app.get("/api/health")
-    def health():
-        try:
-            db.session.execute(text("SELECT 1"))
-            db_ok = "ok"
-        except Exception as e:
-            db_ok = f"error: {e.__class__.__name__}: {e}"
-        return jsonify({"status": "ok", "db": db_ok}), 200
-
-    # ---------- JWT Helper ----------
-    def generate_token(user_id):
+    # ---------- JWT Helper (Custom JWT statt Flask-Security Token) ----------
+    def generate_jwt_token(user_id):
         """Generiere JWT Token"""
         payload = {
             "user_id": user_id,
-            "exp": datetime.utcnow() + timedelta(hours=app.config["JWT_EXPIRATION_HOURS"])
+            "exp": datetime.utcnow() + timedelta(hours=24)
         }
-        return jwt.encode(payload, app.config["SECRET_KEY"], algorithm="HS256")
+        return pyjwt.encode(payload, app.config["SECRET_KEY"], algorithm="HS256")
 
-    def token_required(f):
-        """Decorator für protected routes"""
-        @wraps(f)
-        def decorated(*args, **kwargs):
+    def token_auth_required(fn):
+        """Decorator für JWT-basierte Authentifizierung"""
+        @wraps(fn)
+        def decorated_view(*args, **kwargs):
             token = None
             auth_header = request.headers.get("Authorization")
 
@@ -203,24 +212,48 @@ def create_app():
                 return ok({"error": "Token fehlt"}, 401)
 
             try:
-                payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
-                current_user_id = payload["user_id"]
-                current_user = User.query.get(current_user_id)
-                if not current_user:
+                payload = pyjwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+                user_id = payload["user_id"]
+                user = User.query.get(user_id)
+
+                if not user:
                     return ok({"error": "User nicht gefunden"}, 401)
-            except jwt.ExpiredSignatureError:
+
+                if not user.active:
+                    return ok({"error": "Account deaktiviert"}, 401)
+
+                # Setze current_user
+                g.current_user = user
+                return fn(*args, **kwargs)
+
+            except pyjwt.ExpiredSignatureError:
                 return ok({"error": "Token abgelaufen"}, 401)
-            except jwt.InvalidTokenError:
+            except pyjwt.InvalidTokenError:
                 return ok({"error": "Ungültiger Token"}, 401)
+            except Exception as e:
+                print(f"Token error: {e}")
+                return ok({"error": "Token ungültig"}, 401)
 
-            return f(current_user, *args, **kwargs)
+        return decorated_view
 
-        return decorated
+    # Helper um current_user zu bekommen
+    def get_current_user():
+        return getattr(g, 'current_user', None)
 
-    # ---------- Auth ----------
+    # ---------- Health ----------
+    @app.get("/api/health")
+    def health():
+        try:
+            db.session.execute(text("SELECT 1"))
+            db_ok = "ok"
+        except Exception as e:
+            db_ok = f"error: {e.__class__.__name__}: {e}"
+        return jsonify({"status": "ok", "db": db_ok}), 200
+
+    # ---------- Auth mit Flask-Security-Too ----------
     @app.post("/api/auth/register")
     def register():
-        """Registriere neuen User"""
+        """Registriere neuen User mit Flask-Security-Too"""
         data = request.get_json() or {}
         email = data.get("email", "").strip().lower()
         password = data.get("password", "")
@@ -233,35 +266,79 @@ def create_app():
             return ok({"error": "Passwort muss mindestens 6 Zeichen lang sein"}, 400)
 
         # Prüfe ob User existiert
-        if User.query.filter_by(email=email).first():
+        if user_datastore.find_user(email=email):
             return ok({"error": "Email bereits registriert"}, 400)
 
-        # Erstelle User
-        user = User(email=email, name=name or email.split("@")[0])
-        user.set_password(password)
-
         try:
-            db.session.add(user)
-            db.session.commit()
-        except IntegrityError:
-            db.session.rollback()
-            return ok({"error": "Registrierung fehlgeschlagen"}, 400)
+            # Generiere fs_uniquifier für Flask-Security-Too
+            import uuid
+            fs_uniquifier = uuid.uuid4().hex
 
-        token = generate_token(user.id)
-        return ok({
-            "token": token,
-            "user": {
-                "id": user.id,
-                "email": user.email,
-                "name": user.name,
-                "language": user.language or "de",
-                "created_at": user.created_at.isoformat() if user.created_at else None
-            }
-        }, 201)
+            # Hash das Passwort
+            hashed_password = hash_password(password)
+
+            # Erstelle User mit Flask-Security-Too
+            user = user_datastore.create_user(
+                email=email,
+                password=hashed_password,
+                name=name or email.split("@")[0],
+                active=True,
+                fs_uniquifier=fs_uniquifier,
+                confirmed_at=None if app.config.get("SECURITY_CONFIRMABLE") else datetime.utcnow()
+            )
+
+            # Backward compatibility: Setze auch password_hash für alte Spalte
+            user.password_hash = hashed_password
+            db.session.commit()
+
+            # Sende Confirmation Email wenn aktiviert
+            if app.config.get("SECURITY_CONFIRMABLE"):
+                from flask_security import send_mail
+                from flask_security.utils import config_value
+                send_mail(
+                    config_value("EMAIL_SUBJECT_REGISTER"),
+                    user.email,
+                    "welcome",
+                    user=user
+                )
+                return ok({
+                    "message": "Registrierung erfolgreich. Bitte bestätige deine Email-Adresse.",
+                    "user": {
+                        "id": user.id,
+                        "email": user.email,
+                        "name": user.name,
+                        "confirmed": False
+                    }
+                }, 201)
+
+            # Token generieren (nur wenn keine Email-Confirmation nötig)
+            token = generate_jwt_token(user.id)
+            return ok({
+                "token": token,
+                "user": {
+                    "id": user.id,
+                    "email": user.email,
+                    "name": user.name,
+                    "language": user.language or "en",
+                    "confirmed": True,
+                    "created_at": user.created_at.isoformat() if user.created_at else None
+                }
+            }, 201)
+
+        except IntegrityError as e:
+            db.session.rollback()
+            print(f"IntegrityError bei Registrierung: {e}")
+            return ok({"error": "Registrierung fehlgeschlagen"}, 400)
+        except Exception as e:
+            db.session.rollback()
+            print(f"Fehler bei Registrierung: {e}")
+            import traceback
+            traceback.print_exc()
+            return ok({"error": f"Registrierung fehlgeschlagen: {str(e)}"}, 400)
 
     @app.post("/api/auth/login")
     def login():
-        """Login User"""
+        """Login User mit Flask-Security-Too"""
         data = request.get_json() or {}
         email = data.get("email", "").strip().lower()
         password = data.get("password", "")
@@ -269,70 +346,199 @@ def create_app():
         if not email or not password:
             return ok({"error": "Email und Passwort erforderlich"}, 400)
 
-        user = User.query.filter_by(email=email).first()
-        if not user or not user.check_password(password):
+        user = user_datastore.find_user(email=email)
+
+        if not user:
             return ok({"error": "Ungültige Anmeldedaten"}, 401)
 
-        token = generate_token(user.id)
+        # Prüfe Passwort - unterstütze alte pbkdf2 UND neue bcrypt Hashes
+        password_valid = False
+
+        # Versuche zuerst Flask-Security-Too's verify_and_update_password
+        try:
+            password_valid = user.verify_and_update_password(password)
+        except:
+            pass
+
+        # Fallback: Alte Werkzeug pbkdf2 Hashes (von vorher)
+        if not password_valid:
+            from werkzeug.security import check_password_hash
+            # Prüfe ob password_hash Spalte noch existiert (Legacy)
+            old_hash = getattr(user, 'password_hash', None) or user.password
+            if old_hash and check_password_hash(old_hash, password):
+                password_valid = True
+                # Update zu neuem bcrypt Hash
+                user.password = hash_password(password)
+                db.session.commit()
+
+        if not password_valid:
+            return ok({"error": "Ungültige Anmeldedaten"}, 401)
+
+        # Prüfe ob User aktiv
+        if not user.active:
+            return ok({"error": "Account deaktiviert"}, 401)
+
+        # Prüfe Email-Bestätigung (wenn aktiviert)
+        if app.config.get("SECURITY_CONFIRMABLE") and not user.confirmed_at:
+            return ok({"error": "Bitte bestätige zuerst deine Email-Adresse"}, 401)
+
+        # Update Login Tracking
+        user.current_login_at = datetime.utcnow()
+        user.current_login_ip = request.remote_addr
+        user.login_count = (user.login_count or 0) + 1
+        db.session.commit()
+
+        # Token generieren (Custom JWT)
+        token = generate_jwt_token(user.id)
         return ok({
             "token": token,
             "user": {
                 "id": user.id,
                 "email": user.email,
                 "name": user.name,
-                "language": user.language or "de",
+                "language": user.language or "en",
+                "confirmed": bool(user.confirmed_at),
                 "created_at": user.created_at.isoformat() if user.created_at else None
             }
         })
 
     @app.get("/api/auth/me")
-    @token_required
-    def get_current_user(current_user):
-        """Hole aktuellen User"""
+    @token_auth_required
+    def get_user_info():
+        """Hole aktuellen User (mit Flask-Security-Too)"""
+        user = get_current_user()
         return ok({
-            "id": current_user.id,
-            "email": current_user.email,
-            "name": current_user.name,
-            "language": current_user.language or "de",
-            "created_at": current_user.created_at.isoformat() if current_user.created_at else None
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "language": user.language or "en",
+            "confirmed": bool(user.confirmed_at),
+            "created_at": user.created_at.isoformat() if user.created_at else None
         })
 
     @app.put("/api/auth/update-language")
-    @token_required
-    def update_user_language(current_user):
+    @token_auth_required
+    def update_user_language():
         """Update user language preference"""
+        user = get_current_user()
         data = request.get_json() or {}
-        language = data.get("language", "de")
+        language = data.get("language", "en")
 
         # Validiere Sprache
         valid_languages = ['de', 'en', 'es', 'fr', 'it', 'pt']
         if language not in valid_languages:
             return bad_request("Ungültige Sprache")
 
-        current_user.language = language
+        user.language = language
         db.session.commit()
 
         return ok({
-            "id": current_user.id,
-            "email": current_user.email,
-            "name": current_user.name,
-            "language": current_user.language
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "language": user.language
+        })
+
+    @app.post("/api/auth/forgot-password")
+    def forgot_password():
+        """Passwort-Reset anfragen"""
+        data = request.get_json() or {}
+        email = data.get("email", "").strip().lower()
+
+        if not email:
+            return ok({"error": "Email erforderlich"}, 400)
+
+        user = user_datastore.find_user(email=email)
+
+        # Immer success zurückgeben (Security: kein User-Enumeration)
+        if user:
+            from flask_security import send_mail
+            from flask_security.utils import config_value
+            send_mail(
+                config_value("EMAIL_SUBJECT_PASSWORD_RESET"),
+                user.email,
+                "reset_instructions",
+                user=user
+            )
+
+        return ok({"message": "Falls die Email existiert, wurde ein Reset-Link gesendet."})
+
+    @app.post("/api/auth/reset-password")
+    def reset_password():
+        """Passwort mit Token zurücksetzen"""
+        data = request.get_json() or {}
+        token = data.get("token", "")
+        password = data.get("password", "")
+
+        if not token or not password:
+            return ok({"error": "Token und Passwort erforderlich"}, 400)
+
+        if len(password) < 6:
+            return ok({"error": "Passwort muss mindestens 6 Zeichen lang sein"}, 400)
+
+        from flask_security.recoverable import reset_password_token_status
+        expired, invalid, user = reset_password_token_status(token)
+
+        if expired:
+            return ok({"error": "Reset-Token abgelaufen"}, 400)
+        if invalid or not user:
+            return ok({"error": "Ungültiger Reset-Token"}, 400)
+
+        # Passwort ändern
+        user.password = hash_password(password)
+        db.session.commit()
+
+        return ok({"message": "Passwort erfolgreich zurückgesetzt"})
+
+    @app.post("/api/auth/confirm-email")
+    def confirm_email():
+        """Email mit Token bestätigen"""
+        data = request.get_json() or {}
+        token = data.get("token", "")
+
+        if not token:
+            return ok({"error": "Token erforderlich"}, 400)
+
+        from flask_security.confirmable import confirm_email_token_status
+        expired, invalid, user = confirm_email_token_status(token)
+
+        if expired:
+            return ok({"error": "Bestätigungs-Token abgelaufen"}, 400)
+        if invalid or not user:
+            return ok({"error": "Ungültiger Bestätigungs-Token"}, 400)
+
+        # Email bestätigen
+        user_datastore.confirm_user(user)
+        db.session.commit()
+
+        # Token generieren
+        auth_token = generate_jwt_token(user.id)
+        return ok({
+            "message": "Email erfolgreich bestätigt",
+            "token": auth_token,
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "name": user.name,
+                "language": user.language or "en",
+                "confirmed": True
+            }
         })
 
     # ---------- Projects ----------
     @app.get("/api/projects")
-    @token_required
-    def list_projects(current_user):
-        rows = (Project.query.filter_by(user_id=current_user.id)
+    @token_auth_required
+    def list_projects():
+        rows = (Project.query.filter_by(user_id=get_current_user().id)
                 .order_by(Project.updated_at.desc()).all()
                 if hasattr(Project, "updated_at")
-                else Project.query.filter_by(user_id=current_user.id)
+                else Project.query.filter_by(user_id=get_current_user().id)
                 .order_by(Project.id.desc()).all())
         return ok([{"id": p.id, "title": p.title, "description": p.description} for p in rows])
 
     @app.post("/api/projects")
-    @token_required
-    def create_project(current_user):
+    @token_auth_required
+    def create_project():
         # Check if multipart/form-data (file upload)
         if request.content_type and 'multipart/form-data' in request.content_type:
             title = request.form.get("title", "Neues Projekt").strip()
@@ -341,7 +547,7 @@ def create_app():
 
             # Erstelle Projekt
             p = Project(
-                user_id=current_user.id,
+                user_id=get_current_user().id,
                 title=title,
                 description=description
             )
@@ -389,7 +595,7 @@ def create_app():
             # JSON request (normal)
             data = request.get_json() or {}
             p = Project(
-                user_id=current_user.id,
+                user_id=get_current_user().id,
                 title=data.get("title") or "Neues Projekt",
                 description=data.get("description", "")
             )
@@ -398,16 +604,16 @@ def create_app():
             return ok({"id": p.id, "title": p.title, "description": p.description}, 201)
 
     @app.get("/api/projects/<int:pid>")
-    @token_required
-    def get_project(current_user, pid):
-        p = Project.query.filter_by(id=pid, user_id=current_user.id).first()
+    @token_auth_required
+    def get_project(pid):
+        p = Project.query.filter_by(id=pid, user_id=get_current_user().id).first()
         if not p: return not_found()
         return ok({"id": p.id, "title": p.title, "description": p.description})
 
     @app.put("/api/projects/<int:pid>")
-    @token_required
-    def update_project(current_user, pid):
-        p = Project.query.filter_by(id=pid, user_id=current_user.id).first()
+    @token_auth_required
+    def update_project(pid):
+        p = Project.query.filter_by(id=pid, user_id=get_current_user().id).first()
         if not p: return not_found()
         data = request.get_json() or {}
         p.title = data.get("title", p.title)
@@ -416,9 +622,9 @@ def create_app():
         return ok({"id": p.id, "title": p.title, "description": p.description})
 
     @app.delete("/api/projects/<int:pid>")
-    @token_required
-    def delete_project(current_user, pid):
-        p = Project.query.filter_by(id=pid, user_id=current_user.id).first()
+    @token_auth_required
+    def delete_project(pid):
+        p = Project.query.filter_by(id=pid, user_id=get_current_user().id).first()
         if not p: return not_found()
         db.session.delete(p)
         db.session.commit()
@@ -426,9 +632,9 @@ def create_app():
 
     # ---------- Chapters ----------
     @app.get("/api/projects/<int:pid>/chapters")
-    @token_required
-    def list_chapters(current_user, pid):
-        if not verify_project_ownership(pid, current_user.id):
+    @token_auth_required
+    def list_chapters(pid):
+        if not verify_project_ownership(pid, get_current_user().id):
             return forbidden()
         rows = (Chapter.query.filter_by(project_id=pid)
                 .order_by(Chapter.order_index.asc(), Chapter.id.asc())
@@ -439,9 +645,9 @@ def create_app():
         } for c in rows])
 
     @app.post("/api/projects/<int:pid>/chapters")
-    @token_required
-    def create_chapter(current_user, pid):
-        if not verify_project_ownership(pid, current_user.id):
+    @token_auth_required
+    def create_chapter(pid):
+        if not verify_project_ownership(pid, get_current_user().id):
             return forbidden()
         data = request.get_json() or {}
         c = Chapter(project_id=pid,
@@ -451,17 +657,17 @@ def create_app():
         return ok({"id": c.id, "title": c.title, "order_index": c.order_index, "project_id": c.project_id}, 201)
 
     @app.get("/api/chapters/<int:cid>")
-    @token_required
-    def get_chapter(current_user, cid):
-        c = verify_chapter_ownership(cid, current_user.id)
+    @token_auth_required
+    def get_chapter(cid):
+        c = verify_chapter_ownership(cid, get_current_user().id)
         if not c: return not_found()
         return ok({"id": c.id, "project_id": c.project_id, "title": c.title,
                    "order_index": c.order_index, "content": getattr(c, "content", None)})
 
     @app.put("/api/chapters/<int:cid>")
-    @token_required
-    def update_chapter(current_user, cid):
-        c = verify_chapter_ownership(cid, current_user.id)
+    @token_auth_required
+    def update_chapter(cid):
+        c = verify_chapter_ownership(cid, get_current_user().id)
         if not c: return not_found()
         data = request.get_json() or {}
         title = data.get("title")
@@ -473,18 +679,18 @@ def create_app():
         return ok({"id": c.id, "title": c.title, "order_index": c.order_index, "project_id": c.project_id})
 
     @app.delete("/api/chapters/<int:cid>")
-    @token_required
-    def delete_chapter(current_user, cid):
-        c = verify_chapter_ownership(cid, current_user.id)
+    @token_auth_required
+    def delete_chapter(cid):
+        c = verify_chapter_ownership(cid, get_current_user().id)
         if not c: return not_found()
         db.session.delete(c); db.session.commit()
         return ok({"ok": True})
 
     # ---------- Scenes ----------
     @app.get("/api/chapters/<int:cid>/scenes")
-    @token_required
-    def list_scenes(current_user, cid):
-        if not verify_chapter_ownership(cid, current_user.id):
+    @token_auth_required
+    def list_scenes(cid):
+        if not verify_chapter_ownership(cid, get_current_user().id):
             return forbidden()
         rows = (Scene.query.filter_by(chapter_id=cid)
                 .order_by(Scene.order_index.asc(), Scene.id.asc())
@@ -495,9 +701,9 @@ def create_app():
         } for s in rows])
 
     @app.post("/api/chapters/<int:cid>/scenes")
-    @token_required
-    def create_scene(current_user, cid):
-        if not verify_chapter_ownership(cid, current_user.id): return forbidden()
+    @token_auth_required
+    def create_scene(cid):
+        if not verify_chapter_ownership(cid, get_current_user().id): return forbidden()
         data = request.get_json() or {}
         s = Scene(chapter_id=cid,
                   title=(data.get("title") or "Neue Szene").strip(),
@@ -512,21 +718,21 @@ def create_app():
                    "chapter_id": s.chapter_id, "content": s.content}, 201)
 
     @app.get("/api/scenes/<int:sid>")
-    @token_required
-    def get_scene(current_user, sid):
+    @token_auth_required
+    def get_scene(sid):
         s = Scene.query.get(sid)
-        if s and not verify_chapter_ownership(s.chapter_id, current_user.id):
+        if s and not verify_chapter_ownership(s.chapter_id, get_current_user().id):
             return forbidden()
         if not s: return not_found()
         return ok({"id": s.id, "chapter_id": s.chapter_id, "title": s.title,
                    "order_index": s.order_index, "content": s.content})
 
     @app.put("/api/scenes/<int:sid>")
-    @token_required
-    def update_scene(current_user, sid):
+    @token_auth_required
+    def update_scene(sid):
         s = Scene.query.get(sid)
         if not s: return not_found()
-        if not verify_chapter_ownership(s.chapter_id, current_user.id):
+        if not verify_chapter_ownership(s.chapter_id, get_current_user().id):
             return forbidden()
         data = request.get_json() or {}
         if (t := data.get("title")) is not None:   s.title = t.strip()
@@ -536,11 +742,11 @@ def create_app():
                    "chapter_id": s.chapter_id, "content": s.content})
 
     @app.delete("/api/scenes/<int:sid>")
-    @token_required
-    def delete_scene(current_user, sid):
+    @token_auth_required
+    def delete_scene(sid):
         s = Scene.query.get(sid)
         if not s: return not_found()
-        if not verify_chapter_ownership(s.chapter_id, current_user.id):
+        if not verify_chapter_ownership(s.chapter_id, get_current_user().id):
             return forbidden()
         db.session.delete(s); db.session.commit()
         return ok({"ok": True})
@@ -557,17 +763,17 @@ def create_app():
         }
 
     @app.get("/api/projects/<int:pid>/characters")
-    @token_required
-    def list_characters(current_user, pid):
-        if not verify_project_ownership(pid, current_user.id):
+    @token_auth_required
+    def list_characters(pid):
+        if not verify_project_ownership(pid, get_current_user().id):
             return forbidden()
         rows = Character.query.filter_by(project_id=pid).order_by(Character.id.asc()).all()
         return ok([_char_to_dict(c) for c in rows])
 
     @app.post("/api/projects/<int:pid>/characters")
-    @token_required
-    def create_character(current_user, pid):
-        if not verify_project_ownership(pid, current_user.id):
+    @token_auth_required
+    def create_character(pid):
+        if not verify_project_ownership(pid, get_current_user().id):
             return not_found()
         data = request.get_json() or {}
         profile = data.get("profile") or {}
@@ -582,17 +788,17 @@ def create_app():
         return ok(_char_to_dict(c), 201)
 
     @app.get("/api/characters/<int:cid>")
-    @token_required
-    def get_character(current_user, cid):
-        c = verify_character_ownership(cid, current_user.id)
+    @token_auth_required
+    def get_character(cid):
+        c = verify_character_ownership(cid, get_current_user().id)
         if not c: return not_found()
         return ok(_char_to_dict(c))
 
     @app.put("/api/characters/<int:cid>")
     @app.patch("/api/characters/<int:cid>")
-    @token_required
-    def update_character(current_user, cid):
-        c = verify_character_ownership(cid, current_user.id)
+    @token_auth_required
+    def update_character(cid):
+        c = verify_character_ownership(cid, get_current_user().id)
         if not c: return not_found()
         data = request.get_json() or {}
 
@@ -613,18 +819,18 @@ def create_app():
         return ok(_char_to_dict(c))
 
     @app.delete("/api/characters/<int:cid>")
-    @token_required
-    def delete_character(current_user, cid):
-        c = verify_character_ownership(cid, current_user.id)
+    @token_auth_required
+    def delete_character(cid):
+        c = verify_character_ownership(cid, get_current_user().id)
         if not c: return not_found()
         db.session.delete(c); db.session.commit()
         return ok({"ok": True})
 
     # ---------- World ----------
     @app.get("/api/projects/<int:pid>/world")
-    @token_required
-    def list_world(current_user, pid):
-        if not verify_project_ownership(pid, current_user.id):
+    @token_auth_required
+    def list_world(pid):
+        if not verify_project_ownership(pid, get_current_user().id):
             return forbidden()
         rows = WorldNode.query.filter_by(project_id=pid).order_by(WorldNode.id.asc()).all()
         return ok([{
@@ -633,9 +839,9 @@ def create_app():
         } for w in rows])
 
     @app.post("/api/projects/<int:pid>/world")
-    @token_required
-    def create_world(current_user, pid):
-        if not verify_project_ownership(pid, current_user.id):
+    @token_auth_required
+    def create_world(pid):
+        if not verify_project_ownership(pid, get_current_user().id):
             return forbidden()
         data = request.get_json() or {}
         w = WorldNode(project_id=pid,
@@ -648,9 +854,9 @@ def create_app():
                    "summary": w.summary, "icon": w.icon}, 201)
 
     @app.get("/api/world/<int:w_id>")
-    @token_required
-    def get_world(current_user, w_id):
-        w = verify_world_ownership(w_id, current_user.id)
+    @token_auth_required
+    def get_world(w_id):
+        w = verify_world_ownership(w_id, get_current_user().id)
         if not w: return not_found()
         return ok({
             "id": w.id,
@@ -663,9 +869,9 @@ def create_app():
         })
 
     @app.put("/api/world/<int:w_id>")
-    @token_required
-    def update_world(current_user, w_id):
-        w = verify_world_ownership(w_id, current_user.id)
+    @token_auth_required
+    def update_world(w_id):
+        w = verify_world_ownership(w_id, get_current_user().id)
         if not w: return not_found()
         data = request.get_json() or {}
         w.title   = data.get("title", w.title)
@@ -689,18 +895,18 @@ def create_app():
         })
 
     @app.delete("/api/world/<int:w_id>")
-    @token_required
-    def delete_world(current_user, w_id):
-        w = verify_world_ownership(w_id, current_user.id)
+    @token_auth_required
+    def delete_world(w_id):
+        w = verify_world_ownership(w_id, get_current_user().id)
         if not w: return not_found()
         db.session.delete(w); db.session.commit()
         return ok({"ok": True})
 
     # ---------- Project Settings ----------
     @app.get("/api/projects/<int:pid>/settings")
-    @token_required
-    def get_project_settings(current_user, pid):
-        p = verify_project_ownership(pid, current_user.id)
+    @token_auth_required
+    def get_project_settings(pid):
+        p = verify_project_ownership(pid, get_current_user().id)
         if not p: return not_found()
         return ok({
             "title": p.title,
@@ -715,9 +921,9 @@ def create_app():
         })
 
     @app.put("/api/projects/<int:pid>/settings")
-    @token_required
-    def update_project_settings(current_user, pid):
-        p = verify_project_ownership(pid, current_user.id)
+    @token_auth_required
+    def update_project_settings(pid):
+        p = verify_project_ownership(pid, get_current_user().id)
         if not p: return not_found()
         data = request.get_json() or {}
 
@@ -746,9 +952,9 @@ def create_app():
         })
 
     @app.post("/api/projects/<int:pid>/upload-cover")
-    @token_required
-    def upload_project_cover(current_user, pid):
-        p = verify_project_ownership(pid, current_user.id)
+    @token_auth_required
+    def upload_project_cover(pid):
+        p = verify_project_ownership(pid, get_current_user().id)
         if not p: return not_found()
 
         if 'cover' not in request.files:

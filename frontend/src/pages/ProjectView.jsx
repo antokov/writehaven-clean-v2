@@ -467,7 +467,7 @@ export default function ProjectView() {
         <div className="tree">
           <div className="tree-head">
             <span className="tree-title">{t('writing.structure')}</span>
-            <button className="icon-btn" title={t('writing.addChapter')} onClick={addChapter}>
+            <button className="icon-btn" title={t('writing.addChapter')} onClick={addChapter} data-testid="add-chapter-button">
               <BsPlus />
             </button>
           </div>
@@ -477,7 +477,7 @@ export default function ProjectView() {
               const open = !!expanded[ch.id];
               const scenes = scenesByChapter[ch.id] || [];
               return (
-                <li key={ch.id} className={`tree-chapter ${activeChapterId === ch.id ? 'active' : ''}`}>
+                <li key={ch.id} className={`tree-chapter ${activeChapterId === ch.id ? 'active' : ''}`} data-testid={`chapter-${ch.id}`}>
                   <div className="tree-row chapter-row" onClick={() => onSelectChapter(ch.id)}>
                     <button
                       className="icon-btn caret"
@@ -490,6 +490,7 @@ export default function ProjectView() {
                         clearEditor();
                       }}
                       title={t('writing.showChapter')}
+                      data-testid={`chapter-expand-${ch.id}`}
                     >
                       {open ? <BsChevronDown /> : <BsChevronRight />}
                     </button>
@@ -497,10 +498,10 @@ export default function ProjectView() {
                     <span className="tree-name">{ch.title}</span>
 
                     <div className="row-actions" onClick={e => e.stopPropagation()}>
-                      <button className="icon-btn" title={t('writing.addScene')} onClick={() => addSceneForChapter(ch.id)}>
+                      <button className="icon-btn" title={t('writing.addScene')} onClick={() => addSceneForChapter(ch.id)} data-testid={`add-scene-${ch.id}`}>
                         <BsPlus />
                       </button>
-                      <button className="icon-btn danger" title={t('writing.deleteChapter')} onClick={() => deleteChapter(ch.id)}>
+                      <button className="icon-btn danger" title={t('writing.deleteChapter')} onClick={() => deleteChapter(ch.id)} data-testid={`delete-chapter-${ch.id}`}>
                         <BsTrash />
                       </button>
                     </div>
@@ -509,12 +510,12 @@ export default function ProjectView() {
                   {open && (
                     <ul className="tree-scenes">
                       {scenes.map(s => (
-                        <li key={s.id} className={`tree-scene ${activeSceneId === s.id ? 'active' : ''}`}>
+                        <li key={s.id} className={`tree-scene ${activeSceneId === s.id ? 'active' : ''}`} data-testid={`scene-${s.id}`}>
                           <div className="tree-row scene-row" onClick={() => onSelectScene(ch.id, s)}>
                             <span className="tree-dot" aria-hidden />
                             <span className="tree-name">{s.title}</span>
                             <div className="row-actions" onClick={e => e.stopPropagation()}>
-                              <button className="icon-btn danger" title={t('writing.deleteScene')} onClick={() => deleteScene(s.id, ch.id)}>
+                              <button className="icon-btn danger" title={t('writing.deleteScene')} onClick={() => deleteScene(s.id, ch.id)} data-testid={`delete-scene-${s.id}`}>
                                 <BsTrash />
                               </button>
                             </div>
@@ -549,6 +550,7 @@ export default function ProjectView() {
                   }}
                   onBlur={() => saveSceneNow(activeSceneId, sceneTitle, sceneContent)}
                   placeholder={t('writing.sceneTitlePlaceholder')}
+                  data-testid="scene-title-input"
                 />
                 <div style={{marginLeft:'auto', fontSize:12, color:'var(--muted)'}}>
                   {lastSavedAt ? <>{t('writing.savedAt', { time: lastSavedAt.toLocaleTimeString() })}</> : '—'}
@@ -561,6 +563,7 @@ export default function ProjectView() {
                 onBlur={() => saveSceneNow(activeSceneId, sceneTitle, sceneContent)}
                 onContextMenu={handleContextMenu}
                 placeholder={t('writing.sceneContentPlaceholder')}
+                data-testid="scene-content-editor"
               />
             </>
           ) : (
@@ -616,6 +619,7 @@ function ChapterOverview({
           onChange={(e) => setChapterTitle(e.target.value)}
           onBlur={saveChapter}
           placeholder={t('writing.chapterTitlePlaceholder')}
+          data-testid="chapter-title-input"
         />
         <div className="chapter-meta">
           {lastChapterSavedAt ? <>{t('writing.savedAt', { time: lastChapterSavedAt.toLocaleTimeString() })}</> : ' '}

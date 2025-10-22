@@ -91,6 +91,7 @@ export default function CreateProjectModal({ onConfirm, onCancel }) {
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder={t("dashboard.createModal.projectNamePlaceholder")}
                 required
+                data-testid="project-title-input"
               />
             </div>
 
@@ -151,10 +152,10 @@ export default function CreateProjectModal({ onConfirm, onCancel }) {
             </div>
           </div>
           <div className="modal-footer">
-            <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={uploading}>
+            <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={uploading} data-testid="create-project-cancel">
               {t("common.cancel")}
             </button>
-            <button type="submit" className="btn btn-primary" disabled={!title.trim() || uploading}>
+            <button type="submit" className="btn btn-primary" disabled={!title.trim() || uploading} data-testid="create-project-submit">
               {uploading ? t("dashboard.createModal.creating") : t("dashboard.createModal.create")}
             </button>
           </div>

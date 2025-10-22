@@ -7,6 +7,9 @@ import ProtectedRoute from './components/ProtectedRoute.jsx'
 
 import Landing from './pages/Landing.jsx'               // Landing Page
 import Login from './pages/Login.jsx'                   // Login/Register Page
+import ForgotPassword from './pages/ForgotPassword.jsx' // Forgot Password Page
+import ResetPassword from './pages/ResetPassword.jsx'   // Reset Password Page
+import ConfirmEmail from './pages/ConfirmEmail.jsx'     // Email Confirmation Page
 import Dashboard from './pages/Dashboard.jsx'
 import UserSettings from './pages/UserSettings.jsx'
 import ProjectLayout from './pages/ProjectLayout.jsx'
@@ -48,8 +51,11 @@ createRoot(document.getElementById('root')).render(
           {/* Landing Page als Startseite */}
           <Route path="/" element={<Landing />} />
 
-          {/* Login/Register Page */}
+          {/* Auth Pages */}
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/confirm-email" element={<ConfirmEmail />} />
 
           {/* Protected App Routes */}
           <Route path="/app" element={<ProtectedRoute><App /></ProtectedRoute>}>
