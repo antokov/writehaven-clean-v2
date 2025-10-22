@@ -69,9 +69,13 @@ def create_app():
     app = Flask(__name__, static_folder="static", static_url_path="")
     app.json.sort_keys = False
 
-    # Load Flask-Security-Too Configuration
-    security_config = get_security_config()
-    app.config.update(security_config)
+    # Load Flask-Security-Too Configuration (if available)
+    if FLASK_SECURITY_AVAILABLE:
+        security_config = get_security_config()
+        app.config.update(security_config)
+    else:
+        # Fallback: Basic config without Flask-Security
+        app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
 
     # SQLAlchemy
     app.config["SQLALCHEMY_DATABASE_URI"] = get_database_uri()
