@@ -35,16 +35,18 @@ function paragraphsHTML(text, firstIsDropcap = false, locale = "en") {
 
 const escReg = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-// Build localized chapter heading like "Chapter 3 — Title"
-// Avoid double prefix if the given title already starts with "Chapter"/"Kapitel"
+// Build chapter heading - only show title (or fallback to "Chapter X")
 function buildChapterHeading(no, rawTitle = "", t, locale) {
   const title = (rawTitle || "").trim();
-  const chapterWord = t("export.chapter", "Chapter"); // i18n
-  const re = new RegExp(`^\\s*(${escReg(chapterWord)}|Kapitel)\\b`, "i"); // also handle legacy "Kapitel"
-  if (re.test(title)) return title;
 
-  const suffix = title ? ` — ${escapeHtml(smartQuotes(title, locale))}` : "";
-  return `${chapterWord} ${no}${suffix}`;
+  // If there's a title, just return it (with smart quotes)
+  if (title) {
+    return escapeHtml(smartQuotes(title, locale));
+  }
+
+  // Fallback: if no title, show "Chapter X"
+  const chapterWord = t("export.chapter", "Chapter");
+  return `${chapterWord} ${no}`;
 }
 
 export default function BookExport() {
