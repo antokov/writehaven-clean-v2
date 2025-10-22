@@ -136,6 +136,13 @@ def create_app():
             db.Model.metadata.create_all(bind=db.engine, checkfirst=True)
             print("Database schema created/verified successfully")
 
+            # Auto-Migration: Update existing schema if needed
+            try:
+                from auto_migrate import auto_migrate
+                auto_migrate()
+            except Exception as e:
+                print(f"Auto-migration skipped: {e}")
+
             # Verifiziere Datenbankverbindung
             db.session.execute(text("SELECT 1"))
             db.session.commit()
