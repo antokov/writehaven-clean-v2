@@ -124,10 +124,15 @@ def create_app():
 
             # Auto-Migration: Update existing schema if needed
             try:
-                from auto_migrate import auto_migrate
+                try:
+                    from backend.auto_migrate import auto_migrate
+                except ImportError:
+                    from auto_migrate import auto_migrate
                 auto_migrate()
             except Exception as e:
                 print(f"Auto-migration skipped: {e}")
+                import traceback
+                traceback.print_exc()
 
             # Verifiziere Datenbankverbindung
             db.session.execute(text("SELECT 1"))
