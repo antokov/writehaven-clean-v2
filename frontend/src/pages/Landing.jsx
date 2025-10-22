@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import '../styles/landing.css'
 import logoUrl from '../assets/logo.png'
 
-const BMAC_URL = import.meta.env.VITE_BMAC_URL || 'https://www.buymeacoffee.com/yourname' // TODO
+const BMAC_URL = import.meta.env.VITE_BMAC_URL || 'https://buymeacoffee.com/antonkovacw' // TODO
 
 export default function Landing() {
   const [scrollY, setScrollY] = useState(0)
