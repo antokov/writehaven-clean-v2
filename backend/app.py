@@ -80,8 +80,18 @@ def create_app():
             return send_from_directory('static', 'index.html')
         return {"message": "WriteHaven API", "version": "1.0", "health": "/api/health"}, 200
 
-    # CORS
-    allowed = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "*").split(",")]
+    # CORS - Allow writehaven.io domains
+    allowed_origins = os.getenv("ALLOWED_ORIGINS", "")
+    if allowed_origins:
+        allowed = [o.strip() for o in allowed_origins.split(",")]
+    else:
+        # Default: Allow Amplify and writehaven.io domains
+        allowed = [
+            "https://master.d1g3w3mv6woysa.amplifyapp.com",
+            "https://www.writehaven.io",
+            "https://writehaven.io"
+        ]
+
     CORS(app,
          resources={r"/api/*": {"origins": allowed}},
          supports_credentials=False,
