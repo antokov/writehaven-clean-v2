@@ -1,0 +1,9 @@
+# robots.txt for WriteHaven
+User-agent: *
+Allow: /
+Disallow: /app/
+Disallow: /login
+Disallow: /register
+
+# Sitemap
+Sitemap: https://www.writehaven.io/sitemap.xml
