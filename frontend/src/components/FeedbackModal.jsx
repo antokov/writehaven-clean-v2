@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import '../styles/FeedbackModal.css';
 import { useTranslation } from 'react-i18next';
-import axios from 'axios';
+import api from '../api';
 
 export default function FeedbackModal({ isOpen, onClose }) {
   const { t } = useTranslation();
@@ -22,7 +22,7 @@ export default function FeedbackModal({ isOpen, onClose }) {
     setSending(true);
 
     try {
-      await axios.post('/api/feedback', {
+      await api.post('/feedback', {
         type: feedbackType,
         message: message,
         email: email
