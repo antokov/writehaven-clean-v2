@@ -566,24 +566,18 @@ def create_app():
         if not message:
             return ok({"error": "Message is required"}, 400)
 
-        # Send email via SMTP (AWS SES SMTP)
+        # Send email via AWS SES API (works better with AWS AppRunner than SMTP)
         try:
-            import smtplib
-            from email.mime.text import MIMEText
-            from email.mime.multipart import MIMEMultipart
+            import boto3
+            from botocore.exceptions import ClientError
 
-            # SMTP Configuration
-            smtp_host = os.getenv("SMTP_HOST", "email-smtp.eu-central-1.amazonaws.com")
-            smtp_port = int(os.getenv("SMTP_PORT", "587"))
-            smtp_user = os.getenv("SMTP_USER")
-            smtp_password = os.getenv("SMTP_PASSWORD")
+            # SES Configuration
+            aws_region = os.getenv("AWS_REGION", "eu-central-1")
             sender_email = os.getenv("FEEDBACK_SENDER_EMAIL", "info@writehaven.io")
             receiver_email = os.getenv("FEEDBACK_RECEIVER_EMAIL", "info@writehaven.io")
 
-            # Validate SMTP credentials are set
-            if not smtp_user or not smtp_password:
-                print("ERROR: SMTP credentials not configured")
-                return ok({"error": "Email service not configured"}, 500)
+            # Create SES client
+            ses_client = boto3.client('ses', region_name=aws_region)
 
             # Email subject based on type
             type_labels = {
@@ -593,12 +587,6 @@ def create_app():
                 "other": "💬 Feedback"
             }
             subject = f"WriteHaven Feedback: {type_labels.get(feedback_type, 'Feedback')}"
-
-            # Create message
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = subject
-            msg['From'] = sender_email
-            msg['To'] = receiver_email
 
             # Plain text version
             text_body = f"""
@@ -631,29 +619,38 @@ Sent from WriteHaven Feedback Form
 </html>
 """
 
-            # Attach parts
-            part1 = MIMEText(text_body, 'plain', 'utf-8')
-            part2 = MIMEText(html_body, 'html', 'utf-8')
-            msg.attach(part1)
-            msg.attach(part2)
+            # Send email via SES API
+            print(f"Sending feedback email via AWS SES in region {aws_region}...")
+            response = ses_client.send_email(
+                Source=sender_email,
+                Destination={
+                    'ToAddresses': [receiver_email]
+                },
+                Message={
+                    'Subject': {
+                        'Data': subject,
+                        'Charset': 'UTF-8'
+                    },
+                    'Body': {
+                        'Text': {
+                            'Data': text_body,
+                            'Charset': 'UTF-8'
+                        },
+                        'Html': {
+                            'Data': html_body,
+                            'Charset': 'UTF-8'
+                        }
+                    }
+                }
+            )
 
-            # Send email with timeout
-            print(f"Connecting to SMTP server {smtp_host}:{smtp_port}...")
-            server = smtplib.SMTP(smtp_host, smtp_port, timeout=10)
-            try:
-                print("Starting TLS...")
-                server.starttls()
-                print("Logging in...")
-                server.login(smtp_user, smtp_password)
-                print("Sending message...")
-                server.send_message(msg)
-                print(f"Feedback email sent successfully to {receiver_email}")
-                return ok({"message": "Feedback sent successfully"}, 200)
-            finally:
-                server.quit()
+            print(f"Feedback email sent successfully. Message ID: {response['MessageId']}")
+            return ok({"message": "Feedback sent successfully"}, 200)
 
-        except smtplib.SMTPException as e:
-            print(f"SMTP Error sending feedback email: {e}")
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            error_message = e.response['Error']['Message']
+            print(f"AWS SES Error: {error_code} - {error_message}")
             import traceback
             traceback.print_exc()
             return ok({"error": "Failed to send feedback. Please try again later."}, 500)
