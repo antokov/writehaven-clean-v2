@@ -550,6 +550,100 @@ def create_app():
             }
         })
 
+    # ---------- Feedback ----------
+    @app.post("/api/feedback")
+    def submit_feedback():
+        """Submit feedback via email"""
+        data = request.get_json() or {}
+        feedback_type = data.get("type", "other")
+        message = data.get("message", "").strip()
+        user_email = data.get("email", "").strip()
+
+        if not message:
+            return ok({"error": "Message is required"}, 400)
+
+        try:
+            # Import AWS SES
+            import boto3
+            from botocore.exceptions import ClientError
+
+            # AWS SES Configuration
+            aws_region = os.getenv("AWS_SES_REGION", "eu-central-1")
+            sender_email = os.getenv("FEEDBACK_SENDER_EMAIL", "noreply@writehaven.io")
+            receiver_email = os.getenv("FEEDBACK_RECEIVER_EMAIL", "feedback@writehaven.io")
+
+            # Create SES client
+            ses_client = boto3.client(
+                'ses',
+                region_name=aws_region,
+                aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+                aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY")
+            )
+
+            # Email subject based on type
+            type_labels = {
+                "bug": "🐛 Bug Report",
+                "improvement": "💡 Improvement Suggestion",
+                "feature": "✨ Feature Request",
+                "other": "💬 Feedback"
+            }
+            subject = f"WriteHaven Feedback: {type_labels.get(feedback_type, 'Feedback')}"
+
+            # Email body
+            body_text = f"""
+WriteHaven Feedback
+
+Type: {feedback_type}
+From: {user_email or 'Anonymous'}
+
+Message:
+{message}
+
+---
+Sent from WriteHaven Feedback Form
+"""
+
+            body_html = f"""
+<html>
+<head></head>
+<body>
+  <h2>WriteHaven Feedback</h2>
+  <p><strong>Type:</strong> {feedback_type}</p>
+  <p><strong>From:</strong> {user_email or 'Anonymous'}</p>
+  <hr>
+  <h3>Message:</h3>
+  <p style="white-space: pre-wrap;">{message}</p>
+  <hr>
+  <p style="color: #666; font-size: 12px;">Sent from WriteHaven Feedback Form</p>
+</body>
+</html>
+"""
+
+            # Send email
+            response = ses_client.send_email(
+                Source=sender_email,
+                Destination={'ToAddresses': [receiver_email]},
+                Message={
+                    'Subject': {'Data': subject, 'Charset': 'UTF-8'},
+                    'Body': {
+                        'Text': {'Data': body_text, 'Charset': 'UTF-8'},
+                        'Html': {'Data': body_html, 'Charset': 'UTF-8'}
+                    }
+                }
+            )
+
+            print(f"Feedback email sent! Message ID: {response['MessageId']}")
+            return ok({"message": "Feedback sent successfully"}, 200)
+
+        except ClientError as e:
+            print(f"AWS SES Error: {e.response['Error']['Message']}")
+            return ok({"error": "Failed to send feedback. Please try again later."}, 500)
+        except Exception as e:
+            print(f"Error sending feedback: {e}")
+            import traceback
+            traceback.print_exc()
+            return ok({"error": "Failed to send feedback. Please try again later."}, 500)
+
     # ---------- Projects ----------
     @app.get("/api/projects")
     @token_auth_required

@@ -3,27 +3,44 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import '../styles/FeedbackModal.css';
 import { useTranslation } from 'react-i18next';
+import axios from 'axios';
 
 export default function FeedbackModal({ isOpen, onClose }) {
   const { t } = useTranslation();
   const [feedbackType, setFeedbackType] = useState('bug');
   const [message, setMessage] = useState('');
+  const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    setSending(true);
 
-    // Hier könntest du an dein Backend senden
-    console.log('Feedback submitted:', { type: feedbackType, message });
+    try {
+      await axios.post('/api/feedback', {
+        type: feedbackType,
+        message: message,
+        email: email
+      });
 
-    setSubmitted(true);
-    setTimeout(() => {
-      setSubmitted(false);
-      setMessage('');
-      onClose();
-    }, 2000);
+      setSubmitted(true);
+      setTimeout(() => {
+        setSubmitted(false);
+        setMessage('');
+        setEmail('');
+        onClose();
+      }, 2000);
+    } catch (err) {
+      console.error('Error sending feedback:', err);
+      setError(t('feedback.error', 'Failed to send feedback. Please try again.'));
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -58,6 +75,18 @@ export default function FeedbackModal({ isOpen, onClose }) {
             </div>
 
             <div className="form-group">
+              <label htmlFor="feedback-email">{t('feedback.emailLabel', 'Your Email (optional)')}</label>
+              <input
+                id="feedback-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={t('feedback.emailPlaceholder', 'your.email@example.com')}
+                className="form-control"
+              />
+            </div>
+
+            <div className="form-group">
               <label htmlFor="feedback-message">{t('feedback.messageLabel')}</label>
               <textarea
                 id="feedback-message"
@@ -70,12 +99,18 @@ export default function FeedbackModal({ isOpen, onClose }) {
               />
             </div>
 
+            {error && (
+              <div className="feedback-error" style={{ color: 'red', marginBottom: '1rem' }}>
+                {error}
+              </div>
+            )}
+
             <div className="modal-actions">
-              <button type="button" className="btn ghost" onClick={onClose}>
+              <button type="button" className="btn ghost" onClick={onClose} disabled={sending}>
                 {t('common.cancel')}
               </button>
-              <button type="submit" className="btn primary">
-                {t('feedback.submit')}
+              <button type="submit" className="btn primary" disabled={sending}>
+                {sending ? t('feedback.sending', 'Sending...') : t('feedback.submit')}
               </button>
             </div>
           </form>
