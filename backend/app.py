@@ -575,10 +575,15 @@ def create_app():
             # SMTP Configuration
             smtp_host = os.getenv("SMTP_HOST", "email-smtp.eu-central-1.amazonaws.com")
             smtp_port = int(os.getenv("SMTP_PORT", "587"))
-            smtp_user = os.getenv("SMTP_USER", "AKIASGVTPY27UUGKD6EK")
-            smtp_password = os.getenv("SMTP_PASSWORD", "BJoxRbE+T1wli7D2MIP1xxqKlBLt6LWbImX7DzcVOXy6")
-            sender_email = os.getenv("FEEDBACK_SENDER_EMAIL", "noreply@writehaven.io")
+            smtp_user = os.getenv("SMTP_USER")
+            smtp_password = os.getenv("SMTP_PASSWORD")
+            sender_email = os.getenv("FEEDBACK_SENDER_EMAIL", "info@writehaven.io")
             receiver_email = os.getenv("FEEDBACK_RECEIVER_EMAIL", "info@writehaven.io")
+
+            # Validate SMTP credentials are set
+            if not smtp_user or not smtp_password:
+                print("ERROR: SMTP credentials not configured")
+                return ok({"error": "Email service not configured"}, 500)
 
             # Email subject based on type
             type_labels = {
@@ -632,15 +637,26 @@ Sent from WriteHaven Feedback Form
             msg.attach(part1)
             msg.attach(part2)
 
-            # Send email
-            with smtplib.SMTP(smtp_host, smtp_port) as server:
+            # Send email with timeout
+            print(f"Connecting to SMTP server {smtp_host}:{smtp_port}...")
+            server = smtplib.SMTP(smtp_host, smtp_port, timeout=10)
+            try:
+                print("Starting TLS...")
                 server.starttls()
+                print("Logging in...")
                 server.login(smtp_user, smtp_password)
+                print("Sending message...")
                 server.send_message(msg)
+                print(f"Feedback email sent successfully to {receiver_email}")
+                return ok({"message": "Feedback sent successfully"}, 200)
+            finally:
+                server.quit()
 
-            print(f"Feedback email sent successfully to {receiver_email}")
-            return ok({"message": "Feedback sent successfully"}, 200)
-
+        except smtplib.SMTPException as e:
+            print(f"SMTP Error sending feedback email: {e}")
+            import traceback
+            traceback.print_exc()
+            return ok({"error": "Failed to send feedback. Please try again later."}, 500)
         except Exception as e:
             print(f"Error sending feedback email: {e}")
             import traceback
