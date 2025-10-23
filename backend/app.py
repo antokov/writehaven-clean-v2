@@ -566,18 +566,57 @@ def create_app():
         if not message:
             return ok({"error": "Message is required"}, 400)
 
-        # Send email via AWS SES API (works better with AWS AppRunner than SMTP)
+        # Send email in background thread to avoid blocking
+        import threading
+
+        def send_email_async():
+            """Send email in background thread"""
+            try:
+                _send_feedback_email(feedback_type, message, user_email)
+            except Exception as e:
+                print(f"Background email send failed: {e}")
+
+        # Start background thread
+        thread = threading.Thread(target=send_email_async)
+        thread.daemon = True
+        thread.start()
+
+        # Return immediately
+        return ok({"message": "Feedback received. Thank you!"}, 200)
+
+    def _send_feedback_email(feedback_type, message, user_email):
+        """Helper function to send feedback email via AWS SES"""
         try:
             import boto3
             from botocore.exceptions import ClientError
+            from botocore.config import Config
 
             # SES Configuration
             aws_region = os.getenv("AWS_REGION", "eu-central-1")
             sender_email = os.getenv("FEEDBACK_SENDER_EMAIL", "info@writehaven.io")
             receiver_email = os.getenv("FEEDBACK_RECEIVER_EMAIL", "info@writehaven.io")
 
-            # Create SES client
-            ses_client = boto3.client('ses', region_name=aws_region)
+            # Validate AWS credentials are set
+            aws_access_key = os.getenv("AWS_ACCESS_KEY_ID")
+            aws_secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+
+            if not aws_access_key or not aws_secret_key:
+                print("ERROR: AWS credentials not configured")
+                return ok({"error": "Email service not configured"}, 500)
+
+            # Create SES client with timeout configuration
+            config = Config(
+                connect_timeout=5,
+                read_timeout=10,
+                retries={'max_attempts': 2}
+            )
+            ses_client = boto3.client(
+                'ses',
+                region_name=aws_region,
+                aws_access_key_id=aws_access_key,
+                aws_secret_access_key=aws_secret_key,
+                config=config
+            )
 
             # Email subject based on type
             type_labels = {
@@ -645,7 +684,6 @@ Sent from WriteHaven Feedback Form
             )
 
             print(f"Feedback email sent successfully. Message ID: {response['MessageId']}")
-            return ok({"message": "Feedback sent successfully"}, 200)
 
         except ClientError as e:
             error_code = e.response['Error']['Code']
@@ -653,12 +691,12 @@ Sent from WriteHaven Feedback Form
             print(f"AWS SES Error: {error_code} - {error_message}")
             import traceback
             traceback.print_exc()
-            return ok({"error": "Failed to send feedback. Please try again later."}, 500)
+            raise
         except Exception as e:
             print(f"Error sending feedback email: {e}")
             import traceback
             traceback.print_exc()
-            return ok({"error": "Failed to send feedback. Please try again later."}, 500)
+            raise
 
     # ---------- Projects ----------
     @app.get("/api/projects")
