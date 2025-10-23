@@ -11,6 +11,10 @@ from flask_mailman import Mail
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError, ProgrammingError, OperationalError
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
 try:
     from backend.extensions import db
     from backend.models import Project, Chapter, Scene, Character, WorldNode, User, Role
@@ -562,27 +566,19 @@ def create_app():
         if not message:
             return ok({"error": "Message is required"}, 400)
 
-        # Import AWS SES at top level to avoid import errors
+        # Send email via SMTP (AWS SES SMTP)
         try:
-            import boto3
-            from botocore.exceptions import ClientError
-        except ImportError as e:
-            print(f"boto3 not available: {e}")
-            return ok({"error": "Email service not configured. Please try again later."}, 500)
+            import smtplib
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
 
-        try:
-            # AWS SES Configuration
-            aws_region = os.getenv("AWS_SES_REGION", "eu-central-1")
+            # SMTP Configuration
+            smtp_host = os.getenv("SMTP_HOST", "email-smtp.eu-central-1.amazonaws.com")
+            smtp_port = int(os.getenv("SMTP_PORT", "587"))
+            smtp_user = os.getenv("SMTP_USER", "AKIASGVTPY27UUGKD6EK")
+            smtp_password = os.getenv("SMTP_PASSWORD", "BJoxRbE+T1wli7D2MIP1xxqKlBLt6LWbImX7DzcVOXy6")
             sender_email = os.getenv("FEEDBACK_SENDER_EMAIL", "noreply@writehaven.io")
             receiver_email = os.getenv("FEEDBACK_RECEIVER_EMAIL", "info@writehaven.io")
-
-            # Create SES client
-            ses_client = boto3.client(
-                'ses',
-                region_name=aws_region,
-                aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-                aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY")
-            )
 
             # Email subject based on type
             type_labels = {
@@ -593,8 +589,14 @@ def create_app():
             }
             subject = f"WriteHaven Feedback: {type_labels.get(feedback_type, 'Feedback')}"
 
-            # Email body
-            body_text = f"""
+            # Create message
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = subject
+            msg['From'] = sender_email
+            msg['To'] = receiver_email
+
+            # Plain text version
+            text_body = f"""
 WriteHaven Feedback
 
 Type: {feedback_type}
@@ -607,7 +609,8 @@ Message:
 Sent from WriteHaven Feedback Form
 """
 
-            body_html = f"""
+            # HTML version
+            html_body = f"""
 <html>
 <head></head>
 <body>
@@ -623,27 +626,23 @@ Sent from WriteHaven Feedback Form
 </html>
 """
 
-            # Send email
-            response = ses_client.send_email(
-                Source=sender_email,
-                Destination={'ToAddresses': [receiver_email]},
-                Message={
-                    'Subject': {'Data': subject, 'Charset': 'UTF-8'},
-                    'Body': {
-                        'Text': {'Data': body_text, 'Charset': 'UTF-8'},
-                        'Html': {'Data': body_html, 'Charset': 'UTF-8'}
-                    }
-                }
-            )
+            # Attach parts
+            part1 = MIMEText(text_body, 'plain', 'utf-8')
+            part2 = MIMEText(html_body, 'html', 'utf-8')
+            msg.attach(part1)
+            msg.attach(part2)
 
-            print(f"Feedback email sent! Message ID: {response['MessageId']}")
+            # Send email
+            with smtplib.SMTP(smtp_host, smtp_port) as server:
+                server.starttls()
+                server.login(smtp_user, smtp_password)
+                server.send_message(msg)
+
+            print(f"Feedback email sent successfully to {receiver_email}")
             return ok({"message": "Feedback sent successfully"}, 200)
 
-        except ClientError as e:
-            print(f"AWS SES Error: {e.response['Error']['Message']}")
-            return ok({"error": "Failed to send feedback. Please try again later."}, 500)
         except Exception as e:
-            print(f"Error sending feedback: {e}")
+            print(f"Error sending feedback email: {e}")
             import traceback
             traceback.print_exc()
             return ok({"error": "Failed to send feedback. Please try again later."}, 500)
