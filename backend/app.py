@@ -562,15 +562,19 @@ def create_app():
         if not message:
             return ok({"error": "Message is required"}, 400)
 
+        # Import AWS SES at top level to avoid import errors
         try:
-            # Import AWS SES
             import boto3
             from botocore.exceptions import ClientError
+        except ImportError as e:
+            print(f"boto3 not available: {e}")
+            return ok({"error": "Email service not configured. Please try again later."}, 500)
 
+        try:
             # AWS SES Configuration
             aws_region = os.getenv("AWS_SES_REGION", "eu-central-1")
             sender_email = os.getenv("FEEDBACK_SENDER_EMAIL", "noreply@writehaven.io")
-            receiver_email = os.getenv("FEEDBACK_RECEIVER_EMAIL", "feedback@writehaven.io")
+            receiver_email = os.getenv("FEEDBACK_RECEIVER_EMAIL", "info@writehaven.io")
 
             # Create SES client
             ses_client = boto3.client(
