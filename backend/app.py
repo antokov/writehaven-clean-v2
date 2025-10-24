@@ -585,38 +585,24 @@ def create_app():
         return ok({"message": "Feedback received. Thank you!"}, 200)
 
     def _send_feedback_email(feedback_type, message, user_email):
-        """Helper function to send feedback email via AWS SES"""
+        """Helper function to send feedback email via SMTP"""
         try:
-            import boto3
-            from botocore.exceptions import ClientError
-            from botocore.config import Config
+            import smtplib
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
 
-            # SES Configuration
-            aws_region = os.getenv("AWS_REGION", "eu-central-1")
+            # SMTP Configuration
+            smtp_host = os.getenv("SMTP_HOST", "mail.spacemail.com")
+            smtp_port = int(os.getenv("SMTP_PORT", "465"))
+            smtp_user = os.getenv("SMTP_USER", "info@writehaven.io")
+            smtp_password = os.getenv("SMTP_PASSWORD")
             sender_email = os.getenv("FEEDBACK_SENDER_EMAIL", "info@writehaven.io")
             receiver_email = os.getenv("FEEDBACK_RECEIVER_EMAIL", "info@writehaven.io")
 
-            # Validate AWS credentials are set
-            aws_access_key = os.getenv("AWS_ACCESS_KEY_ID")
-            aws_secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-
-            if not aws_access_key or not aws_secret_key:
-                print("ERROR: AWS credentials not configured")
-                return ok({"error": "Email service not configured"}, 500)
-
-            # Create SES client with timeout configuration
-            config = Config(
-                connect_timeout=5,
-                read_timeout=10,
-                retries={'max_attempts': 2}
-            )
-            ses_client = boto3.client(
-                'ses',
-                region_name=aws_region,
-                aws_access_key_id=aws_access_key,
-                aws_secret_access_key=aws_secret_key,
-                config=config
-            )
+            # Validate SMTP credentials
+            if not smtp_password:
+                print("ERROR: SMTP password not configured")
+                return
 
             # Email subject based on type
             type_labels = {
@@ -658,37 +644,39 @@ Sent from WriteHaven Feedback Form
 </html>
 """
 
-            # Send email via SES API
-            print(f"Sending feedback email via AWS SES in region {aws_region}...")
-            response = ses_client.send_email(
-                Source=sender_email,
-                Destination={
-                    'ToAddresses': [receiver_email]
-                },
-                Message={
-                    'Subject': {
-                        'Data': subject,
-                        'Charset': 'UTF-8'
-                    },
-                    'Body': {
-                        'Text': {
-                            'Data': text_body,
-                            'Charset': 'UTF-8'
-                        },
-                        'Html': {
-                            'Data': html_body,
-                            'Charset': 'UTF-8'
-                        }
-                    }
-                }
-            )
+            # Create email message
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = subject
+            msg['From'] = sender_email
+            msg['To'] = receiver_email
 
-            print(f"Feedback email sent successfully. Message ID: {response['MessageId']}")
+            # Attach text and HTML parts
+            part1 = MIMEText(text_body, 'plain', 'utf-8')
+            part2 = MIMEText(html_body, 'html', 'utf-8')
+            msg.attach(part1)
+            msg.attach(part2)
 
-        except ClientError as e:
-            error_code = e.response['Error']['Code']
-            error_message = e.response['Error']['Message']
-            print(f"AWS SES Error: {error_code} - {error_message}")
+            # Send email via SMTP (Port 465 uses SSL)
+            print(f"Connecting to SMTP server {smtp_host}:{smtp_port}...")
+
+            # Port 465 requires SMTP_SSL instead of SMTP + starttls
+            if smtp_port == 465:
+                server = smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=15)
+            else:
+                server = smtplib.SMTP(smtp_host, smtp_port, timeout=15)
+                server.starttls()
+
+            try:
+                print(f"Logging in as {smtp_user}...")
+                server.login(smtp_user, smtp_password)
+                print("Sending message...")
+                server.send_message(msg)
+                print(f"Feedback email sent successfully to {receiver_email}")
+            finally:
+                server.quit()
+
+        except smtplib.SMTPException as e:
+            print(f"SMTP Error sending feedback email: {e}")
             import traceback
             traceback.print_exc()
             raise
