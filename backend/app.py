@@ -594,30 +594,28 @@ def create_app():
         return ok({"message": "Feedback received. Thank you!"}, 200)
 
     def _send_feedback_email(feedback_type, message, user_email):
-        """Helper function to send feedback email via SMTP"""
+        """Helper function to send feedback email via Resend API"""
         try:
-            import smtplib
-            from email.mime.text import MIMEText
-            from email.mime.multipart import MIMEMultipart
+            import resend
+            import sys
 
-            # SMTP Configuration
-            smtp_host = os.getenv("SMTP_HOST", "mail.spacemail.com")
-            smtp_port = int(os.getenv("SMTP_PORT", "465"))
-            smtp_user = os.getenv("SMTP_USER", "info@writehaven.io")
-            smtp_password = os.getenv("SMTP_PASSWORD")
-            sender_email = os.getenv("FEEDBACK_SENDER_EMAIL", "info@writehaven.io")
+            # Resend API Configuration
+            resend_api_key = os.getenv("RESEND_API_KEY")
+            sender_email = os.getenv("FEEDBACK_SENDER_EMAIL", "onboarding@resend.dev")
             receiver_email = os.getenv("FEEDBACK_RECEIVER_EMAIL", "info@writehaven.io")
 
-            print(f"[FEEDBACK] SMTP Config: host={smtp_host}, port={smtp_port}, user={smtp_user}")
-            print(f"[FEEDBACK] Password configured: {bool(smtp_password)}")
-            import sys
+            print(f"[FEEDBACK] Resend Config: from={sender_email}, to={receiver_email}")
+            print(f"[FEEDBACK] API Key configured: {bool(resend_api_key)}")
             sys.stdout.flush()
 
-            # Validate SMTP credentials
-            if not smtp_password:
-                print("[FEEDBACK] ERROR: SMTP password not configured")
+            # Validate Resend API key
+            if not resend_api_key:
+                print("[FEEDBACK] ERROR: RESEND_API_KEY not configured")
                 sys.stdout.flush()
                 return
+
+            # Set API key
+            resend.api_key = resend_api_key
 
             # Email subject based on type
             type_labels = {
@@ -659,48 +657,23 @@ Sent from WriteHaven Feedback Form
 </html>
 """
 
-            # Create email message
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = subject
-            msg['From'] = sender_email
-            msg['To'] = receiver_email
-
-            # Attach text and HTML parts
-            part1 = MIMEText(text_body, 'plain', 'utf-8')
-            part2 = MIMEText(html_body, 'html', 'utf-8')
-            msg.attach(part1)
-            msg.attach(part2)
-
-            # Send email via SMTP (Port 465 uses SSL)
-            print(f"[FEEDBACK] Connecting to SMTP server {smtp_host}:{smtp_port}...")
+            # Send email via Resend API
+            print("[FEEDBACK] Sending email via Resend API...")
             sys.stdout.flush()
 
-            # Port 465 requires SMTP_SSL instead of SMTP + starttls
-            if smtp_port == 465:
-                server = smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=15)
-            else:
-                server = smtplib.SMTP(smtp_host, smtp_port, timeout=15)
-                server.starttls()
+            params = {
+                "from": sender_email,
+                "to": [receiver_email],
+                "subject": subject,
+                "html": html_body,
+                "text": text_body
+            }
 
-            try:
-                print(f"[FEEDBACK] Logging in as {smtp_user}...")
-                sys.stdout.flush()
-                server.login(smtp_user, smtp_password)
-                print("[FEEDBACK] Sending message...")
-                sys.stdout.flush()
-                server.send_message(msg)
-                print(f"[FEEDBACK] Email sent successfully to {receiver_email}")
-                sys.stdout.flush()
-            finally:
-                server.quit()
+            response = resend.Emails.send(params)
 
-        except smtplib.SMTPException as e:
-            print(f"[FEEDBACK] SMTP Error: {e}")
-            import traceback
-            import sys
-            traceback.print_exc()
+            print(f"[FEEDBACK] Email sent successfully! ID: {response.get('id', 'unknown')}")
             sys.stdout.flush()
-            raise
+
         except Exception as e:
             print(f"[FEEDBACK] Error: {e}")
             import traceback
