@@ -568,15 +568,24 @@ def create_app():
 
         # Send email in background thread to avoid blocking
         import threading
+        import sys
 
         def send_email_async():
             """Send email in background thread"""
             try:
+                print(f"[FEEDBACK] Starting background email send thread...")
+                print(f"[FEEDBACK] Type: {feedback_type}, From: {user_email}")
+                sys.stdout.flush()
                 _send_feedback_email(feedback_type, message, user_email)
             except Exception as e:
-                print(f"Background email send failed: {e}")
+                print(f"[FEEDBACK] Background email send failed: {e}")
+                import traceback
+                traceback.print_exc()
+                sys.stdout.flush()
 
         # Start background thread
+        print(f"[FEEDBACK] Received feedback request, starting background thread...")
+        sys.stdout.flush()
         thread = threading.Thread(target=send_email_async)
         thread.daemon = True
         thread.start()
@@ -599,9 +608,15 @@ def create_app():
             sender_email = os.getenv("FEEDBACK_SENDER_EMAIL", "info@writehaven.io")
             receiver_email = os.getenv("FEEDBACK_RECEIVER_EMAIL", "info@writehaven.io")
 
+            print(f"[FEEDBACK] SMTP Config: host={smtp_host}, port={smtp_port}, user={smtp_user}")
+            print(f"[FEEDBACK] Password configured: {bool(smtp_password)}")
+            import sys
+            sys.stdout.flush()
+
             # Validate SMTP credentials
             if not smtp_password:
-                print("ERROR: SMTP password not configured")
+                print("[FEEDBACK] ERROR: SMTP password not configured")
+                sys.stdout.flush()
                 return
 
             # Email subject based on type
@@ -657,7 +672,8 @@ Sent from WriteHaven Feedback Form
             msg.attach(part2)
 
             # Send email via SMTP (Port 465 uses SSL)
-            print(f"Connecting to SMTP server {smtp_host}:{smtp_port}...")
+            print(f"[FEEDBACK] Connecting to SMTP server {smtp_host}:{smtp_port}...")
+            sys.stdout.flush()
 
             # Port 465 requires SMTP_SSL instead of SMTP + starttls
             if smtp_port == 465:
@@ -667,23 +683,30 @@ Sent from WriteHaven Feedback Form
                 server.starttls()
 
             try:
-                print(f"Logging in as {smtp_user}...")
+                print(f"[FEEDBACK] Logging in as {smtp_user}...")
+                sys.stdout.flush()
                 server.login(smtp_user, smtp_password)
-                print("Sending message...")
+                print("[FEEDBACK] Sending message...")
+                sys.stdout.flush()
                 server.send_message(msg)
-                print(f"Feedback email sent successfully to {receiver_email}")
+                print(f"[FEEDBACK] Email sent successfully to {receiver_email}")
+                sys.stdout.flush()
             finally:
                 server.quit()
 
         except smtplib.SMTPException as e:
-            print(f"SMTP Error sending feedback email: {e}")
+            print(f"[FEEDBACK] SMTP Error: {e}")
             import traceback
+            import sys
             traceback.print_exc()
+            sys.stdout.flush()
             raise
         except Exception as e:
-            print(f"Error sending feedback email: {e}")
+            print(f"[FEEDBACK] Error: {e}")
             import traceback
+            import sys
             traceback.print_exc()
+            sys.stdout.flush()
             raise
 
     # ---------- Projects ----------
