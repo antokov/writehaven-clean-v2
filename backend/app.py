@@ -38,8 +38,13 @@ def _sqlite_uri() -> str:
 
 def get_database_uri() -> str:
     uri = os.getenv("DATABASE_URL")
-    if uri and uri.startswith("postgres://"):
-        uri = uri.replace("postgres://", "postgresql+psycopg://", 1)
+    if uri:
+        # Convert postgres:// to postgresql+psycopg://
+        if uri.startswith("postgres://"):
+            uri = uri.replace("postgres://", "postgresql+psycopg://", 1)
+        # Convert postgresql:// to postgresql+psycopg://
+        elif uri.startswith("postgresql://") and "+psycopg" not in uri:
+            uri = uri.replace("postgresql://", "postgresql+psycopg://", 1)
     return uri or _sqlite_uri()
 
 
