@@ -110,6 +110,21 @@ def create_app():
     # DB init
     db.init_app(app)
 
+    # Flask-Admin Setup
+    from flask_admin import Admin
+    from flask_admin.contrib.sqla import ModelView
+
+    admin = Admin(app, name='WriteHaven Admin', template_mode='bootstrap4', url='/admin')
+
+    # Add model views for all tables
+    admin.add_view(ModelView(User, db.session))
+    admin.add_view(ModelView(Role, db.session))
+    admin.add_view(ModelView(Project, db.session))
+    admin.add_view(ModelView(Chapter, db.session))
+    admin.add_view(ModelView(Scene, db.session))
+    admin.add_view(ModelView(Character, db.session))
+    admin.add_view(ModelView(WorldNode, db.session))
+
     # Flask-Security-Too Setup
     user_datastore = SQLAlchemyUserDatastore(db, User, Role)
     security = Security(app, user_datastore)
