@@ -285,9 +285,9 @@ def create_app():
                 return fn(*args, **kwargs)
 
             except pyjwt.ExpiredSignatureError:
-                return ok({"error": "Token abgelaufen"}, 401)
+                return ok({"error": "Token expired"}, 401)
             except pyjwt.InvalidTokenError:
-                return ok({"error": "Ungültiger Token"}, 401)
+                return ok({"error": "Invalid token"}, 401)
             except Exception as e:
                 print(f"Token error: {e}")
                 return ok({"error": "Token ungültig"}, 401)
@@ -366,17 +366,17 @@ def create_app():
                 
                 # Erstelle Email-Nachricht
                 msg = Message(
-                    subject="WriteHaven - Bitte bestätige deine Email-Adresse",
+                    subject="WriteHaven - Please confirm your email",
                     sender=app.config.get("SECURITY_EMAIL_SENDER", "info@writehaven.io"),
                     recipients=[user.email]
                 )
                 
                 # HTML-Body
                 msg.html = f"""<!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Bestätige deine Email-Adresse</title>
+    <title>Confirm your email address</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #f5f5f5;">
     <div style="max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
@@ -384,14 +384,14 @@ def create_app():
             <h1 style="font-size: 32px; font-weight: 700; color: #ffffff; margin: 0;">WRITEHAVEN</h1>
         </div>
         <div style="padding: 40px 30px;">
-            <h1 style="color: #1f2937; font-size: 24px; margin: 0 0 20px 0;">Willkommen bei WriteHaven!</h1>
-            <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 15px 0;">Hallo {user.name or ''},</p>
-            <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 15px 0;">vielen Dank für deine Registrierung!</p>
-            <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">Um deinen Account zu aktivieren, klicke bitte auf den folgenden Button:</p>
+            <h1 style="color: #1f2937; font-size: 24px; margin: 0 0 20px 0;">Welcome to WriteHaven!</h1>
+            <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 15px 0;">Hello {user.name or ''},</p>
+            <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 15px 0;">Thank you for registering!</p>
+            <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">To activate your account, please click the button below:</p>
             <div style="text-align: center; margin: 30px 0;">
-                <a href="{confirmation_link}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">Email-Adresse bestätigen</a>
+                <a href="{confirmation_link}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">Confirm Email Address</a>
             </div>
-            <p style="color: #6b7280; font-size: 14px; margin: 25px 0 0 0;">Dieser Link ist 24 Stunden gültig.</p>
+            <p style="color: #6b7280; font-size: 14px; margin: 25px 0 0 0;">This link is valid for 24 hours.</p>
         </div>
         <div style="background-color: #f9fafb; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
             <p style="margin: 0; color: #1f2937; font-weight: 600;">WriteHaven</p>
@@ -402,18 +402,18 @@ def create_app():
 </html>"""
                 
                 # Text-Body (Fallback)
-                msg.body = f"""WRITEHAVEN - Email-Bestätigung
+                msg.body = f"""WRITEHAVEN - Email Confirmation
 
-Willkommen bei WriteHaven!
+Welcome to WriteHaven!
 
-Hallo {user.name or ''},
+Hello {user.name or ''},
 
-vielen Dank für deine Registrierung!
+Thank you for registering!
 
-Um deinen Account zu aktivieren, klicke bitte auf den folgenden Link:
+To activate your account, please click the following link:
 {confirmation_link}
 
-Dieser Link ist 24 Stunden gültig.
+This link is valid for 24 hours.
 
 ---
 WriteHaven
@@ -430,7 +430,7 @@ https://www.writehaven.io
                 
                 # Return success response
                 return ok({
-                    "message": "Registrierung erfolgreich. Bitte bestätige deine Email-Adresse.",
+                    "message": "Registration successful. Please confirm your email address.",
                     "user": {
                         "id": user.id,
                         "email": user.email,
@@ -456,13 +456,13 @@ https://www.writehaven.io
         except IntegrityError as e:
             db.session.rollback()
             print(f"IntegrityError bei Registrierung: {e}")
-            return ok({"error": "Registrierung fehlgeschlagen"}, 400)
+            return ok({"error": "Registration failed"}, 400)
         except Exception as e:
             db.session.rollback()
             print(f"Fehler bei Registrierung: {e}")
             import traceback
             traceback.print_exc()
-            return ok({"error": f"Registrierung fehlgeschlagen: {str(e)}"}, 400)
+            return ok({"error": f"Registration failed: {str(e)}"}, 400)
 
 
     @app.get("/api/auth/confirm/<token>")
@@ -475,20 +475,20 @@ https://www.writehaven.io
             expired, invalid, user = confirm_email_token_status(token)
             
             if invalid or not user:
-                return ok({"error": "Ungültiger Bestätigungs-Token"}, 400)
+                return ok({"error": "Invalid confirmation token"}, 400)
             
             if expired:
-                return ok({"error": "Bestätigungs-Token abgelaufen"}, 400)
+                return ok({"error": "Confirmation token expired"}, 400)
             
             if user.confirmed_at:
-                return ok({"message": "Email bereits bestätigt"}, 200)
+                return ok({"message": "Email already confirmed"}, 200)
             
             # Confirm user
             confirm_user(user)
             db.session.commit()
             
             return ok({
-                "message": "Email erfolgreich bestätigt! Du kannst dich jetzt einloggen.",
+                "message": "Email confirmed successfully! You can now log in.",
                 "confirmed": True
             }, 200)
             
@@ -496,7 +496,7 @@ https://www.writehaven.io
             print(f"Fehler bei Email-Bestätigung: {e}")
             import traceback
             traceback.print_exc()
-            return ok({"error": "Email-Bestätigung fehlgeschlagen"}, 400)
+            return ok({"error": "Email confirmation failed"}, 400)
 
     @app.post("/api/auth/login")
     def login():
@@ -545,12 +545,12 @@ https://www.writehaven.io
         # Prüfe ob Email bestätigt wurde (wenn Email-Confirmation aktiviert)
         if app.config.get("SECURITY_CONFIRMABLE") and app.config.get("SECURITY_LOGIN_WITHOUT_CONFIRMATION") == False:
             if hasattr(user, 'confirmed_at') and user.confirmed_at is None:
-                return ok({"error": "Bitte bestätige zuerst deine Email-Adresse"}, 401)
+                return ok({"error": "Please confirm your email address first"}, 401)
 
         # Prüfe ob Email bestätigt wurde (wenn Email-Confirmation aktiviert)
         if app.config.get("SECURITY_CONFIRMABLE") and app.config.get("SECURITY_LOGIN_WITHOUT_CONFIRMATION") == False:
             if hasattr(user, 'confirmed_at') and user.confirmed_at is None:
-                return ok({"error": "Bitte bestätige zuerst deine Email-Adresse"}, 401)
+                return ok({"error": "Please confirm your email address first"}, 401)
         # Update Login Tracking (only if fields exist)
         if hasattr(user, 'current_login_at'):
             user.current_login_at = datetime.utcnow()
@@ -652,9 +652,9 @@ https://www.writehaven.io
         expired, invalid, user = reset_password_token_status(token)
 
         if expired:
-            return ok({"error": "Reset-Token abgelaufen"}, 400)
+            return ok({"error": "Reset token expired"}, 400)
         if invalid or not user:
-            return ok({"error": "Ungültiger Reset-Token"}, 400)
+            return ok({"error": "Invalid reset token"}, 400)
 
         # Passwort ändern
         user.password = hash_password(password)

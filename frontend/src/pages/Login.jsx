@@ -33,10 +33,10 @@ export default function Login() {
 
       // Bei Registrierung: Prüfe ob Email-Bestätigung erforderlich ist
       if (!isLogin && !response.data.token) {
-        // Kein Token = Email-Bestätigung erforderlich
+        // No token = Email confirmation required
         setError('');
-        setSuccess(response.data.message || 'Registrierung erfolgreich! Bitte bestätige deine Email-Adresse.');
-        setIsLogin(true); // Wechsle zum Login-Modus
+        setSuccess(response.data.message || 'Registration successful! Please confirm your email address.');
+        setIsLogin(true); // Switch to login mode
         setFormData({ email: '', password: '', name: '' });
         return;
       }
