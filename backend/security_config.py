@@ -30,7 +30,7 @@ def get_security_config():
         "SECURITY_TOKEN_MAX_AGE": int(os.getenv("JWT_EXPIRATION_HOURS", "720")) * 3600,  # In Sekunden (30 Tage)
 
         # Email-Einstellungen
-        "SECURITY_EMAIL_SENDER": os.getenv("SECURITY_EMAIL_SENDER", "noreply@writehaven.com"),
+        "SECURITY_EMAIL_SENDER": os.getenv("SECURITY_EMAIL_SENDER", "info@writehaven.io"),
         "SECURITY_EMAIL_SUBJECT_REGISTER": "Welcome to WriteHaven - Please confirm your email",
         "SECURITY_EMAIL_SUBJECT_PASSWORD_RESET": "WriteHaven - Password Reset Instructions",
         "SECURITY_EMAIL_SUBJECT_PASSWORD_NOTICE": "WriteHaven - Your password has been changed",
@@ -66,8 +66,8 @@ def get_security_config():
     if email_backend == "console":
         # Lokale Entwicklung: Email in Console ausgeben
         config.update({
-            "MAIL_BACKEND": "console",
             "MAIL_SUPPRESS_SEND": False,
+            "TESTING": True,  # Flask-Mail uses this for console output
         })
     else:
         # Production: SMTP (spacemail.com) for Flask-Mail
