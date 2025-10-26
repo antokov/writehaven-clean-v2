@@ -435,6 +435,16 @@ def create_app():
         if hasattr(user, 'active') and user.active == False:
             return ok({"error": "Account deaktiviert"}, 401)
 
+
+        # Prüfe ob Email bestätigt wurde (wenn Email-Confirmation aktiviert)
+        if app.config.get("SECURITY_CONFIRMABLE") and app.config.get("SECURITY_LOGIN_WITHOUT_CONFIRMATION") == False:
+            if hasattr(user, 'confirmed_at') and user.confirmed_at is None:
+                return ok({"error": "Bitte bestätige zuerst deine Email-Adresse"}, 401)
+
+        # Prüfe ob Email bestätigt wurde (wenn Email-Confirmation aktiviert)
+        if app.config.get("SECURITY_CONFIRMABLE") and app.config.get("SECURITY_LOGIN_WITHOUT_CONFIRMATION") == False:
+            if hasattr(user, 'confirmed_at') and user.confirmed_at is None:
+                return ok({"error": "Bitte bestätige zuerst deine Email-Adresse"}, 401)
         # Update Login Tracking (only if fields exist)
         if hasattr(user, 'current_login_at'):
             user.current_login_at = datetime.utcnow()

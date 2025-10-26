@@ -16,6 +16,7 @@ export default function Login() {
     name: ''
   });
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -23,6 +24,7 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setLoading(true);
 
     try {
@@ -33,7 +35,7 @@ export default function Login() {
       if (!isLogin && !response.data.token) {
         // Kein Token = Email-Bestätigung erforderlich
         setError('');
-        alert(response.data.message || t('auth.confirmEmailSent'));
+        setSuccess(response.data.message || 'Registrierung erfolgreich! Bitte bestätige deine Email-Adresse.');
         setIsLogin(true); // Wechsle zum Login-Modus
         setFormData({ email: '', password: '', name: '' });
         return;
@@ -61,6 +63,7 @@ export default function Login() {
   const toggleMode = () => {
     setIsLogin(!isLogin);
     setError('');
+    setSuccess('');
     setFormData({ email: '', password: '', name: '' });
   };
 
@@ -129,6 +132,22 @@ export default function Login() {
               </div>
             )}
           </div>
+
+          {success && (
+
+
+            <div className=\"success-message\">
+
+
+              {success}
+
+
+            </div>
+
+
+          )}
+
+
 
           {error && (
             <div className="error-message">
