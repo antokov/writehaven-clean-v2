@@ -365,60 +365,23 @@ def create_app():
                 confirmation_link = f"{frontend_url}/confirm-email?token={token}"
                 
                 # Erstelle Email-Nachricht
+                # Erstelle Email-Nachricht mit Templates
+                from flask import render_template
+                
                 msg = Message(
                     subject="WriteHaven - Please confirm your email",
                     sender=app.config.get("SECURITY_EMAIL_SENDER", "info@writehaven.io"),
                     recipients=[user.email]
                 )
                 
-                # HTML-Body
-                msg.html = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Confirm your email address</title>
-</head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #f5f5f5;">
-    <div style="max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
-            <h1 style="font-size: 32px; font-weight: 700; color: #ffffff; margin: 0;">WRITEHAVEN</h1>
-        </div>
-        <div style="padding: 40px 30px;">
-            <h1 style="color: #1f2937; font-size: 24px; margin: 0 0 20px 0;">Welcome to WriteHaven!</h1>
-            <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 15px 0;">Hello {user.name or ''},</p>
-            <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 15px 0;">Thank you for registering!</p>
-            <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">To activate your account, please click the button below:</p>
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="{confirmation_link}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">Confirm Email Address</a>
-            </div>
-            <p style="color: #6b7280; font-size: 14px; margin: 25px 0 0 0;">This link is valid for 24 hours.</p>
-        </div>
-        <div style="background-color: #f9fafb; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
-            <p style="margin: 0; color: #1f2937; font-weight: 600;">WriteHaven</p>
-            <p style="margin: 5px 0 0 0;"><a href="https://www.writehaven.io" style="color: #667eea; text-decoration: none;">www.writehaven.io</a></p>
-        </div>
-    </div>
-</body>
-</html>"""
+                # Render templates mit Variablen
+                template_vars = {
+                    'user_name': user.name or '',
+                    'confirmation_link': confirmation_link
+                }
                 
-                # Text-Body (Fallback)
-                msg.body = f"""WRITEHAVEN - Email Confirmation
-
-Welcome to WriteHaven!
-
-Hello {user.name or ''},
-
-Thank you for registering!
-
-To activate your account, please click the following link:
-{confirmation_link}
-
-This link is valid for 24 hours.
-
----
-WriteHaven
-https://www.writehaven.io
-"""
+                msg.html = render_template('email/confirm_email.html', **template_vars)
+                msg.body = render_template('email/confirm_email.txt', **template_vars)
                 
                 # Sende Email
                 try:
