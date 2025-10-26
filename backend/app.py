@@ -588,43 +588,6 @@ def create_app():
 
         return ok({"message": "Passwort erfolgreich zurückgesetzt"})
 
-    @app.post("/api/auth/confirm-email")
-    def confirm_email():
-        """Email mit Token bestätigen"""
-        data = request.get_json() or {}
-        token = data.get("token", "")
-
-        if not token:
-            return ok({"error": "Token erforderlich"}, 400)
-
-        from flask_security.confirmable import confirm_email_token_status
-        expired, invalid, user = confirm_email_token_status(token)
-
-        if expired:
-            return ok({"error": "Bestätigungs-Token abgelaufen"}, 400)
-        if invalid or not user:
-            return ok({"error": "Ungültiger Bestätigungs-Token"}, 400)
-
-        # Email bestätigen
-        if hasattr(user, 'confirmed_at'):
-            user.confirmed_at = datetime.utcnow()
-        db.session.commit()
-
-        # Token generieren
-        auth_token = generate_jwt_token(user.id)
-        return ok({
-            "message": "Email erfolgreich bestätigt",
-            "token": auth_token,
-            "user": {
-                "id": user.id,
-                "email": user.email,
-                "name": user.name,
-                "language": user.language or "en",
-                "confirmed": True
-            }
-        })
-
-    # ---------- Feedback ----------
     @app.post("/api/feedback")
     def submit_feedback():
         """Submit feedback via email"""
