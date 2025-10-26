@@ -27,20 +27,12 @@ export default function ConfirmEmail() {
 
     const confirmEmail = async () => {
       try {
-        const response = await axios.post('/api/auth/confirm-email', { token });
+        const response = await axios.get(`/api/auth/confirm/${token}`);
 
         setStatus('success');
         setMessage(response.data.message || t('auth.emailConfirmed'));
 
-        // Auto-Login wenn Token zurückgegeben wird
-        if (response.data.token && response.data.user) {
-          login(response.data.token, response.data.user);
-
-          // Nach 2 Sekunden zur App navigieren
-          setTimeout(() => {
-            navigate('/app');
-          }, 2000);
-        }
+        // Erfolg - User kann sich jetzt einloggen
       } catch (err) {
         setStatus('error');
         setError(err.response?.data?.error || t('common.error.generic'));
@@ -72,9 +64,7 @@ export default function ConfirmEmail() {
             <div className="success-message">
               <h2 style={{ marginBottom: '10px' }}>✓</h2>
               <p>{message}</p>
-              <p style={{ marginTop: '10px', fontSize: '14px' }}>
-                {t('auth.redirectingToApp')}
-              </p>
+              
             </div>
           )}
 

@@ -392,6 +392,38 @@ def create_app():
             traceback.print_exc()
             return ok({"error": f"Registrierung fehlgeschlagen: {str(e)}"}, 400)
 
+
+    @app.get("/api/auth/confirm/<token>")
+    def confirm_email(token):
+        """Bestätige Email-Adresse mit Token"""
+        try:
+            from flask_security.confirmable import confirm_user
+            from flask_security.utils import verify_confirmation_token
+            
+            # Verify token and get user
+            user = verify_confirmation_token(token)
+            
+            if not user:
+                return ok({"error": "Ungültiger oder abgelaufener Token"}, 400)
+            
+            if user.confirmed_at:
+                return ok({"message": "Email bereits bestätigt"}, 200)
+            
+            # Confirm user
+            confirm_user(user)
+            db.session.commit()
+            
+            return ok({
+                "message": "Email erfolgreich bestätigt! Du kannst dich jetzt einloggen.",
+                "confirmed": True
+            }, 200)
+            
+        except Exception as e:
+            print(f"Fehler bei Email-Bestätigung: {e}")
+            import traceback
+            traceback.print_exc()
+            return ok({"error": "Email-Bestätigung fehlgeschlagen"}, 400)
+
     @app.post("/api/auth/login")
     def login():
         """Login User"""
