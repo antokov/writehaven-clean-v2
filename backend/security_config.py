@@ -70,9 +70,8 @@ def get_security_config():
             "MAIL_SUPPRESS_SEND": False,
         })
     else:
-        # Production: SMTP (spacemail.com)
+        # Production: SMTP (spacemail.com) for Flask-Mail
         config.update({
-            "MAIL_BACKEND": "smtp",
             "MAIL_SERVER": os.getenv("MAIL_SERVER", "mail.spacemail.com"),
             "MAIL_PORT": int(os.getenv("MAIL_PORT", "465")),
             "MAIL_USE_TLS": False,  # Port 465 uses SSL, not TLS

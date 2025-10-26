@@ -7,7 +7,7 @@ from functools import wraps
 from flask import Flask, request, jsonify, send_from_directory, g
 from flask_cors import CORS
 from flask_security import Security, SQLAlchemyUserDatastore, hash_password
-from flask_mailman import Mail
+from flask_mail import Mail
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError, ProgrammingError, OperationalError
 
