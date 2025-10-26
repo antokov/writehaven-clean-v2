@@ -19,9 +19,10 @@ def get_security_config():
         # Features
         "SECURITY_REGISTERABLE": True,  # Erlaubt Registrierung
         "SECURITY_RECOVERABLE": True,  # Passwort-Reset
-        "SECURITY_CONFIRMABLE": False,  # Email-Bestätigung DEAKTIVIERT (vorerst)
+        "SECURITY_CONFIRMABLE": True,  # Email-Bestätigung AKTIVIERT
         "SECURITY_CHANGEABLE": True,  # Passwort ändern
         "SECURITY_TRACKABLE": True,  # Login-Tracking
+        "SECURITY_LOGIN_WITHOUT_CONFIRMATION": False,  # User muss Email bestätigen
 
         # Token-basierte Auth
         "SECURITY_TOKEN_AUTHENTICATION_HEADER": "Authorization",
@@ -69,16 +70,16 @@ def get_security_config():
             "MAIL_SUPPRESS_SEND": False,
         })
     else:
-        # Production: SMTP
+        # Production: SMTP (spacemail.com)
         config.update({
             "MAIL_BACKEND": "smtp",
-            "MAIL_SERVER": os.getenv("MAIL_SERVER", "smtp.gmail.com"),
-            "MAIL_PORT": int(os.getenv("MAIL_PORT", "587")),
-            "MAIL_USE_TLS": os.getenv("MAIL_USE_TLS", "true").lower() == "true",
-            "MAIL_USE_SSL": os.getenv("MAIL_USE_SSL", "false").lower() == "true",
-            "MAIL_USERNAME": os.getenv("MAIL_USERNAME"),
+            "MAIL_SERVER": os.getenv("MAIL_SERVER", "mail.spacemail.com"),
+            "MAIL_PORT": int(os.getenv("MAIL_PORT", "465")),
+            "MAIL_USE_TLS": False,  # Port 465 uses SSL, not TLS
+            "MAIL_USE_SSL": True,   # Port 465 requires SSL
+            "MAIL_USERNAME": os.getenv("MAIL_USERNAME", "info@writehaven.io"),
             "MAIL_PASSWORD": os.getenv("MAIL_PASSWORD"),
-            "MAIL_DEFAULT_SENDER": os.getenv("SECURITY_EMAIL_SENDER", "noreply@writehaven.com"),
+            "MAIL_DEFAULT_SENDER": os.getenv("SECURITY_EMAIL_SENDER", "info@writehaven.io"),
         })
 
     return config

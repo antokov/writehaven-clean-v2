@@ -1,0 +1,19 @@
+WRITEHAVEN - Email-Bestätigung
+
+Willkommen bei WriteHaven!
+
+Hallo{{ ' ' + user.name if user.name else '' }},
+
+vielen Dank für deine Registrierung! Wir freuen uns, dass du Teil unserer Autoren-Community wirst.
+
+Um deinen Account zu aktivieren, klicke bitte auf den folgenden Link:
+
+{{ confirmation_link }}
+
+Dieser Link ist 24 Stunden gültig.
+
+Falls du dich nicht bei WriteHaven registriert hast, kannst du diese Email ignorieren.
+
+---
+WriteHaven - Deine kreative Schreibplattform
+https://www.writehaven.io

@@ -129,6 +129,18 @@ def create_app():
     user_datastore = SQLAlchemyUserDatastore(db, User, Role)
     security = Security(app, user_datastore)
 
+    # Custom confirmation link generator für Frontend
+    from flask_security.confirmable import generate_confirmation_token
+
+    def generate_confirmation_link(user):
+        """Generiere Bestätigungslink für Frontend"""
+        token = generate_confirmation_token(user)
+        frontend_url = app.config.get("FRONTEND_URL", "http://localhost:5173")
+        return f"{frontend_url}/confirm-email?token={token}"
+
+    # Registriere Custom Link Generator
+    app.jinja_env.globals['confirmation_link'] = lambda user: generate_confirmation_link(user)
+
     # Email Backend Setup
     email_backend = os.getenv("EMAIL_BACKEND", "console")
     if email_backend == "console":
@@ -325,14 +337,15 @@ def create_app():
             hashed_password = hash_password(password)
 
             # Erstelle User mit Flask-Security-Too
+            # active=True, aber confirmed_at=None verhindert Login bis Email bestätigt
             user = user_datastore.create_user(
                 email=email,
                 password=hashed_password,
                 name=name or email.split("@")[0],
                 language=language,
-                active=True,
+                active=True,  # User ist aktiv, aber nicht bestätigt
                 fs_uniquifier=fs_uniquifier,
-                confirmed_at=None if app.config.get("SECURITY_CONFIRMABLE") else datetime.utcnow()
+                confirmed_at=None  # Wird gesetzt nach Email-Bestätigung
             )
 
             # Backward compatibility: Setze auch password_hash für alte Spalte
@@ -341,14 +354,9 @@ def create_app():
 
             # Sende Confirmation Email wenn aktiviert
             if app.config.get("SECURITY_CONFIRMABLE"):
-                from flask_security import send_mail
-                from flask_security.utils import config_value
-                send_mail(
-                    config_value("EMAIL_SUBJECT_REGISTER"),
-                    user.email,
-                    "welcome",
-                    user=user
-                )
+                from flask_security.confirmable import generate_confirmation_token, send_confirmation_instructions
+                # Generiere Confirmation Token und sende Email
+                send_confirmation_instructions(user)
                 return ok({
                     "message": "Registrierung erfolgreich. Bitte bestätige deine Email-Adresse.",
                     "user": {
