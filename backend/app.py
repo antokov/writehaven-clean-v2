@@ -469,14 +469,16 @@ https://www.writehaven.io
     def confirm_email(token):
         """Bestätige Email-Adresse mit Token"""
         try:
-            from flask_security.confirmable import confirm_user
-            from flask_security.utils import verify_confirmation_token
+            from flask_security.confirmable import confirm_email_token_status, confirm_user
             
             # Verify token and get user
-            user = verify_confirmation_token(token)
+            expired, invalid, user = confirm_email_token_status(token)
             
-            if not user:
-                return ok({"error": "Ungültiger oder abgelaufener Token"}, 400)
+            if invalid or not user:
+                return ok({"error": "Ungültiger Bestätigungs-Token"}, 400)
+            
+            if expired:
+                return ok({"error": "Bestätigungs-Token abgelaufen"}, 400)
             
             if user.confirmed_at:
                 return ok({"message": "Email bereits bestätigt"}, 200)
