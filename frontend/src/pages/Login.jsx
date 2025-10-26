@@ -29,6 +29,16 @@ export default function Login() {
       const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
       const response = await axios.post(endpoint, formData);
 
+      // Bei Registrierung: Prüfe ob Email-Bestätigung erforderlich ist
+      if (!isLogin && !response.data.token) {
+        // Kein Token = Email-Bestätigung erforderlich
+        setError('');
+        alert(response.data.message || t('auth.confirmEmailSent'));
+        setIsLogin(true); // Wechsle zum Login-Modus
+        setFormData({ email: '', password: '', name: '' });
+        return;
+      }
+
       // Token und User über AuthContext speichern
       login(response.data.token, response.data.user);
 
