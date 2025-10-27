@@ -1,9 +1,16 @@
-# robots.txt for WriteHaven
+# WriteHaven - robots.txt
 User-agent: *
 Allow: /
 Disallow: /app/
+Disallow: /api/
 Disallow: /login
 Disallow: /register
+Disallow: /reset-password
+Disallow: /confirm-email
+Disallow: /forgot-password
 
-# Sitemap
+# Sitemap location
 Sitemap: https://www.writehaven.io/sitemap.xml
+
+# Crawl-delay (optional, for polite crawling)
+Crawl-delay: 1
