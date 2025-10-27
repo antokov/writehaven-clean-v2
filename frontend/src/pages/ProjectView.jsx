@@ -245,6 +245,11 @@ export default function ProjectView() {
   async function openScene(chapterId, sceneId) {
     await flushIfDirty();
     setActiveChapterId(chapterId);
+
+    // Update chapter title when switching chapters
+    const ch = chapters.find(c => c.id === chapterId);
+    setChapterTitle(ch?.title || '');
+
     expandOnly(chapterId);
 
     const token = ++sceneLoadToken.current;
