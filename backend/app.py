@@ -1277,6 +1277,188 @@ Sent from WriteHaven Feedback Form
 
         return ok({"cover_url": cover_url})
 
+    @app.post("/api/projects/<int:pid>/export-pdf")
+    @token_auth_required
+    def export_project_pdf(pid):
+        """Export project as PDF with ReportLab - matching BookExport.jsx formatting"""
+        from reportlab.lib.pagesizes import landscape
+        from reportlab.lib.styles import ParagraphStyle
+        from reportlab.lib.units import mm
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
+        from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
+        from reportlab.pdfgen import canvas
+        from io import BytesIO
+        from flask import make_response
+        from bs4 import BeautifulSoup
+
+        p = verify_project_ownership(pid, get_current_user().id)
+        if not p: return not_found()
+
+        data = request.get_json() or {}
+        html_content = data.get("html", "")
+
+        if not html_content:
+            return bad_request("HTML content is required")
+
+        try:
+            soup = BeautifulSoup(html_content, 'html.parser')
+
+            # Extract title and chapters
+            chapters = []
+            chapter_sections = soup.find_all('section', class_='chapter-section')
+
+            for section in chapter_sections:
+                chapter_title_elem = section.find('h1', class_='chapter-title')
+                chapter_title = chapter_title_elem.get_text().strip() if chapter_title_elem else ""
+
+                paragraphs = []
+                for p_tag in section.find_all('p'):
+                    text = p_tag.get_text().strip()
+                    if text:
+                        is_first = 'dropcap' in p_tag.get('class', [])
+                        paragraphs.append({'text': text, 'first': is_first})
+
+                if chapter_title or paragraphs:
+                    chapters.append({'title': chapter_title, 'paragraphs': paragraphs})
+
+            # Page size: 152.4mm x 228.6mm (from BookExport.jsx)
+            page_width = 152.4 * mm
+            page_height = 228.6 * mm
+
+            # Margins: @page{margin:20mm 18mm 24mm 18mm} = top, right, bottom, left
+            margin_top = 20 * mm
+            margin_right = 18 * mm
+            margin_bottom = 24 * mm
+            margin_left = 18 * mm
+
+            # Custom canvas for page numbers
+            class NumberedCanvas(canvas.Canvas):
+                def __init__(self, *args, **kwargs):
+                    canvas.Canvas.__init__(self, *args, **kwargs)
+                    self._saved_page_states = []
+
+                def showPage(self):
+                    self._saved_page_states.append(dict(self.__dict__))
+                    self._startPage()
+
+                def save(self):
+                    num_pages = len(self._saved_page_states)
+                    for state in self._saved_page_states:
+                        self.__dict__.update(state)
+                        self.draw_page_number(num_pages)
+                        canvas.Canvas.showPage(self)
+                    canvas.Canvas.save(self)
+
+                def draw_page_number(self, page_count):
+                    page = self._pageNumber
+                    # Skip page number on title page (page 1)
+                    if page == 1:
+                        return
+
+                    self.saveState()
+                    # @bottom-center{content: counter(page); font-size:10pt; color:#444}
+                    self.setFont('Times-Roman', 10)
+                    self.setFillColorRGB(0.267, 0.267, 0.267)  # #444
+                    self.drawCentredString(page_width / 2, margin_bottom / 2, str(page))
+                    self.restoreState()
+
+            pdf_buffer = BytesIO()
+            doc = SimpleDocTemplate(
+                pdf_buffer,
+                pagesize=(page_width, page_height),
+                leftMargin=margin_left,
+                rightMargin=margin_right,
+                topMargin=margin_top,
+                bottomMargin=margin_bottom
+            )
+
+            # Styles matching BookExport.jsx EXACTLY
+            # Title: font-size:28pt
+            title_style = ParagraphStyle(
+                'Title',
+                fontName='Times-Roman',  # Georgia fallback
+                fontSize=28,
+                leading=36,
+                alignment=TA_CENTER,
+                spaceAfter=3*mm
+            )
+
+            # Subtitle: font-size:12pt; color:#555
+            subtitle_style = ParagraphStyle(
+                'Subtitle',
+                fontName='Times-Roman',
+                fontSize=12,
+                leading=16,
+                alignment=TA_CENTER,
+                textColor='#555555',
+                spaceAfter=0
+            )
+
+            # Chapter: font-size:18pt; text-align:center; margin:0 0 10mm
+            chapter_style = ParagraphStyle(
+                'Chapter',
+                fontName='Times-Bold',
+                fontSize=18,
+                leading=22,
+                alignment=TA_CENTER,
+                spaceAfter=10*mm,
+                spaceBefore=0,
+                keepWithNext=True
+            )
+
+            # Body: font-size:11pt; line-height:1.42; text-indent:1.2em; margin-bottom:3.2mm
+            body_style = ParagraphStyle(
+                'Body',
+                fontName='Times-Roman',
+                fontSize=11,
+                leading=11 * 1.42,
+                alignment=TA_JUSTIFY,
+                firstLineIndent=1.2 * 11,  # 1.2em
+                spaceAfter=3.2*mm
+            )
+
+            # First paragraph after chapter: text-indent:0
+            body_first_style = ParagraphStyle(
+                'BodyFirst',
+                parent=body_style,
+                firstLineIndent=0
+            )
+
+            story = []
+
+            # Title page: margin-top:35mm
+            story.append(Spacer(1, 35*mm))
+            story.append(Paragraph(p.title or "Untitled", title_style))
+            story.append(Paragraph("Novel", subtitle_style))
+            story.append(PageBreak())
+
+            # Chapters
+            for idx, chapter in enumerate(chapters):
+                if idx > 0:
+                    story.append(PageBreak())
+
+                if chapter['title']:
+                    story.append(Paragraph(chapter['title'], chapter_style))
+
+                for p_idx, para in enumerate(chapter['paragraphs']):
+                    text = para['text'].replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                    style = body_first_style if p_idx == 0 else body_style
+                    story.append(Paragraph(text, style))
+
+            doc.build(story, canvasmaker=NumberedCanvas)
+            pdf_buffer.seek(0)
+
+            response = make_response(pdf_buffer.getvalue())
+            response.headers['Content-Type'] = 'application/pdf'
+            response.headers['Content-Disposition'] = f'attachment; filename="{p.title or "book"}.pdf"'
+            return response
+
+        except Exception as e:
+            print(f"PDF generation error: {e}")
+            import traceback
+            traceback.print_exc()
+            return bad_request(f"Error generating PDF: {str(e)}")
+
     # Optional: globaler Integrity-Handler
     @app.errorhandler(IntegrityError)
     def handle_integrity(e):

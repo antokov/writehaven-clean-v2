@@ -230,6 +230,41 @@ export default function BookExport() {
     if (w) w.print();
   };
 
+  const savePDF = async () => {
+    try {
+      // Generate filename
+      const fileBase =
+        (project?.title || t("export.bookDefaultFilename", "book"))
+          .toString()
+          .replace(/[^a-z0-9]+/gi, "_")
+          .replace(/^_+|_+$/g, "") || "book";
+
+      // Send HTML to backend for PDF generation
+      const response = await axios.post(
+        `/api/projects/${pid}/export-pdf`,
+        { html: srcDoc },
+        {
+          responseType: 'blob',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      // Create download link
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${fileBase}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert(t("export.pdfError", "Error generating PDF. Please try again."));
+    }
+  };
+
   const scrollToChapter = (chapterIndex) => {
     const iframe = iframeRef.current;
     if (!iframe) return;
@@ -312,8 +347,8 @@ export default function BookExport() {
         </div>
 
         <div className="export-actions">
-          <button className="btn btn-export" onClick={printIframe}>
-            🖨️ {t("export.printPdf", "Print as PDF")}
+          <button className="btn btn-export" onClick={savePDF}>
+            💾 {t("export.savePdf", "Save as PDF")}
           </button>
           <button className="btn btn-export" onClick={handleExportHTML} style={{ marginTop: "0.75rem" }}>
             📥 {t("export.downloadHtml", "Download HTML")}
