@@ -278,7 +278,7 @@ def create_app():
                     return ok({"error": "User nicht gefunden"}, 401)
 
                 if not user.active:
-                    return ok({"error": "Account deaktiviert"}, 401)
+                    return ok({"error": "Account deactivated"}, 401)
 
                 # Setze current_user
                 g.current_user = user
@@ -491,18 +491,24 @@ def create_app():
             from werkzeug.security import check_password_hash
             # Prüfe ob password_hash Spalte noch existiert (Legacy)
             old_hash = getattr(user, 'password_hash', None) or user.password
-            if old_hash and check_password_hash(old_hash, password):
-                password_valid = True
-                # Update zu neuem bcrypt Hash
-                user.password = hash_password(password)
-                db.session.commit()
+            # Check if old_hash is not empty string
+            if old_hash and old_hash.strip():
+                try:
+                    if check_password_hash(old_hash, password):
+                        password_valid = True
+                        # Update zu neuem bcrypt Hash
+                        user.password = hash_password(password)
+                        db.session.commit()
+                except ValueError:
+                    # Invalid hash format - skip fallback
+                    pass
 
         if not password_valid:
-            return ok({"error": "Ungültige Anmeldedaten"}, 401)
+            return ok({"error": "Invalid credentials"}, 401)
 
         # Prüfe ob User aktiv (nur wenn Feld existiert)
         if hasattr(user, 'active') and user.active == False:
-            return ok({"error": "Account deaktiviert"}, 401)
+            return ok({"error": "Account deactivated"}, 401)
 
 
         # Prüfe ob Email bestätigt wurde (wenn Email-Confirmation aktiviert)
