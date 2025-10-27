@@ -15,6 +15,7 @@ export default function ResetPassword() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -26,6 +27,7 @@ export default function ResetPassword() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
 
     if (password !== confirmPassword) {
       setError(t('auth.passwordsDontMatch'));
@@ -46,8 +48,10 @@ export default function ResetPassword() {
       });
 
       // Erfolg - zurück zum Login
-      alert(response.data.message || t('auth.passwordResetSuccess'));
-      navigate('/login');
+      setSuccess(response.data.message || 'Password reset successfully! Redirecting to login...');
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000);
     } catch (err) {
       setError(err.response?.data?.error || t('common.error.generic'));
     } finally {
@@ -97,6 +101,12 @@ export default function ResetPassword() {
               autoComplete="new-password"
             />
           </div>
+
+          {success && (
+            <div className="success-message">
+              {success}
+            </div>
+          )}
 
           {error && (
             <div className="error-message">

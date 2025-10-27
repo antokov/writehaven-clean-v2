@@ -322,7 +322,7 @@ def create_app():
             return ok({"error": "Email und Passwort erforderlich"}, 400)
 
         if len(password) < 6:
-            return ok({"error": "Passwort muss mindestens 6 Zeichen lang sein"}, 400)
+            return ok({"error": "Password must be at least 6 characters long"}, 400)
 
         # Prüfe ob User existiert
         if user_datastore.find_user(email=email):
@@ -581,22 +581,48 @@ def create_app():
         email = data.get("email", "").strip().lower()
 
         if not email:
-            return ok({"error": "Email erforderlich"}, 400)
+            return ok({"error": "Email required"}, 400)
 
         user = user_datastore.find_user(email=email)
 
         # Immer success zurückgeben (Security: kein User-Enumeration)
         if user:
-            from flask_security import send_mail
-            from flask_security.utils import config_value
-            send_mail(
-                config_value("EMAIL_SUBJECT_PASSWORD_RESET"),
-                user.email,
-                "reset_instructions",
-                user=user
+            from flask_security.recoverable import generate_reset_password_token
+            from flask_mail import Message
+            from flask import render_template
+            
+            # Generiere Reset Token
+            token = generate_reset_password_token(user)
+            
+            # Erstelle Reset Link für Frontend
+            frontend_url = app.config.get("FRONTEND_URL", "http://localhost:5173")
+            reset_link = f"{frontend_url}/reset-password?token={token}"
+            
+            # Erstelle Email-Nachricht mit Templates
+            msg = Message(
+                subject="WriteHaven - Password Reset Instructions",
+                sender=app.config.get("SECURITY_EMAIL_SENDER", "info@writehaven.io"),
+                recipients=[user.email]
             )
+            
+            # Render templates mit Variablen
+            template_vars = {
+                'user_name': user.name or '',
+                'reset_link': reset_link
+            }
+            
+            msg.html = render_template('email/reset_password.html', **template_vars)
+            msg.body = render_template('email/reset_password.txt', **template_vars)
+            
+            # Sende Email
+            try:
+                mail = app.extensions.get('mail')
+                if mail:
+                    mail.send(msg)
+            except Exception as e:
+                print(f"Error sending reset email: {e}")
 
-        return ok({"message": "Falls die Email existiert, wurde ein Reset-Link gesendet."})
+        return ok({"message": "If this email exists, a reset link has been sent."})
 
     @app.post("/api/auth/reset-password")
     def reset_password():
@@ -606,10 +632,10 @@ def create_app():
         password = data.get("password", "")
 
         if not token or not password:
-            return ok({"error": "Token und Passwort erforderlich"}, 400)
+            return ok({"error": "Token and password required"}, 400)
 
         if len(password) < 6:
-            return ok({"error": "Passwort muss mindestens 6 Zeichen lang sein"}, 400)
+            return ok({"error": "Password must be at least 6 characters long"}, 400)
 
         from flask_security.recoverable import reset_password_token_status
         expired, invalid, user = reset_password_token_status(token)
@@ -623,7 +649,7 @@ def create_app():
         user.password = hash_password(password)
         db.session.commit()
 
-        return ok({"message": "Passwort erfolgreich zurückgesetzt"})
+        return ok({"message": "Password reset successfully"})
 
     @app.post("/api/feedback")
     def submit_feedback():
