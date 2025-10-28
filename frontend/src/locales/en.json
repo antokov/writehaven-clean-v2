@@ -117,6 +117,7 @@
     "newProject": "New Project",
     "empty": "No projects yet — click the plus card to create one.",
     "openAria": "Open {{title}}",
+    "noDescription": "No description",
     "loadFailed": "Could not load projects. Is the backend running?",
     "createFailed": "Failed to create project.",
     "renameTitle": "Rename project",
@@ -601,7 +602,9 @@
     "chapter": "Chapter",
     "chaptersCount": "{{count}} {{count, plural, one {chapter} other {chapters}}}",
     "printPdf": "Print as PDF",
-    "downloadHtml": "Download HTML"
+    "savePdf": "Save as PDF",
+    "downloadHtml": "Download HTML",
+    "pdfError": "Error generating PDF. Please try again."
   },
   "feedback": {
     "title": "Give feedback",

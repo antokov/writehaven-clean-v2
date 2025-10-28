@@ -117,13 +117,14 @@
     "newProject": "Neues Projekt",
     "empty": "Noch keine Projekte — klicke auf die Plus-Karte, um eines zu erstellen.",
     "openAria": "{{title}} öffnen",
+    "noDescription": "Keine Beschreibung",
     "loadFailed": "Projekte konnten nicht geladen werden. Läuft das Backend?",
     "createFailed": "Projekt konnte nicht erstellt werden.",
     "renameTitle": "Projekt umbenennen",
     "renameMessage": "Gib einen neuen Namen für das Projekt ein:",
     "renameFailed": "Umbenennen fehlgeschlagen.",
     "deleteTitle": "Projekt löschen",
-    "deleteMessage": "Möchtest du das Projekt „{{title}}“ wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteMessage": "Möchtest du das Projekt \"{{title}}\" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
     "deleteFailed": "Löschen fehlgeschlagen.",
     "importWord": "Word-Dokument importieren",
     "projectTitle": "Projekttitel",
@@ -482,7 +483,9 @@
     "chapter": "Kapitel",
     "chaptersCount": "{{count}} {{count, plural, one {Kapitel} other {Kapitel}}}",
     "printPdf": "Als PDF drucken",
-    "downloadHtml": "HTML herunterladen"
+    "savePdf": "Als PDF speichern",
+    "downloadHtml": "HTML herunterladen",
+    "pdfError": "Fehler beim Erstellen der PDF. Bitte versuche es erneut."
   },
   "feedback": {
     "title": "Feedback geben",

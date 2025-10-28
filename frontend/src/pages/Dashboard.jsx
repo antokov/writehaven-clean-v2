@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 // Bootstrap-Icons als React-SVGs (keine Fonts nötig)
-import { BsBoxArrowUpRight, BsPencil, BsTrash, BsPlus } from 'react-icons/bs';
+import { BsBoxArrowUpRight, BsPencil, BsTrash, BsPlus, BsThreeDotsVertical } from 'react-icons/bs';
 
 import ConfirmModal from '../components/ConfirmModal';
 import PromptModal from '../components/PromptModal';
@@ -12,12 +12,15 @@ import { useTranslation } from 'react-i18next';
 
 export default function Dashboard(){
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [confirmModal, setConfirmModal] = useState(null);
   const [promptModal, setPromptModal] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const menuRef = useRef(null);
 
   async function load(){
     try {
@@ -31,6 +34,34 @@ export default function Dashboard(){
     }
   }
   useEffect(()=>{ load(); }, []);
+
+  // Menü schließen bei Klick außerhalb
+  useEffect(() => {
+    function handleClickOutside(event) {
+      // Prüfen ob der Klick außerhalb des Menü-Containers ist
+      const menuButton = event.target.closest('.project-menu-btn');
+      const menuDropdown = event.target.closest('.project-dropdown-menu');
+
+      if (!menuButton && !menuDropdown) {
+        setOpenMenuId(null);
+      }
+    }
+    if (openMenuId !== null) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [openMenuId]);
+
+  function toggleMenu(e, projectId) {
+    e.preventDefault();
+    e.stopPropagation();
+    setOpenMenuId(openMenuId === projectId ? null : projectId);
+  }
+
+  function handleOpenProject(project) {
+    setOpenMenuId(null);
+    navigate(`/app/project/${project.id}`);
+  }
 
   async function handleCreateProject({ title, file }) {
     try {
@@ -61,6 +92,7 @@ export default function Dashboard(){
   }
 
   async function renameProject(p){
+    setOpenMenuId(null);
     setPromptModal({
       title: t('dashboard.renameTitle'),
       message: t('dashboard.renameMessage'),
@@ -80,6 +112,7 @@ export default function Dashboard(){
   }
 
   async function removeProject(p){
+    setOpenMenuId(null);
     setConfirmModal({
       title: t('dashboard.deleteTitle'),
       message: t('dashboard.deleteMessage', { title: p.title }),
@@ -115,45 +148,78 @@ export default function Dashboard(){
             </article>
 
             {projects.map(p => (
-              <article key={p.id} className="project-card" data-testid={`project-card-${p.id}`}>
+              <article
+                key={p.id}
+                className="project-card"
+                data-testid={`project-card-${p.id}`}
+                onClick={() => navigate(`/app/project/${p.id}`)}
+                style={{ cursor: 'pointer' }}
+              >
                 {/* Cover links (2:3) */}
-                <Link
-                  to={`/app/project/${p.id}`}
-                  className="project-cover"
-                  aria-label={t('dashboard.openAria', { title: p.title })}
-                  data-testid={`project-cover-${p.id}`}
-                >
+                <div className="project-cover" data-testid={`project-cover-${p.id}`}>
                   <div className="cover-art">
                     <span className="cover-letter">{(p.title || '?').slice(0,1).toUpperCase()}</span>
                   </div>
-                </Link>
+                </div>
 
-                {/* Rechts: Titel + Actions */}
+                {/* Rechts: Titel + Menü-Icon + Description */}
                 <div className="project-body">
                   <div className="project-top">
                     <h3 className="project-title" title={p.title}>
-                      <Link to={`/app/project/${p.id}`}>{p.title}</Link>
+                      {p.title}
                     </h3>
-                  </div>
-
-                  <div className="project-actions">
-                    <div className="actions-left">
-                      <Link className="btn btn-primary-quiet" to={`/app/project/${p.id}`} data-testid={`project-open-${p.id}`}>
-                        <BsBoxArrowUpRight className="icon" aria-hidden />
-                        <span>{t('common.open')}</span>
-                      </Link>
-                      <button className="btn btn-quiet" onClick={()=>renameProject(p)} data-testid={`project-rename-${p.id}`}>
-                        <BsPencil className="icon" aria-hidden />
-                        <span>{t('common.rename')}</span>
+                    <div className="project-menu-container">
+                      <button
+                        className="project-menu-btn"
+                        onClick={(e) => toggleMenu(e, p.id)}
+                        aria-label="Menü öffnen"
+                        data-testid={`project-menu-${p.id}`}
+                      >
+                        <BsThreeDotsVertical />
                       </button>
-                    </div>
-                    <div className="actions-right">
-                      <button className="btn btn-danger-quiet" onClick={()=>removeProject(p)} data-testid={`project-delete-${p.id}`}>
-                        <BsTrash className="icon" aria-hidden />
-                        <span>{t('common.delete')}</span>
-                      </button>
+                      {openMenuId === p.id && (
+                        <div ref={menuRef} className="project-dropdown-menu" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            className="dropdown-menu-item"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenProject(p);
+                            }}
+                            data-testid={`project-open-${p.id}`}
+                          >
+                            <BsBoxArrowUpRight className="icon" aria-hidden />
+                            <span>{t('common.open')}</span>
+                          </button>
+                          <button
+                            className="dropdown-menu-item"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              renameProject(p);
+                            }}
+                            data-testid={`project-rename-${p.id}`}
+                          >
+                            <BsPencil className="icon" aria-hidden />
+                            <span>{t('common.rename')}</span>
+                          </button>
+                          <div className="dropdown-menu-separator"></div>
+                          <button
+                            className="dropdown-menu-item danger"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeProject(p);
+                            }}
+                            data-testid={`project-delete-${p.id}`}
+                          >
+                            <BsTrash className="icon" aria-hidden />
+                            <span>{t('common.delete')}</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
+                  <p className={`project-description ${!p.description ? 'placeholder' : ''}`}>
+                    {p.description || t('dashboard.noDescription')}
+                  </p>
                 </div>
               </article>
             ))}
