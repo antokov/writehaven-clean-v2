@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { User, Mail, Calendar, Globe } from 'lucide-react'
 import axios from 'axios'
+import { useTranslation } from 'react-i18next'
 import '../styles/UserSettings.css'
 
 const LANGUAGES = [
@@ -11,6 +12,7 @@ const LANGUAGES = [
 
 export default function UserSettings() {
   const { user, updateUser } = useAuth()
+  const { t, i18n } = useTranslation()
   const [language, setLanguage] = useState('en')
   const [isSaving, setIsSaving] = useState(false)
   const [lastSavedAt, setLastSavedAt] = useState(null)
@@ -29,9 +31,11 @@ export default function UserSettings() {
       await axios.put('/api/auth/update-language', { language: newLanguage })
       // Aktualisiere den User im Context und localStorage
       updateUser({ language: newLanguage })
+      // Ändere auch die i18n Sprache sofort
+      i18n.changeLanguage(newLanguage)
       setLastSavedAt(new Date())
     } catch (error) {
-      console.error('Fehler beim Speichern der Sprache:', error)
+      console.error('Error saving language:', error)
       // Bei Fehler zurücksetzen
       setLanguage(user?.language || 'en')
     } finally {
@@ -40,8 +44,9 @@ export default function UserSettings() {
   }
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'Unbekannt'
-    return new Intl.DateTimeFormat('de-DE', {
+    if (!dateString) return t('settings.notSpecified')
+    const locale = i18n.language === 'de' ? 'de-DE' : 'en-US'
+    return new Intl.DateTimeFormat(locale, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -53,10 +58,10 @@ export default function UserSettings() {
   return (
     <div className="settings-page">
       <div className="settings-container">
-        <h1 className="settings-title">Einstellungen</h1>
+        <h1 className="settings-title">{t('settings.title')}</h1>
 
         <div className="settings-section">
-          <h2 className="section-title">Benutzerprofil</h2>
+          <h2 className="section-title">{t('settings.userProfile')}</h2>
 
           <div className="settings-card">
             <div className="settings-item">
@@ -64,8 +69,8 @@ export default function UserSettings() {
                 <User size={20} />
               </div>
               <div className="settings-item-content">
-                <div className="settings-item-label">Name</div>
-                <div className="settings-item-value">{user?.name || 'Nicht angegeben'}</div>
+                <div className="settings-item-label">{t('auth.name')}</div>
+                <div className="settings-item-value">{user?.name || t('settings.notSpecified')}</div>
               </div>
             </div>
 
@@ -76,8 +81,8 @@ export default function UserSettings() {
                 <Mail size={20} />
               </div>
               <div className="settings-item-content">
-                <div className="settings-item-label">E-Mail</div>
-                <div className="settings-item-value">{user?.email || 'Nicht angegeben'}</div>
+                <div className="settings-item-label">{t('auth.email')}</div>
+                <div className="settings-item-value">{user?.email || t('settings.notSpecified')}</div>
               </div>
             </div>
 
@@ -88,7 +93,7 @@ export default function UserSettings() {
                 <Calendar size={20} />
               </div>
               <div className="settings-item-content">
-                <div className="settings-item-label">Konto erstellt</div>
+                <div className="settings-item-label">{t('settings.accountCreated')}</div>
                 <div className="settings-item-value">{formatDate(user?.created_at)}</div>
               </div>
             </div>
@@ -97,10 +102,10 @@ export default function UserSettings() {
 
         <div className="settings-section">
           <h2 className="section-title">
-            Präferenzen
+            {t('settings.preferences')}
             {lastSavedAt && (
               <span className="save-indicator">
-                Gespeichert {lastSavedAt.toLocaleTimeString()}
+                {t('common.saved', { time: lastSavedAt.toLocaleTimeString() })}
               </span>
             )}
           </h2>
@@ -110,7 +115,7 @@ export default function UserSettings() {
                 <Globe size={20} />
               </div>
               <div className="settings-item-content">
-                <div className="settings-item-label">Sprache</div>
+                <div className="settings-item-label">{t('common.language')}</div>
                 <select
                   className="settings-select"
                   value={language}
@@ -129,17 +134,17 @@ export default function UserSettings() {
         </div>
 
         <div className="settings-section">
-          <h2 className="section-title">Account-Informationen</h2>
+          <h2 className="section-title">{t('settings.accountInfo')}</h2>
           <div className="settings-card">
             <div className="settings-info">
-              <p>Benutzer-ID: <strong>{user?.id}</strong></p>
+              <p>{t('settings.userId')}: <strong>{user?.id}</strong></p>
             </div>
           </div>
         </div>
 
         <div className="settings-section">
           <div className="settings-note">
-            Weitere Einstellungen und Profil-Bearbeitung werden in einer zukünftigen Version verfügbar sein.
+            {t('settings.moreSettingsSoon')}
           </div>
         </div>
       </div>

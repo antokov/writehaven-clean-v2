@@ -51,7 +51,11 @@ test.describe('Writing Section (Schreiben)', () => {
     const testId = await firstCard.getAttribute('data-testid');
     const pid = testId.replace('project-card-', '');
 
-    // Klicke auf "Open" des ersten Projekts
+    // Öffne das Kontextmenü des Projekts
+    await page.getByTestId(`project-menu-${pid}`).click();
+    await page.waitForTimeout(200);
+
+    // Klicke auf "Open" im Dropdown-Menü
     await page.getByTestId(`project-open-${pid}`).click();
 
     // Warte bis Projekt-Seite geladen ist
@@ -68,11 +72,16 @@ test.describe('Writing Section (Schreiben)', () => {
     await page.goto('/app');
     await page.waitForTimeout(300);
 
-    // Klicke auf Delete Button
-    const deleteButton = page.getByTestId(`project-delete-${pid}`);
+    // Prüfe ob das Projekt existiert
+    const projectCard = page.getByTestId(`project-card-${pid}`);
 
-    if (await deleteButton.count() > 0) {
-      await deleteButton.click();
+    if (await projectCard.count() > 0) {
+      // Öffne das Kontextmenü des Projekts
+      await page.getByTestId(`project-menu-${pid}`).click();
+      await page.waitForTimeout(200);
+
+      // Klicke auf Delete Button im Dropdown
+      await page.getByTestId(`project-delete-${pid}`).click();
 
       // Bestätige im Modal
       await page.locator('.modal-dialog button:has-text("Delete"), .modal-dialog button:has-text("Löschen")').click();

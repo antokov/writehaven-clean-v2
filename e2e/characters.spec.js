@@ -50,10 +50,21 @@ test.describe('Characters Section (Charaktere)', () => {
     await page.goto('/app');
     await page.waitForTimeout(300);
 
-    const deleteButton = page.getByTestId(`project-delete-${pid}`);
-    if (await deleteButton.count() > 0) {
-      await deleteButton.click();
+    // Prüfe ob das Projekt existiert
+    const projectCard = page.getByTestId(`project-card-${pid}`);
+
+    if (await projectCard.count() > 0) {
+      // Öffne das Kontextmenü des Projekts
+      await page.getByTestId(`project-menu-${pid}`).click();
+      await page.waitForTimeout(200);
+
+      // Klicke auf Delete Button im Dropdown
+      await page.getByTestId(`project-delete-${pid}`).click();
+
+      // Bestätige im Modal
       await page.locator('.modal-dialog button:has-text("Delete"), .modal-dialog button:has-text("Löschen")').click();
+
+      // Warte bis Modal geschlossen
       await expect(page.locator('.modal-dialog')).not.toBeVisible();
     }
   }
