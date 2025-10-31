@@ -411,7 +411,7 @@ const MapRenderer = React.forwardRef(({ mapData }, ref) => {
               if (!neighbor || neighbor.isOcean || neighbor.isLake || neighbor.stateId !== state.id) {
                 borderSegments.push({ p1, p2 });
               }
-            });
+            }
           });
 
           // Draw border segments
