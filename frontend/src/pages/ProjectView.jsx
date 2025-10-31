@@ -37,7 +37,6 @@ export default function ProjectView() {
 
   // Tools panel (right sidebar)
   const [toolsPanelOpen, setToolsPanelOpen] = useState(true);
-  const [entityCheckActive, setEntityCheckActive] = useState(false);
 
   // Autosave & Snapshot (Szene)
   const saveTimer = useRef(null);
@@ -246,12 +245,6 @@ export default function ProjectView() {
   }, [activeChapterId, activeSceneId, scenesByChapter]);
 
   // Turn off entity check when switching scenes or chapters
-  useEffect(() => {
-    if (entityCheckActive) {
-      setEntityCheckActive(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSceneId, activeChapterId]);
 
   /* -------------------------- Scene open (Detail) ----------------------- */
   async function openScene(chapterId, sceneId) {
@@ -438,7 +431,7 @@ export default function ProjectView() {
     }
   };
 
-  /* ----------------------- Entity Quick-Create -------------------------- */
+  /* ----------------------- Context Menu Quick-Create -------------------------- */
   const handleCreateCharacter = async (name) => {
     try {
       const r = await axios.post(`/api/projects/${pid}/characters`, {
@@ -460,7 +453,7 @@ export default function ProjectView() {
   const handleCreateWorldElement = async (name) => {
     try {
       const r = await axios.post(`/api/projects/${pid}/world`, {
-        title: name,  // API erwartet "title"
+        title: name,
         kind: 'Ort',
         summary: ''
       });
@@ -469,16 +462,6 @@ export default function ProjectView() {
     } catch (err) {
       console.error('Create world element failed', err);
       alert(t('writing.errors.worldElementCreateFailed'));
-    }
-  };
-
-  const handleIgnoreEntity = async (word) => {
-    try {
-      await axios.post(`/api/projects/${pid}/ignore-entity`, { word });
-      console.log(`Word "${word}" added to ignored entities`);
-    } catch (err) {
-      console.error('Ignore entity failed', err);
-      alert('Failed to ignore entity');
     }
   };
 
@@ -633,15 +616,7 @@ export default function ProjectView() {
 
         {toolsPanelOpen && (
           <div className="tools-content">
-            <div className="tool-section">
-              <h3 className="tool-section-title">{t('writing.entityRecognition')}</h3>
-              <button
-                className="btn-analyze-entities"
-                onClick={() => setEntityCheckActive(!entityCheckActive)}
-              >
-                {entityCheckActive ? t('writing.entityCheckOff') : t('writing.entityCheckOn')}
-              </button>
-            </div>
+            {/* Tools content can be added here in the future */}
           </div>
         )}
       </aside>
