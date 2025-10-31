@@ -213,7 +213,8 @@ export function generateMap(seed, width = 1200, height = 800, numCells = 400) {
   });
 
   // STEP 13: Generate political states (group cells into countries)
-  const states = generateStates(cells, random, 8, 15);
+  // More states for larger maps: 15-25 instead of 8-15
+  const states = generateStates(cells, random, 15, 25);
 
   return {
     width,
