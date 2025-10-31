@@ -658,5 +658,17 @@
       "feature": "Feature request",
       "other": "Other"
     }
+  },
+  "notFound": {
+    "title": "Page not found",
+    "message": "The page you're looking for doesn't exist or has been moved.",
+    "backToDashboard": "Back to Dashboard",
+    "backToHome": "Back to Home",
+    "goHome": "Go Home",
+    "goToLogin": "Go to Login",
+    "suggestions": "What you can do:",
+    "checkUrl": "Check the URL for typos",
+    "useNavigation": "Use the navigation to find what you're looking for",
+    "contactSupport": "Contact support if the problem persists"
   }
 }

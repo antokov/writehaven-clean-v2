@@ -665,5 +665,17 @@
       "feature": "Feature-Wunsch",
       "other": "Sonstiges"
     }
+  },
+  "notFound": {
+    "title": "Seite nicht gefunden",
+    "message": "Die Seite, die du suchst, existiert nicht oder wurde verschoben.",
+    "backToDashboard": "Zurück zum Dashboard",
+    "backToHome": "Zurück zur Startseite",
+    "goHome": "Zur Startseite",
+    "goToLogin": "Zum Login",
+    "suggestions": "Was du tun kannst:",
+    "checkUrl": "Überprüfe die URL auf Tippfehler",
+    "useNavigation": "Nutze die Navigation, um zur gewünschten Seite zu gelangen",
+    "contactSupport": "Kontaktiere den Support, wenn das Problem weiterhin besteht"
   }
 }

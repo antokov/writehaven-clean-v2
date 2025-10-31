@@ -16,8 +16,10 @@ import ProjectLayout from './pages/ProjectLayout.jsx'
 import ProjectView from './pages/ProjectView.jsx'
 import Characters from './pages/Characters.jsx'
 import World from './pages/World.jsx'
+import MapView from './pages/MapView.jsx'
 import BookExport from './pages/BookExport.jsx'
 import ProjectSettings from './pages/ProjectSettings.jsx'
+import NotFound from './pages/NotFound.jsx'             // 404 Page
 
 import './styles/styles.css'
 import './styles/layout-2col.css'
@@ -28,6 +30,8 @@ import './styles/dashboard.css'
 import "./styles/characters.css";
 import "./styles/bookexport.css";
 import './styles/landing.css';
+import './styles/mapview.css';
+import './styles/NotFound.css';
 
 import axios from 'axios'
 import './i18n' // Initialize i18n
@@ -66,10 +70,14 @@ createRoot(document.getElementById('root')).render(
               <Route index element={<ProjectView />} />        {/* Schreiben */}
               <Route path="characters" element={<Characters />} />
               <Route path="world" element={<World />} />
+              <Route path="map" element={<MapView />} />
               <Route path="export" element={<BookExport />} />
               <Route path="settings" element={<ProjectSettings />} />
             </Route>
           </Route>
+
+          {/* 404 Catch-All Route */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
