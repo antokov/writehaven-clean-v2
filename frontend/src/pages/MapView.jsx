@@ -47,8 +47,8 @@ export default function MapView() {
       setLoading(true);
       setError(null);
 
-      // Generate map
-      const generated = generateMap(seed, 1200, 800, 600);
+      // Generate map with political states (reduced cell count for larger territories)
+      const generated = generateMap(seed, 1200, 800, 400);
       setMapData(generated);
 
       // Auto-save
@@ -176,21 +176,23 @@ export default function MapView() {
           )}
         </div>
 
-        {/* Biome Legend */}
-        <div className="panel" style={{ marginTop: '1rem' }}>
-          <h3 className="panel-title">{t('map.biomes.title') || 'Biomes'}</h3>
-          <div className="biome-legend">
-            {['ocean', 'lake', 'beach', 'desert', 'grassland', 'forest', 'taiga', 'tundra', 'snow', 'mountain'].map(biome => (
-              <div key={biome} className="biome-item">
-                <span
-                  className="biome-color"
-                  style={{ backgroundColor: getBiomeColor(biome) }}
-                ></span>
-                <span className="biome-label">{t(`map.biomes.${biome}`) || biome}</span>
-              </div>
-            ))}
+        {/* States Legend */}
+        {mapData && mapData.states && mapData.states.length > 0 && (
+          <div className="panel" style={{ marginTop: '1rem' }}>
+            <h3 className="panel-title">{t('map.states.title') || 'States'}</h3>
+            <div className="biome-legend">
+              {mapData.states.map(state => (
+                <div key={state.id} className="biome-item">
+                  <span
+                    className="biome-color"
+                    style={{ backgroundColor: state.color }}
+                  ></span>
+                  <span className="biome-label">{state.name}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </aside>
 
       {/* Main Content - Map Canvas */}
@@ -281,6 +283,9 @@ const MapRenderer = React.forwardRef(({ mapData }, ref) => {
   const mountainCells = cells.filter(c => c.isMountain);
   const landCells = cells.filter(c => !c.isOcean && !c.isLake);
 
+  // Get states from mapData
+  const { states = [] } = mapData;
+
   return (
     <div
       ref={containerRef}
@@ -318,7 +323,7 @@ const MapRenderer = React.forwardRef(({ mapData }, ref) => {
       >
         <title>Fantasy Map</title>
 
-      {/* Layer 1: Ocean */}
+      {/* Layer 1: Ocean (no visible cell borders) */}
       <g id="ocean" className="layer-ocean">
         {oceanCells.map(cell => {
           if (!cell.polygon) return null;
@@ -328,9 +333,7 @@ const MapRenderer = React.forwardRef(({ mapData }, ref) => {
               key={`ocean-${cell.id}`}
               d={pathData}
               fill={getBiomeColor('ocean')}
-              stroke="#3a3a3a"
-              strokeWidth="0.5"
-              strokeOpacity="0.3"
+              stroke="none"
             />
           );
         })}
@@ -354,21 +357,68 @@ const MapRenderer = React.forwardRef(({ mapData }, ref) => {
         })}
       </g>
 
-      {/* Layer 3: Land (biomes) */}
-      <g id="land" className="layer-land">
-        {landCells.map(cell => {
-          if (!cell.polygon) return null;
-          const pathData = `M${cell.polygon.map(p => p.join(',')).join('L')}Z`;
-          return (
-            <path
-              key={`land-${cell.id}`}
-              d={pathData}
-              fill={getBiomeColor(cell.biome)}
-              stroke="#3a3a3a"
-              strokeWidth="0.5"
-              strokeOpacity="0.3"
-            />
-          );
+      {/* Layer 3: States (political territories) */}
+      <g id="states" className="layer-states">
+        {states.map(state => {
+          // Render all cells belonging to this state
+          return state.cells.map(cellId => {
+            const cell = cells[cellId];
+            if (!cell || !cell.polygon) return null;
+            const pathData = `M${cell.polygon.map(p => p.join(',')).join('L')}Z`;
+            return (
+              <path
+                key={`state-${state.id}-cell-${cellId}`}
+                d={pathData}
+                fill={state.color}
+                stroke="none"
+              />
+            );
+          });
+        })}
+      </g>
+
+      {/* Layer 3b: State Borders */}
+      <g id="state-borders" className="layer-state-borders">
+        {states.map(state => {
+          // Find border edges for this state
+          const borderEdges = new Set();
+          state.cells.forEach(cellId => {
+            const cell = cells[cellId];
+            if (!cell) return;
+
+            cell.neighbors.forEach(nId => {
+              const neighbor = cells[nId];
+              if (!neighbor) return;
+
+              // If neighbor is different state or ocean, this is a border
+              if (neighbor.isOcean || neighbor.isLake || neighbor.stateId !== state.id) {
+                // Add edge between cell and neighbor
+                const edgeKey = [cellId, nId].sort().join('-');
+                borderEdges.add(edgeKey);
+              }
+            });
+          });
+
+          // Draw borders
+          return Array.from(borderEdges).map(edgeKey => {
+            const [id1, id2] = edgeKey.split('-').map(Number);
+            const cell1 = cells[id1];
+            const cell2 = cells[id2];
+            if (!cell1 || !cell2) return null;
+
+            return (
+              <line
+                key={`border-${state.id}-${edgeKey}`}
+                x1={cell1.x}
+                y1={cell1.y}
+                x2={cell2.x}
+                y2={cell2.y}
+                stroke="#2a2a2a"
+                strokeWidth="2"
+                strokeOpacity="0.6"
+              />
+            );
+          });
         })}
       </g>
 
@@ -428,6 +478,45 @@ const MapRenderer = React.forwardRef(({ mapData }, ref) => {
               stroke="rgba(100,80,60,0.3)"
               strokeWidth="1"
             />
+          );
+        })}
+      </g>
+
+      {/* Layer 7: State Labels */}
+      <g id="state-labels" className="layer-labels">
+        {states.map(state => {
+          // Calculate centroid of state
+          if (state.cells.length === 0) return null;
+
+          let sumX = 0, sumY = 0;
+          state.cells.forEach(cellId => {
+            const cell = cells[cellId];
+            if (cell) {
+              sumX += cell.x;
+              sumY += cell.y;
+            }
+          });
+
+          const centroidX = sumX / state.cells.length;
+          const centroidY = sumY / state.cells.length;
+
+          return (
+            <text
+              key={`label-${state.id}`}
+              x={centroidX}
+              y={centroidY}
+              textAnchor="middle"
+              fill="#1a1a1a"
+              fontSize="16"
+              fontWeight="600"
+              fontFamily="serif"
+              stroke="#ffffff"
+              strokeWidth="3"
+              paintOrder="stroke"
+              style={{ pointerEvents: 'none' }}
+            >
+              {state.name}
+            </text>
           );
         })}
       </g>
