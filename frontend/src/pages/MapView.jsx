@@ -377,65 +377,103 @@ const MapRenderer = React.forwardRef(({ mapData }, ref) => {
         })}
       </g>
 
-      {/* Layer 3b: State Borders */}
+      {/* Layer 3b: State Borders (only external borders between different states) */}
       <g id="state-borders" className="layer-state-borders">
         {states.map(state => {
-          // Find border edges for this state
-          const borderEdges = new Set();
+          // Collect all border polygon edges (not cell centers!)
+          const borderSegments = [];
+
           state.cells.forEach(cellId => {
             const cell = cells[cellId];
-            if (!cell) return;
+            if (!cell || !cell.polygon) return;
 
-            cell.neighbors.forEach(nId => {
-              const neighbor = cells[nId];
-              if (!neighbor) return;
+            // Check each edge of the polygon
+            for (let i = 0; i < cell.polygon.length; i++) {
+              const p1 = cell.polygon[i];
+              const p2 = cell.polygon[(i + 1) % cell.polygon.length];
 
-              // If neighbor is different state or ocean, this is a border
-              if (neighbor.isOcean || neighbor.isLake || neighbor.stateId !== state.id) {
-                // Add edge between cell and neighbor
-                const edgeKey = [cellId, nId].sort().join('-');
-                borderEdges.add(edgeKey);
+              // Find which neighbor shares this edge
+              const neighborId = cell.neighbors.find(nId => {
+                const neighbor = cells[nId];
+                if (!neighbor || !neighbor.polygon) return false;
+
+                // Check if neighbor's polygon contains both points
+                return neighbor.polygon.some(np =>
+                  Math.abs(np[0] - p1[0]) < 0.1 && Math.abs(np[1] - p1[1]) < 0.1
+                ) && neighbor.polygon.some(np =>
+                  Math.abs(np[0] - p2[0]) < 0.1 && Math.abs(np[1] - p2[1]) < 0.1
+                );
+              });
+
+              const neighbor = neighborId !== undefined ? cells[neighborId] : null;
+
+              // Only draw border if neighbor is different state or water
+              if (!neighbor || neighbor.isOcean || neighbor.isLake || neighbor.stateId !== state.id) {
+                borderSegments.push({ p1, p2 });
               }
             });
           });
 
-          // Draw borders
-          return Array.from(borderEdges).map(edgeKey => {
-            const [id1, id2] = edgeKey.split('-').map(Number);
-            const cell1 = cells[id1];
-            const cell2 = cells[id2];
-            if (!cell1 || !cell2) return null;
-
-            return (
-              <line
-                key={`border-${state.id}-${edgeKey}`}
-                x1={cell1.x}
-                y1={cell1.y}
-                x2={cell2.x}
-                y2={cell2.y}
-                stroke="#2a2a2a"
-                strokeWidth="2"
-                strokeOpacity="0.6"
-              />
-            );
-          });
+          // Draw border segments
+          return borderSegments.map((seg, idx) => (
+            <line
+              key={`border-${state.id}-${idx}`}
+              x1={seg.p1[0]}
+              y1={seg.p1[1]}
+              x2={seg.p2[0]}
+              y2={seg.p2[1]}
+              stroke="#3a3a3a"
+              strokeWidth="1.5"
+              strokeOpacity="0.7"
+              strokeLinecap="round"
+            />
+          ));
         })}
       </g>
 
-      {/* Layer 4: Coasts (borders) */}
+      {/* Layer 4: Coastlines (smooth ocean borders) */}
       <g id="coast" className="layer-coast">
-        {coastCells.map(cell => {
+        {landCells.map(cell => {
           if (!cell.polygon) return null;
-          const pathData = `M${cell.polygon.map(p => p.join(',')).join('L')}Z`;
-          return (
-            <path
-              key={`coast-${cell.id}`}
-              d={pathData}
-              fill="none"
-              stroke="rgba(0,0,0,0.15)"
-              strokeWidth="1.5"
+
+          // Draw only edges that border ocean/lake
+          const coastSegments = [];
+          for (let i = 0; i < cell.polygon.length; i++) {
+            const p1 = cell.polygon[i];
+            const p2 = cell.polygon[(i + 1) % cell.polygon.length];
+
+            // Check if this edge borders water
+            const bordersWater = cell.neighbors.some(nId => {
+              const neighbor = cells[nId];
+              if (!neighbor || !neighbor.polygon) return false;
+              if (!neighbor.isOcean && !neighbor.isLake) return false;
+
+              // Check if neighbor shares this edge
+              return neighbor.polygon.some(np =>
+                Math.abs(np[0] - p1[0]) < 0.1 && Math.abs(np[1] - p1[1]) < 0.1
+              ) && neighbor.polygon.some(np =>
+                Math.abs(np[0] - p2[0]) < 0.1 && Math.abs(np[1] - p2[1]) < 0.1
+              );
+            });
+
+            if (bordersWater) {
+              coastSegments.push({ p1, p2 });
+            }
+          }
+
+          return coastSegments.map((seg, idx) => (
+            <line
+              key={`coast-${cell.id}-${idx}`}
+              x1={seg.p1[0]}
+              y1={seg.p1[1]}
+              x2={seg.p2[0]}
+              y2={seg.p2[1]}
+              stroke="#4a6fa5"
+              strokeWidth="2"
+              strokeOpacity="0.5"
+              strokeLinecap="round"
             />
-          );
+          ));
         })}
       </g>
 
