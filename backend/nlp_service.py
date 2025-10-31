@@ -2,20 +2,37 @@
 """
 NLP Service for entity extraction using spaCy.
 Supports German and English models for PERSON and LOC recognition.
+
+NOTE: spaCy is optional. If not installed, NLP features will be disabled.
 """
-import spacy
 from typing import List, Dict, Optional
 from rapidfuzz import fuzz
 
-# Load spaCy models
+# Try to import spaCy (optional dependency)
 try:
-    nlp_de = spacy.load("de_core_news_sm")
-    nlp_en = spacy.load("en_core_web_sm")
-except OSError as e:
-    print(f"ERROR: spaCy models not found. Please run:")
-    print("  python -m pip install https://github.com/explosion/spacy-models/releases/download/de_core_news_sm-3.7.0/de_core_news_sm-3.7.0-py3-none-any.whl")
-    print("  python -m pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.0/en_core_web_sm-3.7.0-py3-none-any.whl")
-    raise e
+    import spacy
+    SPACY_AVAILABLE = True
+
+    # Try to load spaCy models
+    try:
+        nlp_de = spacy.load("de_core_news_sm")
+        nlp_en = spacy.load("en_core_web_sm")
+        SPACY_MODELS_AVAILABLE = True
+    except OSError:
+        print("⚠️  WARNING: spaCy models not found. NLP features will be disabled.")
+        print("  To enable NLP, install models:")
+        print("  python -m pip install https://github.com/explosion/spacy-models/releases/download/de_core_news_sm-3.7.0/de_core_news_sm-3.7.0-py3-none-any.whl")
+        print("  python -m pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.0/en_core_web_sm-3.7.0-py3-none-any.whl")
+        nlp_de = None
+        nlp_en = None
+        SPACY_MODELS_AVAILABLE = False
+except ImportError:
+    print("⚠️  WARNING: spaCy not installed. NLP features will be disabled.")
+    print("  To enable NLP, install: pip install spacy")
+    SPACY_AVAILABLE = False
+    SPACY_MODELS_AVAILABLE = False
+    nlp_de = None
+    nlp_en = None
 
 
 def is_likely_name(text: str, token=None) -> bool:
@@ -96,6 +113,10 @@ def extract_entities(text: str, language: str = "en", ignored_words: List[str] =
         - start: Character offset start
         - end: Character offset end
     """
+    # Return empty list if spaCy is not available
+    if not SPACY_AVAILABLE or not SPACY_MODELS_AVAILABLE:
+        return []
+
     if not text or not text.strip():
         return []
 
@@ -104,6 +125,10 @@ def extract_entities(text: str, language: str = "en", ignored_words: List[str] =
 
     # Select appropriate model
     nlp = nlp_de if language == "de" else nlp_en
+
+    # Safety check
+    if nlp is None:
+        return []
 
     # Process text
     doc = nlp(text)
