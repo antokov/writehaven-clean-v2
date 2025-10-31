@@ -58,7 +58,6 @@ class Project(db.Model):
         nullable=False,
         server_default=sqltext('false')  # serverseitiger Default für Postgres
     )
-    ignored_entities = db.Column(db.Text, default="[]")  # JSON array of ignored entity words
 
     # Relationships
     user = db.relationship("User", backref="projects")
@@ -111,42 +110,6 @@ class Scene(db.Model):
     )
 
     # Relationship to mentions
-    mentions = db.relationship(
-        "Mention", cascade="all, delete-orphan", backref="scene", lazy="selectin"
-    )
-
-
-class Mention(db.Model):
-    """Entity mentions in scenes - tracks PERSON and LOC entities for NLP highlighting"""
-    __tablename__ = "mention"
-    __table_args__ = {'extend_existing': True}
-
-    id = db.Column(db.Integer, primary_key=True)
-    scene_id = db.Column(
-        db.Integer, db.ForeignKey("scene.id"), nullable=False, index=True
-    )
-
-    # Entity information
-    text = db.Column(db.String(200), nullable=False)  # The actual text mentioned (e.g., "John Smith")
-    entity_type = db.Column(db.String(20), nullable=False)  # PERSON or LOC
-    start_offset = db.Column(db.Integer, nullable=False)  # Character offset start
-    end_offset = db.Column(db.Integer, nullable=False)  # Character offset end
-
-    # Optional link to existing entities
-    character_id = db.Column(db.Integer, db.ForeignKey("character.id"), nullable=True, index=True)
-    worldnode_id = db.Column(db.Integer, db.ForeignKey("worldnode.id"), nullable=True, index=True)
-
-    # Ignore flag for fuzzy match suggestions
-    ignored = db.Column(db.Boolean, nullable=False, server_default=sqltext('false'))
-
-    created_at = db.Column(db.DateTime, server_default=func.now())
-    updated_at = db.Column(
-        db.DateTime, server_default=func.now(), onupdate=func.now()
-    )
-
-    # Relationships
-    character = db.relationship("Character", foreign_keys=[character_id])
-    worldnode = db.relationship("WorldNode", foreign_keys=[worldnode_id])
 
 
 class Character(db.Model):

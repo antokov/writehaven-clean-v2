@@ -5,7 +5,6 @@ import { BsPlus, BsTrash, BsChevronDown, BsChevronRight } from 'react-icons/bs';
 
 import ConfirmModal from '../components/ConfirmModal';
 import TextContextMenu from '../components/TextContextMenu';
-import EntityHighlighter from '../components/EntityHighlighter';
 import { useTranslation } from 'react-i18next';
 
 export default function ProjectView() {
@@ -585,20 +584,14 @@ export default function ProjectView() {
                   {lastSavedAt ? <>{t('writing.savedAt', { time: lastSavedAt.toLocaleTimeString() })}</> : '—'}
                 </div>
               </div>
-              <EntityHighlighter
-                sceneId={activeSceneId}
-                projectId={pid}
-                content={sceneContent}
-                onChange={(newContent) => setSceneContent(newContent)}
-                onCreateCharacter={handleCreateCharacter}
-                onCreateLocation={handleCreateWorldElement}
-                onIgnoreEntity={handleIgnoreEntity}
+              <textarea
+                value={sceneContent}
+                onChange={(e) => setSceneContent(e.target.value)}
                 onBlur={() => saveSceneNow(activeSceneId, sceneTitle, sceneContent)}
                 onContextMenu={handleContextMenu}
                 placeholder={t('writing.sceneContentPlaceholder')}
                 data-testid="scene-content-editor"
                 className="scene-editor"
-                entityCheckActive={entityCheckActive}
               />
             </>
           ) : (
