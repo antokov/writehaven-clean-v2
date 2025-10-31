@@ -17,13 +17,13 @@ load_dotenv()
 
 try:
     from backend.extensions import db
-    from backend.models import Project, Chapter, Scene, Character, WorldNode, User, Role, Mention, Map
+    from backend.models import Project, Chapter, Scene, Character, WorldNode, User, Role, Map
     from backend.word_parser import parse_word_document
     from backend.security_config import get_security_config
     from backend.console_mail import ConsoleMailBackend
 except ImportError:
     from extensions import db
-    from models import Project, Chapter, Scene, Character, WorldNode, User, Role, Mention, Map
+    from models import Project, Chapter, Scene, Character, WorldNode, User, Role, Map
     from word_parser import parse_word_document
     from security_config import get_security_config
     from console_mail import ConsoleMailBackend
@@ -1108,59 +1108,6 @@ Sent from WriteHaven Feedback Form
         c = verify_character_ownership(cid, get_current_user().id)
         if not c: return not_found()
         return ok(_char_to_dict(c))
-
-    @app.get("/api/characters/<int:cid>/mentions")
-    @token_auth_required
-    def get_character_mentions(cid):
-        """Get all mentions of a character across all scenes"""
-        c = verify_character_ownership(cid, get_current_user().id)
-        if not c: return not_found()
-
-        # Get all mentions for this character
-        mentions = Mention.query.filter_by(character_id=cid).order_by(Mention.created_at.desc()).all()
-
-        # Group by scene and include chapter/scene info
-        result = []
-        for m in mentions:
-            scene = Scene.query.get(m.scene_id)
-            if not scene:
-                continue
-
-            chapter = Chapter.query.get(scene.chapter_id)
-            if not chapter:
-                continue
-
-            # Get context snippet (50 chars before and after)
-            content = scene.content or ""
-            start = max(0, m.start_offset - 50)
-            end = min(len(content), m.end_offset + 50)
-            snippet = content[start:end]
-
-            # Add ellipsis if truncated
-            if start > 0:
-                snippet = "..." + snippet
-            if end < len(content):
-                snippet = snippet + "..."
-
-            result.append({
-                "id": m.id,
-                "text": m.text,
-                "start": m.start_offset,
-                "end": m.end_offset,
-                "snippet": snippet,
-                "scene": {
-                    "id": scene.id,
-                    "title": scene.title,
-                    "order_index": scene.order_index
-                },
-                "chapter": {
-                    "id": chapter.id,
-                    "title": chapter.title,
-                    "order_index": chapter.order_index
-                }
-            })
-
-        return ok(result)
 
     @app.put("/api/characters/<int:cid>")
     @app.patch("/api/characters/<int:cid>")
