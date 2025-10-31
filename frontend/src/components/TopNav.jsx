@@ -15,6 +15,7 @@ export default function TopNav(){
         <NavLink end to={base} className="tab">{t('navigation.writing')}</NavLink>
         <NavLink to={`${base}/characters`} className="tab">{t('navigation.characters')}</NavLink>
         <NavLink to={`${base}/world`} className="tab">{t('navigation.world')}</NavLink>
+        <NavLink to={`${base}/map`} className="tab">{t('navigation.map')}</NavLink>
         <NavLink to={`${base}/export`} className="tab">{t('navigation.export')}</NavLink>
         <NavLink to={`${base}/settings`} className="tab">{t('navigation.projectSettings')}</NavLink>
       </div>

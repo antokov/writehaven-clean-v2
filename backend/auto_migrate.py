@@ -38,6 +38,22 @@ def auto_migrate():
                 print("Database schema created/verified successfully")
                 return
 
+            # Add ignored_entities column to project table if missing
+            if 'project' in inspector.get_table_names():
+                project_columns = [col['name'] for col in inspector.get_columns('project')]
+                if 'ignored_entities' not in project_columns:
+                    try:
+                        print("🔄 Adding ignored_entities column to project table...")
+                        conn.execute(text('ALTER TABLE project ADD COLUMN ignored_entities TEXT DEFAULT \'[]\';'))
+                        conn.commit()
+                        print("✅ ignored_entities column added successfully")
+                    except (ProgrammingError, OperationalError) as e:
+                        print(f"⚠️  Could not add ignored_entities column: {e}")
+                        try:
+                            conn.rollback()
+                        except:
+                            pass
+
             existing_columns = [col['name'] for col in inspector.get_columns('user')]
 
             # Check if migration is needed
