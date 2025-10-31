@@ -5,9 +5,9 @@ import { Delaunay } from 'd3-delaunay';
 import { createNoise2D } from 'simplex-noise';
 
 /**
- * Generate a realistic fantasy map from a seed
+ * Generate a realistic fantasy map from a seed with political states
  */
-export function generateMap(seed, width = 1200, height = 800, numCells = 800) {
+export function generateMap(seed, width = 1200, height = 800, numCells = 400) {
   const random = seededRandom(hashCode(String(seed)));
 
   // Initialize multiple noise octaves for more natural terrain
@@ -212,6 +212,9 @@ export function generateMap(seed, width = 1200, height = 800, numCells = 800) {
     }
   });
 
+  // STEP 13: Generate political states (group cells into countries)
+  const states = generateStates(cells, random, 8, 15);
+
   return {
     width,
     height,
@@ -219,6 +222,7 @@ export function generateMap(seed, width = 1200, height = 800, numCells = 800) {
     seed,
     cells,
     rivers,
+    states,
     voronoi: {
       points,
       delaunay: {
@@ -402,6 +406,136 @@ function checkIncompatibleBiomes(biome, neighborBiomes) {
   if (!incompatible[biome]) return false;
 
   return neighborBiomes.some(nb => incompatible[biome].includes(nb));
+}
+
+/**
+ * Generate political states by grouping land cells
+ */
+function generateStates(cells, random, minStates = 8, maxStates = 15) {
+  const landCells = cells.filter(c => !c.isOcean && !c.isLake);
+  if (landCells.length === 0) return [];
+
+  const numStates = Math.floor(random() * (maxStates - minStates + 1)) + minStates;
+
+  // Pick random capitals for each state
+  const capitals = [];
+  const availableCells = [...landCells];
+
+  for (let i = 0; i < numStates && availableCells.length > 0; i++) {
+    const idx = Math.floor(random() * availableCells.length);
+    capitals.push(availableCells[idx].id);
+    availableCells.splice(idx, 1);
+  }
+
+  // Assign each land cell to nearest capital (flood fill with some randomness)
+  const stateMap = new Map(); // cellId -> stateId
+  const queue = capitals.map((capitalId, stateId) => ({ cellId: capitalId, stateId }));
+
+  capitals.forEach((capitalId, stateId) => {
+    stateMap.set(capitalId, stateId);
+  });
+
+  while (queue.length > 0) {
+    const { cellId, stateId } = queue.shift();
+    const cell = cells[cellId];
+
+    cell.neighbors.forEach(nId => {
+      const neighbor = cells[nId];
+      if (neighbor.isOcean || neighbor.isLake || stateMap.has(nId)) return;
+
+      // Add some randomness to borders (80% chance to expand)
+      if (random() < 0.8) {
+        stateMap.set(nId, stateId);
+        queue.push({ cellId: nId, stateId });
+      }
+    });
+  }
+
+  // Assign remaining cells to nearest state
+  landCells.forEach(cell => {
+    if (stateMap.has(cell.id)) return;
+
+    // Find nearest state via BFS
+    const visited = new Set([cell.id]);
+    const q = [cell.id];
+
+    while (q.length > 0) {
+      const currentId = q.shift();
+      const current = cells[currentId];
+
+      for (const nId of current.neighbors) {
+        if (stateMap.has(nId)) {
+          stateMap.set(cell.id, stateMap.get(nId));
+          return;
+        }
+        if (!visited.has(nId) && !cells[nId].isOcean && !cells[nId].isLake) {
+          visited.add(nId);
+          q.push(nId);
+        }
+      }
+    }
+  });
+
+  // Build state objects
+  const states = [];
+  for (let i = 0; i < capitals.length; i++) {
+    const stateCells = [];
+    stateMap.forEach((stateId, cellId) => {
+      if (stateId === i) stateCells.push(cellId);
+    });
+
+    if (stateCells.length === 0) continue;
+
+    const color = getStateColor(i, random);
+    const name = generateStateName(i, random);
+
+    states.push({
+      id: i,
+      name,
+      color,
+      capital: capitals[i],
+      cells: stateCells
+    });
+  }
+
+  // Store state assignment in cells
+  cells.forEach(cell => {
+    if (stateMap.has(cell.id)) {
+      cell.stateId = stateMap.get(cell.id);
+    }
+  });
+
+  return states;
+}
+
+/**
+ * Generate random state name
+ */
+function generateStateName(id, random) {
+  const prefixes = ['North', 'South', 'East', 'West', 'New', 'Old', 'Great', 'Lesser'];
+  const roots = ['Aria', 'Thal', 'Dor', 'Kal', 'Mer', 'Val', 'Tor', 'Lan', 'Fel', 'Bor'];
+  const suffixes = ['ia', 'and', 'or', 'en', 'is', 'os', 'um', 'ar'];
+
+  const usePrefix = random() < 0.3;
+  const root = roots[Math.floor(random() * roots.length)];
+  const suffix = suffixes[Math.floor(random() * suffixes.length)];
+
+  if (usePrefix) {
+    const prefix = prefixes[Math.floor(random() * prefixes.length)];
+    return `${prefix} ${root}${suffix}`;
+  }
+
+  return `${root}${suffix}`;
+}
+
+/**
+ * Generate distinct state colors
+ */
+function getStateColor(id, random) {
+  const hue = (id * 137.5 + random() * 30) % 360; // Golden angle for distribution
+  const saturation = 40 + random() * 20; // 40-60%
+  const lightness = 60 + random() * 15;  // 60-75%
+  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 }
 
 /**
