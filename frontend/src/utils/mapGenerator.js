@@ -7,38 +7,43 @@ import { createNoise2D } from 'simplex-noise';
 /**
  * Generate a realistic fantasy map from a seed
  */
-export function generateMap(seed, width = 1200, height = 800, numCells = 600) {
+export function generateMap(seed, width = 1200, height = 800, numCells = 800) {
   const random = seededRandom(hashCode(String(seed)));
 
-  // Initialize noise functions
+  // Initialize multiple noise octaves for more natural terrain
   const elevationNoise = createNoise2D(() => random());
   const moistureNoise = createNoise2D(() => random());
   const mountainNoise = createNoise2D(() => random());
+  const detailNoise = createNoise2D(() => random());
 
-  // Generate Voronoi points
-  const points = [];
-  for (let i = 0; i < numCells; i++) {
-    points.push([random() * width, random() * height]);
-  }
+  // Generate Voronoi points with better distribution (relaxed)
+  const points = generateRelaxedPoints(numCells, width, height, random);
 
   const delaunay = Delaunay.from(points);
   const voronoi = delaunay.voronoi([0, 0, width, height]);
 
-  // STEP 1: Generate base elevation with island bias
+  // STEP 1: Generate base elevation with more natural island bias
   const cells = [];
   for (let i = 0; i < numCells; i++) {
     const [x, y] = points[i];
 
-    // Island bias (lower at edges)
+    // More natural island bias with irregular coastlines
     const nx = x / width - 0.5;
     const ny = y / height - 0.5;
-    const distanceFromCenter = Math.sqrt(nx * nx + ny * ny) * 2;
+    const distanceFromCenter = Math.sqrt(nx * nx + ny * ny);
 
+    // Use noise to make irregular coastlines instead of perfect circle
+    const coastalNoise = elevationNoise(nx * 3, ny * 3) * 0.3;
+    const islandBias = Math.pow(distanceFromCenter * 1.8, 1.5) - coastalNoise;
+
+    // Multi-octave elevation with better scaling
     const elevation = (
-      elevationNoise(x * 0.002, y * 0.002) * 0.5 +
-      elevationNoise(x * 0.008, y * 0.008) * 0.3 +
-      elevationNoise(x * 0.03, y * 0.03) * 0.2
-    ) - distanceFromCenter * 0.6;
+      elevationNoise(x * 0.0015, y * 0.0015) * 0.4 +      // Large features (continents)
+      elevationNoise(x * 0.005, y * 0.005) * 0.25 +        // Medium features (regions)
+      elevationNoise(x * 0.015, y * 0.015) * 0.15 +        // Small features (hills)
+      detailNoise(x * 0.04, y * 0.04) * 0.1 +              // Fine details
+      detailNoise(x * 0.08, y * 0.08) * 0.05               // Very fine details
+    ) - islandBias * 0.7;
 
     const polygon = voronoi.cellPolygon(i);
 
@@ -400,6 +405,52 @@ function checkIncompatibleBiomes(biome, neighborBiomes) {
 }
 
 /**
+ * Generate relaxed Voronoi points (Lloyd's algorithm)
+ * Makes cells more uniform in size - looks more natural
+ */
+function generateRelaxedPoints(numCells, width, height, random, relaxIterations = 2) {
+  // Start with random points
+  let points = [];
+  for (let i = 0; i < numCells; i++) {
+    points.push([random() * width, random() * height]);
+  }
+
+  // Lloyd relaxation: move points to centroids
+  for (let iter = 0; iter < relaxIterations; iter++) {
+    const delaunay = Delaunay.from(points);
+    const voronoi = delaunay.voronoi([0, 0, width, height]);
+
+    const newPoints = [];
+    for (let i = 0; i < numCells; i++) {
+      const polygon = voronoi.cellPolygon(i);
+      if (!polygon) {
+        newPoints.push(points[i]);
+        continue;
+      }
+
+      // Calculate centroid
+      let cx = 0, cy = 0;
+      for (let j = 0; j < polygon.length; j++) {
+        cx += polygon[j][0];
+        cy += polygon[j][1];
+      }
+      cx /= polygon.length;
+      cy /= polygon.length;
+
+      // Clamp to bounds
+      cx = Math.max(0, Math.min(width, cx));
+      cy = Math.max(0, Math.min(height, cy));
+
+      newPoints.push([cx, cy]);
+    }
+
+    points = newPoints;
+  }
+
+  return points;
+}
+
+/**
  * Seeded random (Mulberry32)
  */
 function seededRandom(seed) {
@@ -425,20 +476,20 @@ function hashCode(str) {
 }
 
 /**
- * Biome colors (Azgaar style - muted, pastel)
+ * Biome colors (Azgaar-inspired - natural, muted tones)
  */
 export function getBiomeColor(biome) {
   const colors = {
-    ocean: '#a5c9d4',      // Light blue-grey (muted ocean)
-    lake: '#b8d9e8',       // Lighter blue (lakes)
-    beach: '#f5e6d3',      // Pale sand
-    desert: '#e8dcc0',     // Muted beige/tan
-    grassland: '#d4e7b0',  // Pale green
-    forest: '#9fb896',     // Muted forest green
-    taiga: '#a8b5a5',      // Grey-green
-    tundra: '#d5dcd5',     // Very pale grey-green
-    snow: '#f5f5f5',       // Off-white
-    mountain: '#c8bfb0'    // Pale brown-grey
+    ocean: '#85b3d1',      // Soft ocean blue
+    lake: '#a3c4d9',       // Calm lake blue
+    beach: '#eddcbb',      // Natural sand
+    desert: '#e0c9a0',     // Warm desert tan
+    grassland: '#c5d99e',  // Fresh grassland green
+    forest: '#8ba888',     // Rich forest green
+    taiga: '#9ba896',      // Cool taiga grey-green
+    tundra: '#bac4ba',     // Cold tundra grey
+    snow: '#f0f0f0',       // Pure snow white
+    mountain: '#b5a895'    // Rocky mountain grey-brown
   };
   return colors[biome] || '#d0d0d0';
 }
