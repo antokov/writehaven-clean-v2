@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
-import { generateMap, getBiomeColor } from '../utils/mapGenerator';
+import { generateHeightmap, getTerrainColor } from '../utils/heightmapGenerator';
 import '../styles/mapview.css';
 
 export default function MapView() {
@@ -47,8 +47,8 @@ export default function MapView() {
       setLoading(true);
       setError(null);
 
-      // Generate map with political states (reduced cell count for larger territories)
-      const generated = generateMap(seed, 1200, 800, 400);
+      // Generate heightmap-based map for natural terrain
+      const generated = generateHeightmap(seed, 1200, 800);
       setMapData(generated);
 
       // Auto-save
@@ -70,7 +70,7 @@ export default function MapView() {
         seed,
         width: dataToSave.width,
         height: dataToSave.height,
-        num_cells: dataToSave.numCells,
+        resolution: dataToSave.resolution,
         data: dataToSave
       });
       setLastSaved(new Date().toISOString());
@@ -82,17 +82,18 @@ export default function MapView() {
     }
   }
 
-  function exportSVG() {
+  function exportPNG() {
     if (!svgRef.current) return;
 
-    const svgData = svgRef.current.outerHTML;
-    const blob = new Blob([svgData], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `map-${seed}.svg`;
-    link.click();
-    URL.revokeObjectURL(url);
+    const canvas = svgRef.current;
+    canvas.toBlob((blob) => {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `map-${seed}.png`;
+      link.click();
+      URL.revokeObjectURL(url);
+    });
   }
 
   function exportJSON() {
@@ -143,12 +144,12 @@ export default function MapView() {
           <h3 className="panel-title">{t('map.export')}</h3>
 
           <button
-            onClick={exportSVG}
+            onClick={exportPNG}
             disabled={!mapData}
             className="btn btn-secondary"
             style={{ width: '100%', marginBottom: '0.5rem' }}
           >
-            {t('map.exportSvg')}
+            {t('map.exportPng') || 'Export PNG'}
           </button>
 
           <button
@@ -221,9 +222,9 @@ export default function MapView() {
   );
 }
 
-// Map Renderer Component with zoom/pan
+// Canvas-based Heightmap Renderer with zoom/pan
 const MapRenderer = React.forwardRef(({ mapData }, ref) => {
-  if (!mapData || !mapData.cells) return null;
+  if (!mapData || !mapData.heightmap) return null;
 
   const containerRef = useRef(null);
   const [zoom, setZoom] = useState(1);
@@ -231,7 +232,138 @@ const MapRenderer = React.forwardRef(({ mapData }, ref) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
-  const { width, height, cells, rivers } = mapData;
+  const { width, height, heightmap, moisturemap, temperaturemap, waterLevel, states, resolution, mapWidth, mapHeight } = mapData;
+
+  // Render heightmap to canvas
+  useEffect(() => {
+    if (!ref || !mapData) return;
+
+    const canvas = ref;
+    const ctx = canvas.getContext('2d');
+
+    // Set canvas size
+    canvas.width = width;
+    canvas.height = height;
+
+    // Create image data
+    const imageData = ctx.createImageData(width, height);
+    const pixels = imageData.data;
+
+    // Render each pixel based on heightmap
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const mapX = Math.min(Math.floor(x / resolution), mapWidth - 1);
+        const mapY = Math.min(Math.floor(y / resolution), mapHeight - 1);
+
+        const elevation = heightmap[mapY][mapX];
+        const moisture = moisturemap[mapY][mapX];
+        const temperature = temperaturemap[mapY][mapX];
+
+        const color = getTerrainColor(elevation, moisture, temperature, waterLevel);
+        const rgb = hexToRgb(color);
+
+        const idx = (y * width + x) * 4;
+        pixels[idx] = rgb.r;
+        pixels[idx + 1] = rgb.g;
+        pixels[idx + 2] = rgb.b;
+        pixels[idx + 3] = 255;
+      }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+
+    // Draw state borders
+    drawStateBorders(ctx, mapData);
+  }, [mapData, ref]);
+
+  const hexToRgb = (hex) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : { r: 0, g: 0, b: 0 };
+  };
+
+  const drawStateBorders = (ctx, data) => {
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = 3;
+
+    // Create state map for quick lookup
+    const stateMap = Array(data.mapHeight).fill(null).map(() => Array(data.mapWidth).fill(-1));
+
+    // Build state ownership map using flood-fill from capitals
+    data.states.forEach((state) => {
+      const queue = [state.capital];
+      stateMap[state.capital.y][state.capital.x] = state.id;
+
+      while (queue.length > 0) {
+        const { x, y } = queue.shift();
+
+        const neighbors = [
+          { x: x - 1, y },
+          { x: x + 1, y },
+          { x, y: y - 1 },
+          { x, y: y + 1 }
+        ];
+
+        for (const n of neighbors) {
+          if (n.x < 0 || n.x >= data.mapWidth || n.y < 0 || n.y >= data.mapHeight) continue;
+          if (data.heightmap[n.y][n.x] <= data.waterLevel) continue;
+          if (stateMap[n.y][n.x] !== -1) continue;
+
+          stateMap[n.y][n.x] = state.id;
+          queue.push(n);
+        }
+      }
+    });
+
+    // Draw borders where states meet
+    for (let y = 0; y < data.mapHeight; y++) {
+      for (let x = 0; x < data.mapWidth; x++) {
+        const currentState = stateMap[y][x];
+        if (currentState === -1) continue;
+
+        // Check right neighbor
+        if (x < data.mapWidth - 1 && stateMap[y][x + 1] !== -1 && stateMap[y][x + 1] !== currentState) {
+          ctx.beginPath();
+          ctx.moveTo((x + 1) * data.resolution, y * data.resolution);
+          ctx.lineTo((x + 1) * data.resolution, (y + 1) * data.resolution);
+          ctx.stroke();
+        }
+
+        // Check bottom neighbor
+        if (y < data.mapHeight - 1 && stateMap[y + 1][x] !== -1 && stateMap[y + 1][x] !== currentState) {
+          ctx.beginPath();
+          ctx.moveTo(x * data.resolution, (y + 1) * data.resolution);
+          ctx.lineTo((x + 1) * data.resolution, (y + 1) * data.resolution);
+          ctx.stroke();
+        }
+      }
+    }
+
+    // Draw state labels
+    ctx.shadowBlur = 0;
+    ctx.font = 'bold 20px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    data.states.forEach((state) => {
+      const x = state.capital.x * data.resolution;
+      const y = state.capital.y * data.resolution;
+
+      // White outline
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 4;
+      ctx.strokeText(state.name, x, y);
+
+      // Black text
+      ctx.fillStyle = '#000000';
+      ctx.fillText(state.name, x, y);
+    });
+  };
 
   // Zoom with mouse wheel
   const handleWheel = useCallback((e) => {
@@ -273,19 +405,6 @@ const MapRenderer = React.forwardRef(({ mapData }, ref) => {
     return () => container.removeEventListener('wheel', handleWheel);
   }, [handleWheel]);
 
-  // Separate cells by type for layered rendering
-  const oceanCells = cells.filter(c => c.isOcean);
-  const lakeCells = cells.filter(c => c.isLake);
-  const coastCells = cells.filter(c => {
-    if (c.isOcean || c.isLake) return false;
-    return c.neighbors.some(nId => cells[nId].isOcean);
-  });
-  const mountainCells = cells.filter(c => c.isMountain);
-  const landCells = cells.filter(c => !c.isOcean && !c.isLake);
-
-  // Get states from mapData
-  const { states = [] } = mapData;
-
   return (
     <div
       ref={containerRef}
@@ -310,255 +429,16 @@ const MapRenderer = React.forwardRef(({ mapData }, ref) => {
         <span className="zoom-level">{Math.round(zoom * 100)}%</span>
       </div>
 
-      <svg
+      <canvas
         ref={ref}
-        viewBox={`0 0 ${width} ${height}`}
         className="fantasy-map"
-        xmlns="http://www.w3.org/2000/svg"
         style={{
           transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
           transformOrigin: 'center center',
-          transition: isDragging ? 'none' : 'transform 0.1s ease-out'
+          transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+          imageRendering: 'pixelated'
         }}
-      >
-        <title>Fantasy Map</title>
-
-      {/* Layer 1: Ocean (no visible cell borders) */}
-      <g id="ocean" className="layer-ocean">
-        {oceanCells.map(cell => {
-          if (!cell.polygon) return null;
-          const pathData = `M${cell.polygon.map(p => p.join(',')).join('L')}Z`;
-          return (
-            <path
-              key={`ocean-${cell.id}`}
-              d={pathData}
-              fill={getBiomeColor('ocean')}
-              stroke="none"
-            />
-          );
-        })}
-      </g>
-
-      {/* Layer 2: Lakes */}
-      <g id="lakes" className="layer-lakes">
-        {lakeCells.map(cell => {
-          if (!cell.polygon) return null;
-          const pathData = `M${cell.polygon.map(p => p.join(',')).join('L')}Z`;
-          return (
-            <path
-              key={`lake-${cell.id}`}
-              d={pathData}
-              fill={getBiomeColor('lake')}
-              stroke="#3a3a3a"
-              strokeWidth="0.5"
-              strokeOpacity="0.3"
-            />
-          );
-        })}
-      </g>
-
-      {/* Layer 3: States (political territories) */}
-      <g id="states" className="layer-states">
-        {states.map(state => {
-          // Render all cells belonging to this state
-          return state.cells.map(cellId => {
-            const cell = cells[cellId];
-            if (!cell || !cell.polygon) return null;
-            const pathData = `M${cell.polygon.map(p => p.join(',')).join('L')}Z`;
-            return (
-              <path
-                key={`state-${state.id}-cell-${cellId}`}
-                d={pathData}
-                fill={state.color}
-                stroke="none"
-              />
-            );
-          });
-        })}
-      </g>
-
-      {/* Layer 3b: State Borders (only external borders between different states) */}
-      <g id="state-borders" className="layer-state-borders">
-        {states.map(state => {
-          // Collect all border polygon edges (not cell centers!)
-          const borderSegments = [];
-
-          state.cells.forEach(cellId => {
-            const cell = cells[cellId];
-            if (!cell || !cell.polygon) return;
-
-            // Check each edge of the polygon
-            for (let i = 0; i < cell.polygon.length; i++) {
-              const p1 = cell.polygon[i];
-              const p2 = cell.polygon[(i + 1) % cell.polygon.length];
-
-              // Find which neighbor shares this edge
-              const neighborId = cell.neighbors.find(nId => {
-                const neighbor = cells[nId];
-                if (!neighbor || !neighbor.polygon) return false;
-
-                // Check if neighbor's polygon contains both points
-                return neighbor.polygon.some(np =>
-                  Math.abs(np[0] - p1[0]) < 0.1 && Math.abs(np[1] - p1[1]) < 0.1
-                ) && neighbor.polygon.some(np =>
-                  Math.abs(np[0] - p2[0]) < 0.1 && Math.abs(np[1] - p2[1]) < 0.1
-                );
-              });
-
-              const neighbor = neighborId !== undefined ? cells[neighborId] : null;
-
-              // Only draw border if neighbor is different state or water
-              if (!neighbor || neighbor.isOcean || neighbor.isLake || neighbor.stateId !== state.id) {
-                borderSegments.push({ p1, p2 });
-              }
-            }
-          });
-
-          // Draw border segments
-          return borderSegments.map((seg, idx) => (
-            <line
-              key={`border-${state.id}-${idx}`}
-              x1={seg.p1[0]}
-              y1={seg.p1[1]}
-              x2={seg.p2[0]}
-              y2={seg.p2[1]}
-              stroke="#3a3a3a"
-              strokeWidth="1.5"
-              strokeOpacity="0.7"
-              strokeLinecap="round"
-            />
-          ));
-        })}
-      </g>
-
-      {/* Layer 4: Coastlines (smooth ocean borders) */}
-      <g id="coast" className="layer-coast">
-        {landCells.map(cell => {
-          if (!cell.polygon) return null;
-
-          // Draw only edges that border ocean/lake
-          const coastSegments = [];
-          for (let i = 0; i < cell.polygon.length; i++) {
-            const p1 = cell.polygon[i];
-            const p2 = cell.polygon[(i + 1) % cell.polygon.length];
-
-            // Check if this edge borders water
-            const bordersWater = cell.neighbors.some(nId => {
-              const neighbor = cells[nId];
-              if (!neighbor || !neighbor.polygon) return false;
-              if (!neighbor.isOcean && !neighbor.isLake) return false;
-
-              // Check if neighbor shares this edge
-              return neighbor.polygon.some(np =>
-                Math.abs(np[0] - p1[0]) < 0.1 && Math.abs(np[1] - p1[1]) < 0.1
-              ) && neighbor.polygon.some(np =>
-                Math.abs(np[0] - p2[0]) < 0.1 && Math.abs(np[1] - p2[1]) < 0.1
-              );
-            });
-
-            if (bordersWater) {
-              coastSegments.push({ p1, p2 });
-            }
-          }
-
-          return coastSegments.map((seg, idx) => (
-            <line
-              key={`coast-${cell.id}-${idx}`}
-              x1={seg.p1[0]}
-              y1={seg.p1[1]}
-              x2={seg.p2[0]}
-              y2={seg.p2[1]}
-              stroke="#4a6fa5"
-              strokeWidth="2"
-              strokeOpacity="0.5"
-              strokeLinecap="round"
-            />
-          ));
-        })}
-      </g>
-
-      {/* Layer 5: Rivers */}
-      <g id="rivers" className="layer-rivers">
-        {rivers && rivers.map((river, idx) => {
-          const riverPoints = river.path.map(cellId => {
-            const cell = cells[cellId];
-            return [cell.x, cell.y];
-          });
-
-          if (riverPoints.length < 2) return null;
-
-          const pathData = `M${riverPoints.map(p => p.join(',')).join('L')}`;
-
-          return (
-            <path
-              key={`river-${idx}`}
-              d={pathData}
-              stroke="#3b8fc4"
-              strokeWidth={river.delta ? "3" : "2"}
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          );
-        })}
-      </g>
-
-      {/* Layer 6: Mountains (overlay) */}
-      <g id="mountains" className="layer-mountains">
-        {mountainCells.map(cell => {
-          if (!cell.polygon) return null;
-          const pathData = `M${cell.polygon.map(p => p.join(',')).join('L')}Z`;
-          return (
-            <path
-              key={`mountain-${cell.id}`}
-              d={pathData}
-              fill="none"
-              stroke="rgba(100,80,60,0.3)"
-              strokeWidth="1"
-            />
-          );
-        })}
-      </g>
-
-      {/* Layer 7: State Labels */}
-      <g id="state-labels" className="layer-labels">
-        {states.map(state => {
-          // Calculate centroid of state
-          if (state.cells.length === 0) return null;
-
-          let sumX = 0, sumY = 0;
-          state.cells.forEach(cellId => {
-            const cell = cells[cellId];
-            if (cell) {
-              sumX += cell.x;
-              sumY += cell.y;
-            }
-          });
-
-          const centroidX = sumX / state.cells.length;
-          const centroidY = sumY / state.cells.length;
-
-          return (
-            <text
-              key={`label-${state.id}`}
-              x={centroidX}
-              y={centroidY}
-              textAnchor="middle"
-              fill="#1a1a1a"
-              fontSize="16"
-              fontWeight="600"
-              fontFamily="serif"
-              stroke="#ffffff"
-              strokeWidth="3"
-              paintOrder="stroke"
-              style={{ pointerEvents: 'none' }}
-            >
-              {state.name}
-            </text>
-          );
-        })}
-      </g>
-    </svg>
+      />
     </div>
   );
 });
