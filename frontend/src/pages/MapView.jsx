@@ -236,9 +236,9 @@ const MapRenderer = React.forwardRef(({ mapData }, ref) => {
 
   // Render heightmap to canvas
   useEffect(() => {
-    if (!ref || !mapData) return;
+    if (!ref || !ref.current || !mapData) return;
 
-    const canvas = ref;
+    const canvas = ref.current;
     const ctx = canvas.getContext('2d');
 
     // Set canvas size
