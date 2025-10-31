@@ -131,6 +131,7 @@ const TABS = [
   { key: "relations",    labelKey: "characters.tabs.background" },   // = Hintergrund
   { key: "skills",       labelKey: "characters.tabs.skills" },
   { key: "links",        labelKey: "characters.tabs.relationships" }, // = Beziehungen
+  { key: "mentions",     labelKey: "characters.tabs.mentions" },
   { key: "notes",        labelKey: "characters.tabs.notes" },
 ];
 
@@ -632,10 +633,154 @@ function WorldGraphModal({ open, onClose, characters, activeId, onJumpToCharacte
   );
 }
 
+/* ---------------- Mentions Tab ---------------- */
+function MentionsTab({ characterId, projectId }) {
+  const { t } = useTranslation();
+  const [mentions, setMentions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [groupBy, setGroupBy] = useState('chronological'); // 'chronological' or 'count'
+
+  useEffect(() => {
+    if (!characterId) return;
+
+    const loadMentions = async () => {
+      setLoading(true);
+      try {
+        const response = await axios.get(`/api/characters/${characterId}/mentions`);
+        setMentions(response.data || []);
+      } catch (err) {
+        console.error('Failed to load mentions:', err);
+        setMentions([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadMentions();
+  }, [characterId]);
+
+  // Group mentions by scene
+  const groupedMentions = useMemo(() => {
+    const groups = {};
+    mentions.forEach(m => {
+      const key = `${m.chapter.id}-${m.scene.id}`;
+      if (!groups[key]) {
+        groups[key] = {
+          chapter: m.chapter,
+          scene: m.scene,
+          mentions: []
+        };
+      }
+      groups[key].mentions.push(m);
+    });
+
+    const result = Object.values(groups);
+
+    if (groupBy === 'chronological') {
+      // Sort by chapter order, then scene order
+      return result.sort((a, b) => {
+        if (a.chapter.order_index !== b.chapter.order_index) {
+          return a.chapter.order_index - b.chapter.order_index;
+        }
+        return a.scene.order_index - b.scene.order_index;
+      });
+    } else {
+      // Sort by number of mentions (descending)
+      return result.sort((a, b) => b.mentions.length - a.mentions.length);
+    }
+  }, [mentions, groupBy]);
+
+  const totalMentions = mentions.length;
+
+  if (loading) {
+    return <div style={{ padding: 20 }}>{t('common.loading')}</div>;
+  }
+
+  return (
+    <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h3 style={{ margin: 0, marginBottom: 4 }}>Erwähnungen</h3>
+          <p style={{ margin: 0, fontSize: 14, color: 'var(--muted)' }}>
+            {totalMentions} Erwähnung{totalMentions !== 1 ? 'en' : ''} in {groupedMentions.length} Szene{groupedMentions.length !== 1 ? 'n' : ''}
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            className={`btn-sm ${groupBy === 'chronological' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setGroupBy('chronological')}
+            style={{ padding: '6px 12px', fontSize: 13 }}
+          >
+            Chronologisch
+          </button>
+          <button
+            className={`btn-sm ${groupBy === 'count' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setGroupBy('count')}
+            style={{ padding: '6px 12px', fontSize: 13 }}
+          >
+            Nach Häufigkeit
+          </button>
+        </div>
+      </div>
+
+      {groupedMentions.length === 0 ? (
+        <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>
+          Noch keine Erwähnungen verlinkt
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {groupedMentions.map((group, idx) => (
+            <div key={idx} style={{
+              border: '1px solid var(--line)',
+              borderRadius: 8,
+              padding: 12,
+              background: 'var(--panel-bg)'
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 8
+              }}>
+                <a
+                  href={`/app/project/${projectId}/writing`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.location.href = `/app/project/${projectId}/writing`;
+                  }}
+                  style={{
+                    fontWeight: 600,
+                    color: 'var(--brand)',
+                    textDecoration: 'none'
+                  }}
+                >
+                  {group.chapter.title} → {group.scene.title}
+                </a>
+                <span style={{
+                  fontSize: 12,
+                  color: 'var(--muted)',
+                  background: 'var(--muted-bg)',
+                  padding: '2px 8px',
+                  borderRadius: 4
+                }}>
+                  {group.mentions.length}×
+                </span>
+              </div>
+              <div style={{ fontSize: 14, color: 'var(--text)', fontStyle: 'italic' }}>
+                {group.mentions[0].snippet}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ---------------- Editor ---------------- */
 const CharacterEditor = React.memo(function CharacterEditor({
   characterId, profile, onChangeProfilePath, activeTab, setActiveTab,
-  lastSavedAt, allCharacters, onAddRelation, onRemoveRelation, onOpenGraph
+  lastSavedAt, allCharacters, onAddRelation, onRemoveRelation, onOpenGraph, projectId
 }) {
   const { t } = useTranslation();
   return (
@@ -819,6 +964,10 @@ const CharacterEditor = React.memo(function CharacterEditor({
           onChangeProfilePath={onChangeProfilePath}
           getPath={getPath}
         />
+      )}
+
+      {activeTab === "mentions" && (
+        <MentionsTab characterId={characterId} projectId={projectId} />
       )}
 
       {activeTab === "notes" && (
@@ -1115,6 +1264,7 @@ export default function Characters() {
               onAddRelation={onAddRelation}
               onRemoveRelation={onRemoveRelation}
               onOpenGraph={()=>setShowGraph(true)}
+              projectId={pid}
             />
             <RelationsGraphModal
               open={showGraph}

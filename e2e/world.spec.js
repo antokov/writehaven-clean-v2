@@ -317,6 +317,6 @@ from across the realm gather to exchange goods and stories.`;
 
   test('should show "none selected" message before creating element', async ({ page }) => {
     // Prüfe dass "None Selected" Nachricht angezeigt wird
-    await expect(page.locator('.panel')).toContainText(/None selected|Nichts ausgewählt|Select|Wähle/i);
+    await expect(page.locator('.panel')).toContainText(/None selected|Nichts ausgewählt|Kein Element ausgewählt|Select|Wähle/i);
   });
 });

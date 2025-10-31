@@ -83,7 +83,7 @@
 }
 .empty-sub{ font-size:.95rem; }
 
-/* --- Kapitel-Überblick -------------------------------------------------- */
+/* --- Kapitel-ï¿½berblick -------------------------------------------------- */
 .chapter-overview{
   display:flex; flex-direction:column; gap: 14px;
   height: 100%;
@@ -110,7 +110,7 @@
   white-space: nowrap;
 }
 
-/* Grid der Szenen – feste Kachelgröße */
+/* Grid der Szenen ï¿½ feste Kachelgrï¿½ï¿½e */
 .scene-grid{
   display:grid;
   grid-auto-flow: row;
@@ -119,7 +119,7 @@
   gap: 18px;
 }
 
-/* Kachel (fixe Größe) */
+/* Kachel (fixe Grï¿½ï¿½e) */
 .scene-card{
   position: relative;
   display:flex;
@@ -158,19 +158,19 @@
 .scene-card-title{
   font-weight: 800;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%;
-  padding-right: 28px; /* Platz für Delete-Icon */
+  padding-right: 28px; /* Platz fï¿½r Delete-Icon */
 }
 
 .scene-card-preview{
   color: var(--muted);
   font-size: .95rem;
   line-height: 1.45;
-  flex: 1 1 auto;            /* füllt die Karte bis zur fixen Höhe */
+  flex: 1 1 auto;            /* fï¿½llt die Karte bis zur fixen Hï¿½he */
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* „Neue Szene“ als Kachel */
+/* ï¿½Neue Szeneï¿½ als Kachel */
 .scene-card.add-card{
   align-items:center;
   justify-content:center;
@@ -183,7 +183,7 @@
   border-color: color-mix(in oklab, var(--brand) 55%, #86efac 45%);
 }
 
-/* Leerer Kapitel-Überblick mit mittigem CTA */
+/* Leerer Kapitel-ï¿½berblick mit mittigem CTA */
 .overview-empty{
   height: 100%;
   display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
@@ -193,3 +193,96 @@
 }
 .overview-empty .empty-title{ font-weight:800; font-size:1.1rem; color: var(--text); }
 .overview-empty .empty-sub{ font-size:.95rem; }
+
+/* --- Tools Panel (Right Sidebar) --------------------------------------- */
+.tools-panel {
+  position: relative;
+  z-index: 2;
+  background: var(--panel-bg);
+  border: 1px solid var(--line);
+  border-radius: 0;
+  padding: 0;
+  box-shadow: var(--shadow-1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tools-panel.closed {
+  /* Grid-Spalte wird Ã¼ber :has() Selector angepasst */
+}
+
+.tools-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--line);
+  min-height: 48px;
+}
+
+.tools-title {
+  font-weight: 800;
+  font-size: 1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tools-panel.closed .tools-title {
+  display: none;
+}
+
+.tools-toggle {
+  margin-left: auto;
+}
+
+.tools-panel.closed .tools-toggle {
+  margin: 0 auto;
+}
+
+.tools-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.tool-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tool-section-title {
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.btn-analyze-entities {
+  width: 100%;
+  padding: 0.65rem 1rem;
+  background: var(--brand);
+  color: white;
+  border: none;
+  border-radius: 0;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.btn-analyze-entities:hover {
+  background: var(--brand-dark, #2563eb);
+  transform: translateY(-1px);
+}
+
+.btn-analyze-entities:active {
+  transform: translateY(0);
+}

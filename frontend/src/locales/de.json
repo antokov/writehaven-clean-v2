@@ -22,6 +22,13 @@
   },
   "writing": {
     "structure": "Struktur",
+    "tools": "Tools",
+    "closeTools": "Tools schließen",
+    "openTools": "Tools öffnen",
+    "entityRecognition": "Entitätserkennung",
+    "analyzeEntities": "Entitäten analysieren",
+    "entityCheckOn": "Entitäten Check ein",
+    "entityCheckOff": "Entitäten Check aus",
     "addChapter": "Kapitel hinzufügen",
     "addScene": "Szene hinzufügen",
     "showChapter": "Kapitel anzeigen",
@@ -34,11 +41,11 @@
     "noChapters": "Noch keine Kapitel.",
     "createFirstChapter": "Erstelle zuerst ein Kapitel.",
     "deleteChapter": "Kapitel löschen",
-    "deleteChapterMessage_zero": "Möchtest du das Kapitel „{{title}}“ wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
-    "deleteChapterMessage_one": "Möchtest du das Kapitel „{{title}}“ wirklich löschen? Auch {{count}} Szene wird gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
-    "deleteChapterMessage_other": "Möchtest du das Kapitel „{{title}}“ wirklich löschen? Auch alle {{count}} Szenen werden gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteChapterMessage_zero": "Möchtest du das Kapitel \"{{title}}\" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteChapterMessage_one": "Möchtest du das Kapitel \"{{title}}\" wirklich löschen? Auch {{count}} Szene wird gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteChapterMessage_other": "Möchtest du das Kapitel \"{{title}}\" wirklich löschen? Auch alle {{count}} Szenen werden gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
     "deleteScene": "Szene löschen",
-    "deleteSceneMessage": "Möchtest du die Szene „{{title}}“ wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteSceneMessage": "Möchtest du die Szene \"{{title}}\" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
     "defaultChapterTitle": "Kapitel {{index}}",
     "defaultSceneTitle": "Szene {{index}}",
     "noScenesYet": "Noch keine Szenen.",
@@ -109,6 +116,7 @@
     "writing": "Schreiben",
     "characters": "Charaktere",
     "world": "Welt",
+    "map": "Karte",
     "export": "Export",
     "projectSettings": "Projekteinstellungen"
   },
@@ -211,6 +219,7 @@
       "background": "Hintergrund",
       "skills": "Fähigkeiten",
       "relationships": "Beziehungen",
+      "mentions": "Erwähnungen",
       "notes": "Notizen"
     },
     "skills": {
@@ -587,6 +596,44 @@
       "orgs": "Organisationen",
       "tech": "Technik & Baukunst",
       "plot": "Plot-Elemente"
+    }
+  },
+  "map": {
+    "title": "Karte",
+    "generateNew": "Neue Welt generieren",
+    "seedLabel": "Seed",
+    "seedPlaceholder": "Beliebiger Text oder Zahl...",
+    "seedHint": "Gleicher Seed erzeugt die gleiche Karte",
+    "generate": "Generieren",
+    "generating": "Generiere Karte...",
+    "export": "Export",
+    "exportSvg": "Als SVG exportieren",
+    "exportJson": "Als JSON exportieren",
+    "save": "Speichern",
+    "saving": "Speichere...",
+    "saved": "Gespeichert!",
+    "lastSaved": "Zuletzt gespeichert: {{time}}",
+    "noMap": "Noch keine Karte generiert.",
+    "generateFirst": "Generiere zuerst eine Welt.",
+    "loading": "Lade Karte...",
+    "biomes": {
+      "ocean": "Ozean",
+      "lake": "See",
+      "water": "Wasser",
+      "beach": "Strand",
+      "desert": "Wüste",
+      "grassland": "Grasland",
+      "forest": "Wald",
+      "taiga": "Taiga",
+      "tundra": "Tundra",
+      "snow": "Schnee",
+      "mountain": "Gebirge"
+    },
+    "errors": {
+      "loadFailed": "Karte konnte nicht geladen werden.",
+      "saveFailed": "Karte konnte nicht gespeichert werden.",
+      "generateFailed": "Kartengenerierung fehlgeschlagen.",
+      "exportFailed": "Export fehlgeschlagen."
     }
   },
   "export": {

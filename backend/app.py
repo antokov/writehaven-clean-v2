@@ -17,13 +17,13 @@ load_dotenv()
 
 try:
     from backend.extensions import db
-    from backend.models import Project, Chapter, Scene, Character, WorldNode, User, Role
+    from backend.models import Project, Chapter, Scene, Character, WorldNode, User, Role, Mention, Map
     from backend.word_parser import parse_word_document
     from backend.security_config import get_security_config
     from backend.console_mail import ConsoleMailBackend
 except ImportError:
     from extensions import db
-    from models import Project, Chapter, Scene, Character, WorldNode, User, Role
+    from models import Project, Chapter, Scene, Character, WorldNode, User, Role, Mention, Map
     from word_parser import parse_word_document
     from security_config import get_security_config
     from console_mail import ConsoleMailBackend
@@ -124,6 +124,7 @@ def create_app():
     admin.add_view(ModelView(Scene, db.session))
     admin.add_view(ModelView(Character, db.session))
     admin.add_view(ModelView(WorldNode, db.session))
+    admin.add_view(ModelView(Map, db.session))
 
     # Flask-Security-Too Setup
     user_datastore = SQLAlchemyUserDatastore(db, User, Role)
@@ -916,6 +917,34 @@ Sent from WriteHaven Feedback Form
         db.session.commit()
         return ok({"ok": True})
 
+    @app.post("/api/projects/<int:pid>/ignore-entity")
+    @token_auth_required
+    def ignore_entity(pid):
+        """Add a word to the project's ignored entities list"""
+        p = Project.query.filter_by(id=pid, user_id=get_current_user().id).first()
+        if not p: return not_found()
+
+        data = request.get_json() or {}
+        word = data.get("word", "").strip()
+
+        if not word:
+            return jsonify({"error": "Word is required"}), 400
+
+        # Parse existing ignored entities
+        try:
+            ignored = json.loads(p.ignored_entities or "[]")
+        except:
+            ignored = []
+
+        # Add word if not already in list (case-insensitive check)
+        word_lower = word.lower()
+        if word_lower not in [w.lower() for w in ignored]:
+            ignored.append(word)
+            p.ignored_entities = json.dumps(ignored, ensure_ascii=False)
+            db.session.commit()
+
+        return ok({"ignored_entities": ignored})
+
     # ---------- Chapters ----------
     @app.get("/api/projects/<int:pid>/chapters")
     @token_auth_required
@@ -1037,6 +1066,552 @@ Sent from WriteHaven Feedback Form
         db.session.delete(s); db.session.commit()
         return ok({"ok": True})
 
+    # ---------- NLP & Mentions ----------
+    try:
+        from backend.nlp_service import analyze_paragraph, extract_entities
+    except ImportError:
+        from nlp_service import analyze_paragraph, extract_entities
+
+    @app.post("/api/scenes/<int:sid>/analyze")
+    @token_auth_required
+    def analyze_scene_paragraph(sid):
+        """Analyze a paragraph from a scene for entity extraction"""
+        s = Scene.query.get(sid)
+        if not s: return not_found()
+        if not verify_chapter_ownership(s.chapter_id, get_current_user().id):
+            return forbidden()
+
+        data = request.get_json() or {}
+        text = data.get("text", "")
+
+        if not text or not text.strip():
+            return ok({"entities": [], "suggestions": []})
+
+        # Get project language and ignored entities
+        chapter = Chapter.query.get(s.chapter_id)
+        project = Project.query.get(chapter.project_id)
+        language = project.language or "en"
+
+        # Parse ignored entities
+        try:
+            ignored_words = json.loads(project.ignored_entities or "[]")
+        except:
+            ignored_words = []
+
+        # Get existing characters and locations for fuzzy matching
+        characters = Character.query.filter_by(project_id=project.id).all()
+        char_list = [{"id": c.id, "name": c.name} for c in characters]
+
+        locations = WorldNode.query.filter_by(project_id=project.id).all()
+        loc_list = [{"id": w.id, "title": w.title} for w in locations]
+
+        # Analyze the paragraph
+        result = analyze_paragraph(text, language, char_list, loc_list, ignored_words)
+
+        # Check if any detected entities are already linked in other scenes of the project
+        # Get all chapters in this project
+        all_chapters = Chapter.query.filter_by(project_id=project.id).all()
+        chapter_ids = [c.id for c in all_chapters]
+
+        # Get all linked mentions (mentions that have character_id or worldnode_id) from all scenes
+        linked_mentions = Mention.query.join(Scene).filter(
+            Scene.chapter_id.in_(chapter_ids),
+            db.or_(Mention.character_id.isnot(None), Mention.worldnode_id.isnot(None))
+        ).all()
+
+        # Create a map of text -> entity info for quick lookup (case-insensitive)
+        # Also track which character IDs are already linked somewhere
+        linked_texts = {}
+        linked_character_ids = set()
+        linked_worldnode_ids = set()
+
+        for m in linked_mentions:
+            text_lower = m.text.lower()
+            if text_lower not in linked_texts:
+                # Get entity name
+                entity_name = None
+                entity_id = None
+                entity_type = m.entity_type
+
+                if m.character_id:
+                    char = Character.query.get(m.character_id)
+                    if char:
+                        entity_name = char.name
+                        entity_id = m.character_id
+                        linked_character_ids.add(m.character_id)
+                elif m.worldnode_id:
+                    world = WorldNode.query.get(m.worldnode_id)
+                    if world:
+                        entity_name = world.title
+                        entity_id = m.worldnode_id
+                        linked_worldnode_ids.add(m.worldnode_id)
+
+                if entity_name:
+                    linked_texts[text_lower] = {
+                        "entity_id": entity_id,
+                        "entity_name": entity_name,
+                        "entity_type": entity_type
+                    }
+
+        # Also add nicknames for characters that are ALREADY LINKED somewhere in the project
+        for char_id in linked_character_ids:
+            char = Character.query.get(char_id)
+            if not char:
+                continue
+
+            # Get the nicknames from the character's profile_json
+            nicknames = []
+            if char.profile_json:
+                try:
+                    profile = json.loads(char.profile_json)
+                    # Get nicknames from the "Spitzname(n)" field
+                    nickname_field = profile.get("Spitzname(n)", "")
+                    if nickname_field and nickname_field.strip():
+                        # Split by comma in case there are multiple nicknames
+                        nicknames = [n.strip() for n in nickname_field.split(",") if n.strip()]
+                except:
+                    pass
+
+            # Add each nickname to linked_texts pointing to the character
+            for nickname in nicknames:
+                nickname_lower = nickname.lower()
+                if nickname_lower not in linked_texts:
+                    linked_texts[nickname_lower] = {
+                        "entity_id": char.id,
+                        "entity_name": char.name,
+                        "entity_type": "PERSON"
+                    }
+
+        # ALSO search text for linked entity names/nicknames that NLP might have missed
+        # This ensures that linked entities are recognized even if NLP doesn't detect them
+        s_content = text  # The text being analyzed
+        additional_entities = []
+
+        for search_text, link_info in linked_texts.items():
+            # Case-insensitive search for each linked text
+            search_lower = search_text.lower()
+            start_pos = 0
+
+            while True:
+                pos = s_content.lower().find(search_lower, start_pos)
+                if pos == -1:
+                    break
+
+                end_pos = pos + len(search_text)
+
+                # Check if this position is already covered by an NLP entity
+                already_covered = False
+                for ent in result.get("entities", []):
+                    if (pos >= ent["start"] and pos < ent["end"]) or \
+                       (end_pos > ent["start"] and end_pos <= ent["end"]):
+                        already_covered = True
+                        break
+
+                if not already_covered:
+                    # Add as additional entity
+                    additional_entities.append({
+                        "text": s_content[pos:end_pos],
+                        "label": link_info["entity_type"],
+                        "start": pos,
+                        "end": end_pos,
+                        "source": "linked"  # Mark as coming from linked entities
+                    })
+
+                start_pos = end_pos
+
+        # Merge NLP entities with additional linked entities
+        all_entities = result.get("entities", []) + additional_entities
+
+        # Auto-link entities that are already linked in other scenes
+        enhanced_suggestions = result.get("suggestions", [])
+        auto_linked_count = 0
+
+        for entity in all_entities:
+            entity_text_lower = entity["text"].lower()
+
+            # Check if this text is already linked in another scene
+            if entity_text_lower in linked_texts:
+                linked_info = linked_texts[entity_text_lower]
+
+                # Check if mention already exists at this position
+                existing_mention = Mention.query.filter_by(
+                    scene_id=sid,
+                    start_offset=entity["start"],
+                    end_offset=entity["end"]
+                ).first()
+
+                if not existing_mention:
+                    # Automatically create the mention (auto-link)
+                    mention = Mention(
+                        scene_id=sid,
+                        text=entity["text"],
+                        entity_type=linked_info["entity_type"],
+                        start_offset=entity["start"],
+                        end_offset=entity["end"],
+                        character_id=linked_info["entity_id"] if linked_info["entity_type"] == "PERSON" else None,
+                        worldnode_id=linked_info["entity_id"] if linked_info["entity_type"] == "LOC" else None,
+                        ignored=False
+                    )
+                    db.session.add(mention)
+                    auto_linked_count += 1
+                elif not (existing_mention.character_id or existing_mention.worldnode_id):
+                    # Update existing unlinked mention to link it
+                    if linked_info["entity_type"] == "PERSON":
+                        existing_mention.character_id = linked_info["entity_id"]
+                        existing_mention.worldnode_id = None
+                    else:
+                        existing_mention.worldnode_id = linked_info["entity_id"]
+                        existing_mention.character_id = None
+                    existing_mention.entity_type = linked_info["entity_type"]
+                    auto_linked_count += 1
+
+        # Commit auto-linked mentions
+        if auto_linked_count > 0:
+            db.session.commit()
+
+        # Update result to include additional entities for frontend display
+        result["entities"] = all_entities
+        result["suggestions"] = enhanced_suggestions
+        result["auto_linked"] = auto_linked_count
+        return ok(result)
+
+    @app.get("/api/scenes/<int:sid>/mentions")
+    @token_auth_required
+    def get_scene_mentions(sid):
+        """Get all mentions for a scene"""
+        s = Scene.query.get(sid)
+        if not s: return not_found()
+        if not verify_chapter_ownership(s.chapter_id, get_current_user().id):
+            return forbidden()
+
+        mentions = Mention.query.filter_by(scene_id=sid).order_by(Mention.start_offset).all()
+
+        result = []
+        for m in mentions:
+            entity_name = None
+            if m.character_id:
+                char = Character.query.get(m.character_id)
+                entity_name = char.name if char else None
+            elif m.worldnode_id:
+                world = WorldNode.query.get(m.worldnode_id)
+                entity_name = world.title if world else None
+
+            result.append({
+                "id": m.id,
+                "text": m.text,
+                "entity_type": m.entity_type,
+                "start": m.start_offset,
+                "end": m.end_offset,
+                "character_id": m.character_id,
+                "worldnode_id": m.worldnode_id,
+                "ignored": m.ignored,
+                "entity_name": entity_name
+            })
+
+        return ok(result)
+
+    @app.post("/api/scenes/<int:sid>/link-entity")
+    @token_auth_required
+    def link_entity_to_mentions(sid):
+        """Link an entity text to a character or location across entire PROJECT (all scenes)"""
+        s = Scene.query.get(sid)
+        if not s: return not_found()
+        if not verify_chapter_ownership(s.chapter_id, get_current_user().id):
+            return forbidden()
+
+        data = request.get_json() or {}
+        entity_text = data.get("text", "").strip()
+        entity_type = data.get("entity_type")  # PERSON or LOC
+        entity_id = data.get("entity_id")
+
+        if not entity_text or not entity_type or not entity_id:
+            return jsonify({"error": "text, entity_type, and entity_id are required"}), 400
+
+        # Validate entity exists and belongs to project
+        chapter = Chapter.query.get(s.chapter_id)
+        project_id = chapter.project_id
+
+        if entity_type == "PERSON":
+            entity = Character.query.filter_by(id=entity_id, project_id=project_id).first()
+            if not entity:
+                return jsonify({"error": "Character not found"}), 404
+        elif entity_type == "LOC":
+            entity = WorldNode.query.filter_by(id=entity_id, project_id=project_id).first()
+            if not entity:
+                return jsonify({"error": "Location not found"}), 404
+        else:
+            return jsonify({"error": "entity_type must be PERSON or LOC"}), 400
+
+        # Get all scenes in the project (project-wide linking)
+        all_chapters = Chapter.query.filter_by(project_id=project_id).all()
+        chapter_ids = [c.id for c in all_chapters]
+        all_scenes = Scene.query.filter(Scene.chapter_id.in_(chapter_ids)).all()
+
+        # Prepare list of texts to search for (entity_text + nicknames if character)
+        search_texts = [entity_text]
+
+        if entity_type == "PERSON":
+            # Also search for character's nicknames
+            char = Character.query.get(entity_id)
+            if char and char.profile_json:
+                try:
+                    profile = json.loads(char.profile_json)
+                    nickname_field = profile.get("Spitzname(n)", "")
+                    if nickname_field and nickname_field.strip():
+                        nicknames = [n.strip() for n in nickname_field.split(",") if n.strip()]
+                        search_texts.extend(nicknames)
+                except:
+                    pass
+
+        mentions_created = 0
+
+        # Search for occurrences in ALL scenes of the project
+        for scene in all_scenes:
+            content = scene.content or ""
+            if not content:
+                continue
+
+            # Search for each text variant (original name + nicknames)
+            for search_text in search_texts:
+                search_text_lower = search_text.lower()
+                start_pos = 0
+
+                while True:
+                    pos = content.lower().find(search_text_lower, start_pos)
+                    if pos == -1:
+                        break
+
+                    end_pos = pos + len(search_text)
+
+                    # Check if mention already exists at this position
+                    existing = Mention.query.filter_by(
+                        scene_id=scene.id,
+                        start_offset=pos,
+                        end_offset=end_pos
+                    ).first()
+
+                    if existing:
+                        # Update existing mention
+                        if entity_type == "PERSON":
+                            existing.character_id = entity_id
+                            existing.worldnode_id = None
+                        else:
+                            existing.worldnode_id = entity_id
+                            existing.character_id = None
+                        existing.text = content[pos:end_pos]
+                        existing.entity_type = entity_type
+                    else:
+                        # Create new mention
+                        mention = Mention(
+                            scene_id=scene.id,
+                            text=content[pos:end_pos],
+                            entity_type=entity_type,
+                            start_offset=pos,
+                            end_offset=end_pos,
+                            character_id=entity_id if entity_type == "PERSON" else None,
+                            worldnode_id=entity_id if entity_type == "LOC" else None,
+                            ignored=False
+                        )
+                        db.session.add(mention)
+                        mentions_created += 1
+
+                    start_pos = end_pos
+
+        db.session.commit()
+
+        return ok({
+            "mentions_created": mentions_created,
+            "scenes_scanned": len(all_scenes),
+            "entity_text": entity_text,
+            "search_texts": search_texts,  # Include all searched texts (name + nicknames)
+            "entity_id": entity_id
+        })
+
+    @app.post("/api/scenes/<int:sid>/mentions")
+    @token_auth_required
+    def save_scene_mentions(sid):
+        """Save mentions for a scene (replaces all existing mentions)"""
+        s = Scene.query.get(sid)
+        if not s: return not_found()
+        if not verify_chapter_ownership(s.chapter_id, get_current_user().id):
+            return forbidden()
+
+        data = request.get_json() or {}
+        mentions_data = data.get("mentions", [])
+
+        # Delete existing mentions for this scene
+        Mention.query.filter_by(scene_id=sid).delete()
+
+        # Create new mentions
+        for m_data in mentions_data:
+            mention = Mention(
+                scene_id=sid,
+                text=m_data.get("text", ""),
+                entity_type=m_data.get("entity_type", "PERSON"),
+                start_offset=m_data.get("start", 0),
+                end_offset=m_data.get("end", 0),
+                character_id=m_data.get("character_id"),
+                worldnode_id=m_data.get("worldnode_id"),
+                ignored=m_data.get("ignored", False)
+            )
+            db.session.add(mention)
+
+        db.session.commit()
+        return ok({"ok": True, "count": len(mentions_data)})
+
+    @app.put("/api/mentions/<int:mid>")
+    @token_auth_required
+    def update_mention(mid):
+        """Update a mention (e.g., link to entity or mark as ignored)"""
+        m = Mention.query.get(mid)
+        if not m: return not_found()
+
+        # Verify ownership via scene -> chapter -> project
+        scene = Scene.query.get(m.scene_id)
+        if not scene or not verify_chapter_ownership(scene.chapter_id, get_current_user().id):
+            return forbidden()
+
+        data = request.get_json() or {}
+
+        if "character_id" in data:
+            m.character_id = data["character_id"]
+        if "worldnode_id" in data:
+            m.worldnode_id = data["worldnode_id"]
+        if "ignored" in data:
+            m.ignored = data["ignored"]
+
+        db.session.commit()
+        return ok({"ok": True})
+
+    @app.delete("/api/mentions/<int:mid>")
+    @token_auth_required
+    def delete_mention(mid):
+        """Delete a mention"""
+        m = Mention.query.get(mid)
+        if not m: return not_found()
+
+        # Verify ownership via scene -> chapter -> project
+        scene = Scene.query.get(m.scene_id)
+        if not scene or not verify_chapter_ownership(scene.chapter_id, get_current_user().id):
+            return forbidden()
+
+        db.session.delete(m)
+        db.session.commit()
+        return ok({"ok": True})
+
+    @app.post("/api/mentions/<int:mid>/unlink")
+    @token_auth_required
+    def unlink_mention(mid):
+        """Remove the link from ALL mentions with the same text across the entire project"""
+        m = Mention.query.get(mid)
+        if not m: return not_found()
+
+        # Verify ownership via scene -> chapter -> project
+        scene = Scene.query.get(m.scene_id)
+        chapter = Chapter.query.get(scene.chapter_id)
+        if not scene or not verify_chapter_ownership(scene.chapter_id, get_current_user().id):
+            return forbidden()
+
+        # Get the entity ID that this mention is linked to
+        entity_id = m.character_id or m.worldnode_id
+        if not entity_id:
+            # Already unlinked
+            return ok({"ok": True, "mention_id": mid, "unlinked_count": 0})
+
+        # Find ALL mentions in the project that are linked to this entity
+        project_id = chapter.project_id
+        all_chapters = Chapter.query.filter_by(project_id=project_id).all()
+        chapter_ids = [c.id for c in all_chapters]
+
+        # Find all mentions linked to this entity
+        if m.character_id:
+            mentions_to_unlink = Mention.query.join(Scene).filter(
+                Scene.chapter_id.in_(chapter_ids),
+                Mention.character_id == entity_id
+            ).all()
+        else:
+            mentions_to_unlink = Mention.query.join(Scene).filter(
+                Scene.chapter_id.in_(chapter_ids),
+                Mention.worldnode_id == entity_id
+            ).all()
+
+        # Unlink all of them
+        unlinked_count = 0
+        for mention in mentions_to_unlink:
+            mention.character_id = None
+            mention.worldnode_id = None
+            unlinked_count += 1
+
+        db.session.commit()
+        return ok({"ok": True, "mention_id": mid, "unlinked_count": unlinked_count})
+
+    @app.post("/api/mentions/<int:mid>/change-type")
+    @token_auth_required
+    def change_mention_type(mid):
+        """Change entity type of a mention (PERSON <-> LOC)"""
+        m = Mention.query.get(mid)
+        if not m: return not_found()
+
+        # Verify ownership via scene -> chapter -> project
+        scene = Scene.query.get(m.scene_id)
+        if not scene or not verify_chapter_ownership(scene.chapter_id, get_current_user().id):
+            return forbidden()
+
+        data = request.get_json() or {}
+        new_type = data.get("entity_type")
+
+        if new_type not in ("PERSON", "LOC"):
+            return jsonify({"error": "entity_type must be PERSON or LOC"}), 400
+
+        # Change the type and clear the link (since the entity type changed)
+        m.entity_type = new_type
+        m.character_id = None
+        m.worldnode_id = None
+        db.session.commit()
+        return ok({"ok": True, "mention_id": mid, "new_type": new_type})
+
+    @app.post("/api/mentions/<int:mid>/relink")
+    @token_auth_required
+    def relink_mention(mid):
+        """Change the linked entity of a mention"""
+        m = Mention.query.get(mid)
+        if not m: return not_found()
+
+        # Verify ownership via scene -> chapter -> project
+        scene = Scene.query.get(m.scene_id)
+        chapter = Chapter.query.get(scene.chapter_id)
+        if not scene or not verify_chapter_ownership(scene.chapter_id, get_current_user().id):
+            return forbidden()
+
+        data = request.get_json() or {}
+        entity_type = data.get("entity_type")
+        entity_id = data.get("entity_id")
+
+        if not entity_type or not entity_id:
+            return jsonify({"error": "entity_type and entity_id are required"}), 400
+
+        # Validate entity exists and belongs to project
+        project_id = chapter.project_id
+
+        if entity_type == "PERSON":
+            entity = Character.query.filter_by(id=entity_id, project_id=project_id).first()
+            if not entity:
+                return jsonify({"error": "Character not found"}), 404
+            m.character_id = entity_id
+            m.worldnode_id = None
+        elif entity_type == "LOC":
+            entity = WorldNode.query.filter_by(id=entity_id, project_id=project_id).first()
+            if not entity:
+                return jsonify({"error": "Location not found"}), 404
+            m.worldnode_id = entity_id
+            m.character_id = None
+        else:
+            return jsonify({"error": "entity_type must be PERSON or LOC"}), 400
+
+        m.entity_type = entity_type
+        db.session.commit()
+        return ok({"ok": True, "mention_id": mid, "entity_id": entity_id, "entity_type": entity_type})
+
     # ---------- Characters ----------
     def _char_to_dict(c: Character):
         return {
@@ -1079,6 +1654,59 @@ Sent from WriteHaven Feedback Form
         c = verify_character_ownership(cid, get_current_user().id)
         if not c: return not_found()
         return ok(_char_to_dict(c))
+
+    @app.get("/api/characters/<int:cid>/mentions")
+    @token_auth_required
+    def get_character_mentions(cid):
+        """Get all mentions of a character across all scenes"""
+        c = verify_character_ownership(cid, get_current_user().id)
+        if not c: return not_found()
+
+        # Get all mentions for this character
+        mentions = Mention.query.filter_by(character_id=cid).order_by(Mention.created_at.desc()).all()
+
+        # Group by scene and include chapter/scene info
+        result = []
+        for m in mentions:
+            scene = Scene.query.get(m.scene_id)
+            if not scene:
+                continue
+
+            chapter = Chapter.query.get(scene.chapter_id)
+            if not chapter:
+                continue
+
+            # Get context snippet (50 chars before and after)
+            content = scene.content or ""
+            start = max(0, m.start_offset - 50)
+            end = min(len(content), m.end_offset + 50)
+            snippet = content[start:end]
+
+            # Add ellipsis if truncated
+            if start > 0:
+                snippet = "..." + snippet
+            if end < len(content):
+                snippet = snippet + "..."
+
+            result.append({
+                "id": m.id,
+                "text": m.text,
+                "start": m.start_offset,
+                "end": m.end_offset,
+                "snippet": snippet,
+                "scene": {
+                    "id": scene.id,
+                    "title": scene.title,
+                    "order_index": scene.order_index
+                },
+                "chapter": {
+                    "id": chapter.id,
+                    "title": chapter.title,
+                    "order_index": chapter.order_index
+                }
+            })
+
+        return ok(result)
 
     @app.put("/api/characters/<int:cid>")
     @app.patch("/api/characters/<int:cid>")
@@ -1186,6 +1814,98 @@ Sent from WriteHaven Feedback Form
         w = verify_world_ownership(w_id, get_current_user().id)
         if not w: return not_found()
         db.session.delete(w); db.session.commit()
+        return ok({"ok": True})
+
+    # ---------- Maps ----------
+    @app.get("/api/projects/<int:pid>/map")
+    @token_auth_required
+    def get_project_map(pid):
+        """Get the map for a project (or null if not exists)"""
+        if not verify_project_ownership(pid, get_current_user().id):
+            return forbidden()
+
+        map_obj = Map.query.filter_by(project_id=pid).first()
+        if not map_obj:
+            return ok(None)
+
+        return ok({
+            "id": map_obj.id,
+            "project_id": map_obj.project_id,
+            "seed": map_obj.seed,
+            "width": map_obj.width,
+            "height": map_obj.height,
+            "num_cells": map_obj.num_cells,
+            "data": _loads(map_obj.data),
+            "created_at": map_obj.created_at.isoformat() if map_obj.created_at else None,
+            "updated_at": map_obj.updated_at.isoformat() if map_obj.updated_at else None
+        })
+
+    @app.post("/api/projects/<int:pid>/map")
+    @token_auth_required
+    def create_or_update_project_map(pid):
+        """Create or update the map for a project"""
+        if not verify_project_ownership(pid, get_current_user().id):
+            return forbidden()
+
+        data = request.get_json() or {}
+        seed = data.get("seed", "")
+        width = data.get("width", 800)
+        height = data.get("height", 600)
+        num_cells = data.get("num_cells", 500)
+        map_data = data.get("data", {})
+
+        if not seed:
+            return bad_request("Seed is required")
+
+        # Check if map exists
+        map_obj = Map.query.filter_by(project_id=pid).first()
+
+        if map_obj:
+            # Update existing
+            map_obj.seed = seed
+            map_obj.width = width
+            map_obj.height = height
+            map_obj.num_cells = num_cells
+            map_obj.data = _dumps(map_data)
+        else:
+            # Create new
+            map_obj = Map(
+                project_id=pid,
+                seed=seed,
+                width=width,
+                height=height,
+                num_cells=num_cells,
+                data=_dumps(map_data)
+            )
+            db.session.add(map_obj)
+
+        db.session.commit()
+
+        return ok({
+            "id": map_obj.id,
+            "project_id": map_obj.project_id,
+            "seed": map_obj.seed,
+            "width": map_obj.width,
+            "height": map_obj.height,
+            "num_cells": map_obj.num_cells,
+            "data": _loads(map_obj.data),
+            "created_at": map_obj.created_at.isoformat() if map_obj.created_at else None,
+            "updated_at": map_obj.updated_at.isoformat() if map_obj.updated_at else None
+        })
+
+    @app.delete("/api/projects/<int:pid>/map")
+    @token_auth_required
+    def delete_project_map(pid):
+        """Delete the map for a project"""
+        if not verify_project_ownership(pid, get_current_user().id):
+            return forbidden()
+
+        map_obj = Map.query.filter_by(project_id=pid).first()
+        if not map_obj:
+            return not_found()
+
+        db.session.delete(map_obj)
+        db.session.commit()
         return ok({"ok": True})
 
     # ---------- Project Settings ----------

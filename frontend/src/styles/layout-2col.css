@@ -2,11 +2,16 @@
 .page-wrap{
   height: calc(100dvh - var(--header-h) - var(--topnav-h)); /* dvh = robuster */
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 280px 1fr 280px;
   gap: 1.25rem;
   padding: 1rem;
   background: var(--page-bg);
-  overflow: hidden; /* äußeres Scrollen verhindern */
+  overflow: hidden; /* Ã¤uÃŸeres Scrollen verhindern */
+}
+
+/* Wenn Tools-Panel geschlossen ist, wird die rechte Spalte schmaler */
+.page-wrap:has(.tools-panel.closed) {
+  grid-template-columns: 280px 1fr 48px;
 }
 
 /* Linke Spalte (Tree) */
@@ -28,7 +33,7 @@
   overflow: auto; /* interner Scroll */
 }
 
-/* Panel füllt die Spaltenhöhe */
+/* Panel fï¿½llt die Spaltenhï¿½he */
 .panel{
   background: var(--panel-bg);
   border: 1px solid var(--line);

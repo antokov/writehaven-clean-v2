@@ -5,6 +5,7 @@ import { BsPlus, BsTrash, BsChevronDown, BsChevronRight } from 'react-icons/bs';
 
 import ConfirmModal from '../components/ConfirmModal';
 import TextContextMenu from '../components/TextContextMenu';
+import EntityHighlighter from '../components/EntityHighlighter';
 import { useTranslation } from 'react-i18next';
 
 export default function ProjectView() {
@@ -34,6 +35,10 @@ export default function ProjectView() {
 
   // Tree
   const [expanded, setExpanded] = useState({}); // { [chapterId]: true }
+
+  // Tools panel (right sidebar)
+  const [toolsPanelOpen, setToolsPanelOpen] = useState(true);
+  const [entityCheckActive, setEntityCheckActive] = useState(false);
 
   // Autosave & Snapshot (Szene)
   const saveTimer = useRef(null);
@@ -241,6 +246,14 @@ export default function ProjectView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeChapterId, activeSceneId, scenesByChapter]);
 
+  // Turn off entity check when switching scenes or chapters
+  useEffect(() => {
+    if (entityCheckActive) {
+      setEntityCheckActive(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSceneId, activeChapterId]);
+
   /* -------------------------- Scene open (Detail) ----------------------- */
   async function openScene(chapterId, sceneId) {
     await flushIfDirty();
@@ -426,6 +439,7 @@ export default function ProjectView() {
     }
   };
 
+  /* ----------------------- Entity Quick-Create -------------------------- */
   const handleCreateCharacter = async (name) => {
     try {
       const r = await axios.post(`/api/projects/${pid}/characters`, {
@@ -456,6 +470,16 @@ export default function ProjectView() {
     } catch (err) {
       console.error('Create world element failed', err);
       alert(t('writing.errors.worldElementCreateFailed'));
+    }
+  };
+
+  const handleIgnoreEntity = async (word) => {
+    try {
+      await axios.post(`/api/projects/${pid}/ignore-entity`, { word });
+      console.log(`Word "${word}" added to ignored entities`);
+    } catch (err) {
+      console.error('Ignore entity failed', err);
+      alert('Failed to ignore entity');
     }
   };
 
@@ -561,14 +585,20 @@ export default function ProjectView() {
                   {lastSavedAt ? <>{t('writing.savedAt', { time: lastSavedAt.toLocaleTimeString() })}</> : '—'}
                 </div>
               </div>
-              <textarea
-                className="scene-editor"
-                value={sceneContent}
-                onChange={(e) => setSceneContent(e.target.value)}
+              <EntityHighlighter
+                sceneId={activeSceneId}
+                projectId={pid}
+                content={sceneContent}
+                onChange={(newContent) => setSceneContent(newContent)}
+                onCreateCharacter={handleCreateCharacter}
+                onCreateLocation={handleCreateWorldElement}
+                onIgnoreEntity={handleIgnoreEntity}
                 onBlur={() => saveSceneNow(activeSceneId, sceneTitle, sceneContent)}
                 onContextMenu={handleContextMenu}
                 placeholder={t('writing.sceneContentPlaceholder')}
                 data-testid="scene-content-editor"
+                className="scene-editor"
+                entityCheckActive={entityCheckActive}
               />
             </>
           ) : (
@@ -594,6 +624,34 @@ export default function ProjectView() {
           ))}
         </div>
       </main>
+
+      {/* Right sidebar - Tools panel */}
+      <aside className={`tools-panel ${toolsPanelOpen ? 'open' : 'closed'}`}>
+        <div className="tools-header">
+          <span className="tools-title">{t('writing.tools')}</span>
+          <button
+            className="icon-btn tools-toggle"
+            onClick={() => setToolsPanelOpen(!toolsPanelOpen)}
+            aria-label={toolsPanelOpen ? t('writing.closeTools') : t('writing.openTools')}
+          >
+            {toolsPanelOpen ? <BsChevronRight /> : <BsChevronDown />}
+          </button>
+        </div>
+
+        {toolsPanelOpen && (
+          <div className="tools-content">
+            <div className="tool-section">
+              <h3 className="tool-section-title">{t('writing.entityRecognition')}</h3>
+              <button
+                className="btn-analyze-entities"
+                onClick={() => setEntityCheckActive(!entityCheckActive)}
+              >
+                {entityCheckActive ? t('writing.entityCheckOff') : t('writing.entityCheckOn')}
+              </button>
+            </div>
+          </div>
+        )}
+      </aside>
 
       {confirmModal && <ConfirmModal {...confirmModal} />}
       {contextMenu && (

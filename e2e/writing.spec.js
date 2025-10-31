@@ -155,9 +155,12 @@ test.describe('Writing Section (Schreiben)', () => {
     const firstScene = page.locator('[data-testid^="scene-"]').first();
     const sceneTestId = await firstScene.getAttribute('data-testid');
 
-    // Schreibe Text
+    // Schreibe Text - EntityHighlighter ist ein ContentEditable, nicht ein Input
     const testContent = 'Es war einmal in einem fernen Land...';
-    await editor.fill(testContent);
+
+    // Klicke in den Editor und tippe Text
+    await editor.click();
+    await page.keyboard.type(testContent);
 
     // Warte auf Autosave (600ms debounce + Puffer)
     await page.waitForTimeout(1000);
@@ -172,8 +175,8 @@ test.describe('Writing Section (Schreiben)', () => {
     // Warte bis Editor wieder da ist
     await expect(page.getByTestId('scene-content-editor')).toBeVisible();
 
-    // Prüfe dass Text gespeichert wurde
-    await expect(page.getByTestId('scene-content-editor')).toHaveValue(testContent);
+    // Prüfe dass Text gespeichert wurde - ContentEditable verwendet textContent
+    await expect(page.getByTestId('scene-content-editor')).toContainText(testContent);
   });
 
   test('should rename a chapter', async ({ page }) => {
@@ -254,9 +257,10 @@ test.describe('Writing Section (Schreiben)', () => {
     const scene1 = page.locator('[data-testid^="scene-"]').first();
     const scene1TestId = await scene1.getAttribute('data-testid');
 
-    // Schreibe in erste Szene
+    // Schreibe in erste Szene - ContentEditable verwenden
     const content1 = 'Inhalt der ersten Szene.';
-    await editor.fill(content1);
+    await editor.click();
+    await page.keyboard.type(content1);
     await page.waitForTimeout(1000); // Autosave
 
     // Erstelle zweite Szene
@@ -268,16 +272,17 @@ test.describe('Writing Section (Schreiben)', () => {
 
     // Schreibe in zweite Szene
     const content2 = 'Inhalt der zweiten Szene.';
-    await editor.fill(content2);
+    await editor.click();
+    await page.keyboard.type(content2);
     await page.waitForTimeout(1000); // Autosave
 
     // Klicke zurück auf Szene 1
     await page.locator(`[data-testid="${scene1TestId}"]`).click();
-    await expect(editor).toHaveValue(content1);
+    await expect(editor).toContainText(content1);
 
     // Klicke auf Szene 2
     await scene2.click();
-    await expect(editor).toHaveValue(content2);
+    await expect(editor).toContainText(content2);
   });
 
   test('should delete a scene', async ({ page }) => {
@@ -303,8 +308,11 @@ test.describe('Writing Section (Schreiben)', () => {
     // Bestätige Deletion im Modal
     await page.locator('.modal-dialog button:has-text("Delete"), .modal-dialog button:has-text("Löschen")').click();
 
+    // Warte bis Modal geschlossen ist
+    await expect(page.locator('.modal-dialog')).not.toBeVisible();
+
     // Prüfe dass Szene entfernt wurde
-    await expect(firstScene).not.toBeVisible();
+    await expect(page.getByTestId(`scene-${sceneId}`)).not.toBeVisible();
   });
 
   test('should delete a chapter', async ({ page }) => {

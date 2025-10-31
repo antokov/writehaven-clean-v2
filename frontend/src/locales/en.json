@@ -109,6 +109,7 @@
     "writing": "Writing",
     "characters": "Characters",
     "world": "World",
+    "map": "Map",
     "export": "Export",
     "projectSettings": "Project Settings"
   },
@@ -588,6 +589,44 @@
       "orgs": "Organizations",
       "tech": "Technology & Architecture",
       "plot": "Plot elements"
+    }
+  },
+  "map": {
+    "title": "Map",
+    "generateNew": "Generate New World",
+    "seedLabel": "Seed",
+    "seedPlaceholder": "Any text or number...",
+    "seedHint": "Same seed generates the same map",
+    "generate": "Generate",
+    "generating": "Generating map...",
+    "export": "Export",
+    "exportSvg": "Export as SVG",
+    "exportJson": "Export as JSON",
+    "save": "Save",
+    "saving": "Saving...",
+    "saved": "Saved!",
+    "lastSaved": "Last saved: {{time}}",
+    "noMap": "No map generated yet.",
+    "generateFirst": "Generate a world first.",
+    "loading": "Loading map...",
+    "biomes": {
+      "ocean": "Ocean",
+      "lake": "Lake",
+      "water": "Water",
+      "beach": "Beach",
+      "desert": "Desert",
+      "grassland": "Grassland",
+      "forest": "Forest",
+      "taiga": "Taiga",
+      "tundra": "Tundra",
+      "snow": "Snow",
+      "mountain": "Mountain"
+    },
+    "errors": {
+      "loadFailed": "Failed to load map.",
+      "saveFailed": "Failed to save map.",
+      "generateFailed": "Map generation failed.",
+      "exportFailed": "Export failed."
     }
   },
   "export": {
