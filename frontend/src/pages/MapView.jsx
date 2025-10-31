@@ -342,8 +342,8 @@ const MapRenderer = React.forwardRef(({ mapData }, ref) => {
   if (!mapData || !mapData.cells) return null;
 
   const containerRef = useRef(null);
-  // Start with 0.5 zoom for large map to fit in viewport
-  const [zoom, setZoom] = useState(0.5);
+  // Start with 1.0 zoom - SVG preserveAspectRatio handles initial fit
+  const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -379,9 +379,9 @@ const MapRenderer = React.forwardRef(({ mapData }, ref) => {
     setIsDragging(false);
   }, []);
 
-  // Reset view to initial zoom for large map
+  // Reset view to initial zoom
   const handleReset = useCallback(() => {
-    setZoom(0.5);
+    setZoom(1);
     setPan({ x: 0, y: 0 });
   }, []);
 
@@ -433,12 +433,15 @@ const MapRenderer = React.forwardRef(({ mapData }, ref) => {
       <svg
         ref={ref}
         viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="xMidYMid meet"
         className="fantasy-map"
         xmlns="http://www.w3.org/2000/svg"
         style={{
           transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
           transformOrigin: 'center center',
-          transition: isDragging ? 'none' : 'transform 0.1s ease-out'
+          transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+          width: '100%',
+          height: '100%'
         }}
       >
         <title>Fantasy Map</title>
