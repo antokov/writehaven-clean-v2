@@ -388,20 +388,20 @@ export default function BookExport() {
 
       {/* Main — Paged.js preview */}
       <main className="book-main">
-
         <div className="preview-stage">
-          <iframe
-            ref={iframeRef}
-            title="Book Preview"
-            className="preview-frame"
-            srcDoc={srcDoc}
-            style={{
-              transform: `scale(${previewZoom})`,
-              transformOrigin: 'top left',
-              width: `${100 / previewZoom}%`,
-              height: `${100 / previewZoom}%`
-            }}
-          />
+          <div className="preview-zoom-wrapper" style={{
+            transform: `scale(${previewZoom})`,
+            transformOrigin: 'top left',
+            width: `${100 / previewZoom}%`,
+            height: `${100 / previewZoom}%`
+          }}>
+            <iframe
+              ref={iframeRef}
+              title="Book Preview"
+              className="preview-frame"
+              srcDoc={srcDoc}
+            />
+          </div>
         </div>
       </main>
     </div>
