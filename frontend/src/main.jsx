@@ -47,6 +47,27 @@ axios.interceptors.request.use(cfg=>{
   return cfg
 })
 
+// Response interceptor to handle token expiration
+axios.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response?.status === 401) {
+      // Token expired or invalid - clear auth and redirect to login
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      delete axios.defaults.headers.common['Authorization']
+
+      // Only redirect if not already on login/auth pages
+      const currentPath = window.location.pathname
+      const authPages = ['/login', '/forgot-password', '/reset-password', '/confirm-email', '/']
+      if (!authPages.includes(currentPath)) {
+        window.location.href = '/login?session=expired'
+      }
+    }
+    return Promise.reject(error)
+  }
+)
+
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <AuthProvider>

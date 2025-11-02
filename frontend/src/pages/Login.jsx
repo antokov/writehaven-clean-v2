@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import logoUrl from '../assets/logo.png';
@@ -9,6 +9,7 @@ import '../styles/Login.css';
 
 export default function Login() {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
     email: '',
@@ -20,6 +21,13 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
+
+  // Check for session expiration message
+  useEffect(() => {
+    if (searchParams.get('session') === 'expired') {
+      setError(t('auth.sessionExpired', 'Your session has expired. Please log in again.'));
+    }
+  }, [searchParams, t]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

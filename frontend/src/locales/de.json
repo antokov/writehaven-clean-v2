@@ -88,6 +88,7 @@
     "alreadyHaveAccount": "Du hast bereits ein Konto?",
     "dontHaveAccount": "Noch kein Konto?",
     "welcomeBack": "Willkommen zurück",
+    "sessionExpired": "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.",
     "forgotPassword": "Passwort vergessen?",
     "forgotPasswordDescription": "Gib deine E-Mail-Adresse ein und wir senden dir einen Link zum Zurücksetzen deines Passworts.",
     "sendResetLink": "Link senden",
