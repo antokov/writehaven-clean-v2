@@ -653,7 +653,8 @@
     "pdfError": "Fehler beim Erstellen der PDF. Bitte versuche es erneut.",
     "zoomIn": "Vergrößern",
     "zoomOut": "Verkleinern",
-    "resetZoom": "Zoom zurücksetzen"
+    "resetZoom": "Zoom zurücksetzen",
+    "previewZoom": "Vorschau-Zoom"
   },
   "feedback": {
     "title": "Feedback geben",

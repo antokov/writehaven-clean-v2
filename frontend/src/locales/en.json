@@ -646,7 +646,8 @@
     "pdfError": "Error generating PDF. Please try again.",
     "zoomIn": "Zoom In",
     "zoomOut": "Zoom Out",
-    "resetZoom": "Reset Zoom"
+    "resetZoom": "Reset Zoom",
+    "previewZoom": "Preview Zoom"
   },
   "feedback": {
     "title": "Give feedback",

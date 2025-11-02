@@ -347,6 +347,35 @@ export default function BookExport() {
           </ul>
         </div>
 
+        {/* Zoom Controls in Sidebar */}
+        <div className="zoom-controls-sidebar">
+          <h3>{t("export.previewZoom", "Vorschau-Zoom")}</h3>
+          <div className="zoom-controls-flex">
+            <button
+              onClick={() => setPreviewZoom(Math.max(0.5, previewZoom - 0.1))}
+              title={t("export.zoomOut", "Zoom Out")}
+              className="zoom-btn-sidebar"
+            >
+              −
+            </button>
+            <span className="zoom-level-sidebar">{Math.round(previewZoom * 100)}%</span>
+            <button
+              onClick={() => setPreviewZoom(Math.min(2, previewZoom + 0.1))}
+              title={t("export.zoomIn", "Zoom In")}
+              className="zoom-btn-sidebar"
+            >
+              +
+            </button>
+            <button
+              onClick={() => setPreviewZoom(1)}
+              title={t("export.resetZoom", "Reset Zoom")}
+              className="zoom-btn-sidebar"
+            >
+              ⟲
+            </button>
+          </div>
+        </div>
+
         <div className="export-actions">
           <button className="btn btn-export" onClick={savePDF}>
             💾 {t("export.savePdf", "Save as PDF")}
@@ -359,31 +388,6 @@ export default function BookExport() {
 
       {/* Main — Paged.js preview */}
       <main className="book-main">
-        {/* Zoom Controls */}
-        <div className="preview-zoom-controls">
-          <button
-            onClick={() => setPreviewZoom(Math.max(0.5, previewZoom - 0.1))}
-            title={t("export.zoomOut", "Zoom Out")}
-            className="zoom-btn"
-          >
-            −
-          </button>
-          <span className="zoom-level">{Math.round(previewZoom * 100)}%</span>
-          <button
-            onClick={() => setPreviewZoom(Math.min(2, previewZoom + 0.1))}
-            title={t("export.zoomIn", "Zoom In")}
-            className="zoom-btn"
-          >
-            +
-          </button>
-          <button
-            onClick={() => setPreviewZoom(1)}
-            title={t("export.resetZoom", "Reset Zoom")}
-            className="zoom-btn"
-          >
-            ⟲
-          </button>
-        </div>
 
         <div className="preview-stage">
           <iframe

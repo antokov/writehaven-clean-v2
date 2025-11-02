@@ -145,27 +145,34 @@
   background: #f5f5f5;
 }
 
-/* Zoom Controls */
-.preview-zoom-controls {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  z-index: 10;
+/* Zoom Controls in Sidebar */
+.zoom-controls-sidebar {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #3a3a3a;
+  margin-bottom: 1rem;
+}
+
+.zoom-controls-sidebar h3 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.75rem;
+}
+
+.zoom-controls-flex {
   display: flex;
   gap: 0.5rem;
   align-items: center;
-  background: rgba(0, 0, 0, 0.7);
-  padding: 0.5rem;
-  border-radius: 8px;
-  backdrop-filter: blur(10px);
 }
 
-.zoom-btn {
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+.zoom-btn-sidebar {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #3a3a3a;
+  background: #2a2a2a;
+  color: #e5e5e5;
   font-size: 18px;
   font-weight: 600;
   cursor: pointer;
@@ -173,23 +180,26 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
-.zoom-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
+.zoom-btn-sidebar:hover {
+  background: #3a3a3a;
+  border-color: #4a4a4a;
 }
 
-.zoom-btn:active {
-  background: rgba(255, 255, 255, 0.3);
+.zoom-btn-sidebar:active {
+  background: #1a1a1a;
+  transform: scale(0.95);
 }
 
-.zoom-level {
-  font-size: 13px;
-  color: #fff;
+.zoom-level-sidebar {
+  flex: 1;
+  font-size: 14px;
+  color: #e5e5e5;
   font-weight: 500;
-  min-width: 50px;
   text-align: center;
+  min-width: 50px;
 }
 
 .preview-stage {
