@@ -63,6 +63,33 @@ export default function BookExport() {
   const [loading, setLoading] = useState(true);
   const [previewZoom, setPreviewZoom] = useState(1);
 
+  // Update zoom in iframe document
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+
+    const updateZoom = () => {
+      try {
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+        if (iframeDoc?.documentElement) {
+          iframeDoc.documentElement.style.setProperty('--zoom', previewZoom.toString());
+        }
+      } catch (e) {
+        console.error('Error setting zoom:', e);
+      }
+    };
+
+    // Update on load
+    iframe.addEventListener('load', updateZoom);
+
+    // Update immediately if already loaded
+    if (iframe.contentDocument?.readyState === 'complete') {
+      updateZoom();
+    }
+
+    return () => iframe.removeEventListener('load', updateZoom);
+  }, [previewZoom]);
+
   useEffect(() => {
     async function loadBookData() {
       try {
@@ -134,7 +161,9 @@ export default function BookExport() {
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;700&family=Crimson+Pro:wght@400;600&display=swap" rel="stylesheet">
 <style>
   :root{--book-font:"EB Garamond","Georgia",serif;--font-size:11pt;--lh:1.42;--zoom:1}
-  html,body{margin:0;padding:0;background:#fff;overflow-x:hidden}
+  html,body{margin:0;padding:0;background:transparent;overflow:visible;height:auto}
+  html::-webkit-scrollbar,body::-webkit-scrollbar{display:none}
+  html{scrollbar-width:none;-ms-overflow-style:none}
   .book{font-family:var(--book-font);font-size:var(--font-size);line-height:var(--lh);color:#111}
 
   /* 6×9" paperback with comfortable margins */
@@ -156,13 +185,15 @@ export default function BookExport() {
 
   /* Screen preview page styling */
   body {
-    background: #f5f5f5;
+    background: transparent;
     padding: 20px 0;
+    overflow: visible;
   }
   .pagedjs_pages{
     transform: scale(var(--zoom));
     transform-origin: top center;
     padding: 20px 0;
+    overflow: visible;
   }
   .pagedjs_page{
     box-shadow:0 4px 20px rgba(0,0,0,.15);
@@ -389,12 +420,7 @@ export default function BookExport() {
       {/* Main — Paged.js preview */}
       <main className="book-main">
         <div className="preview-stage">
-          <div className="preview-zoom-wrapper" style={{
-            transform: `scale(${previewZoom})`,
-            transformOrigin: 'top left',
-            width: `${100 / previewZoom}%`,
-            height: `${100 / previewZoom}%`
-          }}>
+          <div className="preview-container">
             <iframe
               ref={iframeRef}
               title="Book Preview"
