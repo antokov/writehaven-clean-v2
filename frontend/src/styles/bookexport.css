@@ -145,14 +145,62 @@
   background: #f5f5f5;
 }
 
+/* Zoom Controls */
+.preview-zoom-controls {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 10;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 0.5rem;
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+}
+
+.zoom-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.zoom-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.zoom-btn:active {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.zoom-level {
+  font-size: 13px;
+  color: #fff;
+  font-weight: 500;
+  min-width: 50px;
+  text-align: center;
+}
+
 .preview-stage {
   flex: 1;
   display: flex;
   align-items: flex-start;
-  justify-content: center;
+  justify-content: flex-start;
   padding: 2rem;
   overflow: auto;
   background: linear-gradient(135deg, #e8e8e8 0%, #f5f5f5 100%);
+  position: relative;
 }
 
 .preview-frame {
@@ -160,6 +208,7 @@
   height: 100%;
   border: none;
   background: transparent;
+  transform-origin: top left;
 }
 
 .book-viewport {

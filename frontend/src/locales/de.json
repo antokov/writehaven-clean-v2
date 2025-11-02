@@ -650,7 +650,10 @@
     "printPdf": "Als PDF drucken",
     "savePdf": "Als PDF speichern",
     "downloadHtml": "HTML herunterladen",
-    "pdfError": "Fehler beim Erstellen der PDF. Bitte versuche es erneut."
+    "pdfError": "Fehler beim Erstellen der PDF. Bitte versuche es erneut.",
+    "zoomIn": "Vergrößern",
+    "zoomOut": "Verkleinern",
+    "resetZoom": "Zoom zurücksetzen"
   },
   "feedback": {
     "title": "Feedback geben",

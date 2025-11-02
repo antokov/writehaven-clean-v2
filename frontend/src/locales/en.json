@@ -643,7 +643,10 @@
     "printPdf": "Print as PDF",
     "savePdf": "Save as PDF",
     "downloadHtml": "Download HTML",
-    "pdfError": "Error generating PDF. Please try again."
+    "pdfError": "Error generating PDF. Please try again.",
+    "zoomIn": "Zoom In",
+    "zoomOut": "Zoom Out",
+    "resetZoom": "Reset Zoom"
   },
   "feedback": {
     "title": "Give feedback",
