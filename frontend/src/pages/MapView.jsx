@@ -48,8 +48,8 @@ export default function MapView() {
       setError(null);
 
       // Generate large map with many cells for detailed zoom
-      // Increased size: 2400x1600, increased cells: 1200 for detailed terrain
-      const generated = generateMap(seed, 2400, 1600, 1200);
+      // Increased size: 3600x2000, increased cells: 2500 for granular terrain
+      const generated = generateMap(seed, 3600, 2000, 2500);
       setMapData(generated);
 
       // Auto-save
