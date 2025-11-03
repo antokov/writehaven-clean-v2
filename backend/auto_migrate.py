@@ -28,7 +28,14 @@ def auto_migrate():
     """Automatically migrate the database if needed"""
     try:
         db_uri = get_database_uri()
-        engine = create_engine(db_uri)
+
+        # Create engine with proper configuration for both SQLite and PostgreSQL
+        if 'postgresql' in db_uri:
+            # Use psycopg (version 3) driver
+            engine = create_engine(db_uri, pool_pre_ping=True)
+        else:
+            # SQLite
+            engine = create_engine(db_uri)
 
         with engine.connect() as conn:
             inspector = inspect(engine)
