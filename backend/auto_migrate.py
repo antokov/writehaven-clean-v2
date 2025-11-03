@@ -14,8 +14,12 @@ from sqlalchemy.exc import OperationalError, ProgrammingError
 def get_database_uri():
     """Get database URI from environment"""
     uri = os.getenv("DATABASE_URL")
-    if uri and uri.startswith("postgres://"):
-        uri = uri.replace("postgres://", "postgresql+psycopg://", 1)
+    if uri:
+        # Always use psycopg (v3) for PostgreSQL
+        if uri.startswith("postgres://"):
+            uri = uri.replace("postgres://", "postgresql+psycopg://", 1)
+        elif uri.startswith("postgresql://"):
+            uri = uri.replace("postgresql://", "postgresql+psycopg://", 1)
     if not uri:
         # Fallback to SQLite for development
         path = os.getenv("SQLITE_PATH", "/tmp/app.db")
