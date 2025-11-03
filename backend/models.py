@@ -144,6 +144,7 @@ class WorldNode(db.Model):
     summary = db.Column(db.Text, default="")
     icon = db.Column(db.String(50), default="🏰")
     relations_json = db.Column(db.Text, default="{}")
+    region_id = db.Column(db.Integer, nullable=True)
 
 
 class Map(db.Model):

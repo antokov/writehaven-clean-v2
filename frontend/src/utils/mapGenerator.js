@@ -533,9 +533,9 @@ function generateStateName(id, random) {
  * Generate distinct state colors
  */
 function getStateColor(id, random) {
-  const hue = (id * 137.5 + random() * 30) % 360; // Golden angle for distribution
-  const saturation = 40 + random() * 20; // 40-60%
-  const lightness = 60 + random() * 15;  // 60-75%
+  const hue = Math.round((id * 137.5 + random() * 30) % 360); // Golden angle for distribution
+  const saturation = Math.round(40 + random() * 20); // 40-60%
+  const lightness = Math.round(60 + random() * 15);  // 60-75%
   return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 }
 

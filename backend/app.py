@@ -1150,7 +1150,7 @@ Sent from WriteHaven Feedback Form
         rows = WorldNode.query.filter_by(project_id=pid).order_by(WorldNode.id.asc()).all()
         return ok([{
             "id": w.id, "project_id": w.project_id, "title": w.title, "kind": w.kind,
-            "summary": w.summary, "icon": w.icon
+            "summary": w.summary, "icon": w.icon, "regionId": w.region_id
         } for w in rows])
 
     @app.post("/api/projects/<int:pid>/world")
@@ -1180,7 +1180,8 @@ Sent from WriteHaven Feedback Form
             "kind": w.kind,
             "summary": w.summary,
             "icon": w.icon,
-            "relations": _loads(w.relations_json or "{}")
+            "relations": _loads(w.relations_json or "{}"),
+            "regionId": w.region_id
         })
 
     @app.put("/api/world/<int:w_id>")
@@ -1194,6 +1195,10 @@ Sent from WriteHaven Feedback Form
         w.summary = data.get("summary", w.summary)
         w.icon    = data.get("icon", w.icon)
 
+        # Save regionId if provided
+        if "regionId" in data:
+            w.region_id = data.get("regionId")
+
         # Relations speichern
         if "relations" in data and isinstance(data["relations"], dict):
             w.relations_json = _dumps(data["relations"])
@@ -1206,7 +1211,8 @@ Sent from WriteHaven Feedback Form
             "kind": w.kind,
             "summary": w.summary,
             "icon": w.icon,
-            "relations": _loads(w.relations_json or "{}")
+            "relations": _loads(w.relations_json or "{}"),
+            "regionId": w.region_id
         })
 
     @app.delete("/api/world/<int:w_id>")

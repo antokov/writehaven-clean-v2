@@ -1042,6 +1042,78 @@ const SearchableSelect = React.memo(function SearchableSelect({ value, onChange 
   );
 });
 
+/* ---------------- Map Region Select ---------------- */
+const MapRegionSelect = React.memo(function MapRegionSelect({ value, onChange, regions }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    function handleClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setIsOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [isOpen]);
+
+  const selectedLabel = useMemo(() => {
+    if (!value) return "— None —";
+    const region = regions.find(r => r.id === value);
+    return region ? (region.name || `Region ${region.id}`) : "— None —";
+  }, [value, regions]);
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <div
+        className="input"
+        onClick={() => setIsOpen(!isOpen)}
+        style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
+      >
+        {selectedLabel}
+      </div>
+
+      {isOpen && (
+        <div style={{
+          position: "absolute", top: "100%", left: 0, right: 0, maxHeight: 300, overflowY: "auto",
+          background: "white", border: "1px solid #e5e7eb", borderRadius: 6, boxShadow: "0 4px 12px rgba(0,0,0,0.1)", zIndex: 10, marginTop: 4
+        }}>
+          <div style={{ padding: "4px 0" }}>
+            <div
+              onClick={() => { onChange(null); setIsOpen(false); }}
+              style={{
+                padding: "8px 12px",
+                cursor: "pointer",
+                background: !value ? "#f1f5f9" : "transparent",
+                fontSize: "14px"
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = "#f1f5f9"}
+              onMouseLeave={e => e.currentTarget.style.background = !value ? "#f1f5f9" : "transparent"}
+            >
+              — None —
+            </div>
+            {regions.map(region => (
+              <div
+                key={region.id}
+                onClick={() => { onChange(region.id); setIsOpen(false); }}
+                style={{
+                  padding: "8px 12px",
+                  cursor: "pointer",
+                  background: region.id === value ? "#f1f5f9" : "transparent",
+                  fontSize: "14px"
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = "#f1f5f9"}
+                onMouseLeave={e => e.currentTarget.style.background = region.id === value ? "#f1f5f9" : "transparent"}
+              >
+                {region.name || `Region ${region.id}`}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+
 /* ---------------- Editor ---------------- */
 const WorldElementEditor = React.memo(function WorldElementEditor({
   elementId,
@@ -1053,7 +1125,8 @@ const WorldElementEditor = React.memo(function WorldElementEditor({
   allElements,
   onAddRelation,
   onRemoveRelation,
-  onOpenGraph
+  onOpenGraph,
+  mapRegions
 }) {
   const { t } = useTranslation();
   return (
@@ -1094,6 +1167,16 @@ const WorldElementEditor = React.memo(function WorldElementEditor({
                 onChange={value => onChangeElement("kind", value)}
               />
             </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <label className="small muted">Map Region</label>
+            <MapRegionSelect
+              value={getPath(element, "regionId", null)}
+              onChange={value => onChangeElement("regionId", value)}
+              regions={mapRegions}
+            />
+            <small className="hint">Link this place to a region from your map</small>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 20 }}>
@@ -1162,6 +1245,7 @@ export default function World() {
   const [showGraph, setShowGraph] = useState(false);
   const [showWorldGraph, setShowWorldGraph] = useState(false);
   const [confirmModal, setConfirmModal] = useState(null);
+  const [mapRegions, setMapRegions] = useState([]);
 
   const hasHandledNewElement = useRef(false);
 
@@ -1188,6 +1272,25 @@ export default function World() {
     return () => { cancel = true; };
   }, [pid, activeId, state?.newElementId]);
 
+  // Load map regions
+  useEffect(() => {
+    let cancel = false;
+    async function loadMapRegions() {
+      try {
+        const r = await axios.get(`/api/projects/${pid}/map`);
+        if (cancel) return;
+        const mapData = r.data?.data;
+        if (mapData && mapData.states) {
+          setMapRegions(mapData.states);
+        }
+      } catch (e) {
+        console.warn('Could not load map regions:', e);
+      }
+    }
+    if (pid) loadMapRegions();
+    return () => { cancel = true; };
+  }, [pid]);
+
   useEffect(() => {
     if (!activeId) { setElement({}); return; }
     let cancel = false;
@@ -1195,6 +1298,7 @@ export default function World() {
       try {
         const r = await axios.get(`/api/world/${activeId}`);
         if (cancel) return;
+        console.log('[World] Loaded element:', { activeId, regionId: r.data?.regionId, data: r.data });
         setElement(r.data || {});
       } catch (e) { console.warn(e); }
     }
@@ -1269,13 +1373,17 @@ export default function World() {
   const saveTimer = useRef(null);
   const saveNow = useCallback(async () => {
     if (!activeId) return;
+    console.log('[World] Saving element:', { activeId, regionId: element.regionId, element });
     try {
       await axios.put(`/api/world/${activeId}`, element);
       setLastSavedAt(new Date());
       setList(prev => prev.map(el =>
         el.id === activeId ? { ...el, title: element.title || t('world.newElement') } : el
       ));
-    } catch (e) { console.warn("save failed", e); }
+      console.log('[World] Save successful');
+    } catch (e) {
+      console.warn("[World] save failed", e);
+    }
   }, [activeId, element, t]);
 
   useEffect(() => {
@@ -1386,6 +1494,7 @@ export default function World() {
               onAddRelation={onAddRelation}
               onRemoveRelation={onRemoveRelation}
               onOpenGraph={()=>setShowGraph(true)}
+              mapRegions={mapRegions}
             />
             <RelationsGraphModal
               open={showGraph}

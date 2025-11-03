@@ -43,6 +43,12 @@ def auto_migrate():
             # Check if migration is needed
             needs_migration = 'fs_uniquifier' not in existing_columns
 
+            # Check if worldnode table needs region_id column
+            worldnode_needs_migration = False
+            if 'worldnode' in inspector.get_table_names():
+                worldnode_columns = [col['name'] for col in inspector.get_columns('worldnode')]
+                worldnode_needs_migration = 'region_id' not in worldnode_columns
+
             if needs_migration:
                 print("🔄 Auto-migration: Updating user table schema...")
 
@@ -105,7 +111,22 @@ def auto_migrate():
                 except Exception as e:
                     print(f"⚠️  Auto-migration warning: {str(e)}")
                     # Continue anyway - app will work with nullable fields
-            else:
+
+            # Migrate worldnode table if needed
+            if worldnode_needs_migration:
+                print("🔄 Auto-migration: Adding region_id to worldnode table...")
+                try:
+                    conn.execute(text('ALTER TABLE worldnode ADD COLUMN region_id INTEGER;'))
+                    conn.commit()
+                    print("✅ worldnode.region_id column added successfully")
+                except (ProgrammingError, OperationalError) as e:
+                    print(f"⚠️  Could not add region_id column: {e}")
+                    try:
+                        conn.rollback()
+                    except:
+                        pass
+
+            if not needs_migration and not worldnode_needs_migration:
                 print("Database connected successfully: " + db_uri.split('@')[1] if '@' in db_uri else db_uri[:50] + "...")
 
     except Exception as e:
