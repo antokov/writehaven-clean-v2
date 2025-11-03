@@ -137,7 +137,9 @@ def auto_migrate():
                 print("Database connected successfully: " + db_uri.split('@')[1] if '@' in db_uri else db_uri[:50] + "...")
 
     except Exception as e:
-        print(f"⚠️  Database migration skipped: {str(e)}")
+        import traceback
+        print(f"⚠️  Database migration error: {str(e)}")
+        print(f"Traceback: {traceback.format_exc()}")
         # Don't fail app startup if migration fails
 
 
