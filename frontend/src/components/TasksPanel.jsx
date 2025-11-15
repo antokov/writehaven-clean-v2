@@ -7,8 +7,16 @@ export default function TasksPanel({ contextType, contextId, onRequestDelete }) 
   const { t } = useTranslation();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
-  const [completedCollapsed, setCompletedCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(() => {
+    // Load collapsed state from localStorage
+    const saved = localStorage.getItem('tasksPanel.collapsed');
+    return saved ? JSON.parse(saved) : false;
+  });
+  const [completedCollapsed, setCompletedCollapsed] = useState(() => {
+    // Load completed collapsed state from localStorage
+    const saved = localStorage.getItem('tasksPanel.completedCollapsed');
+    return saved ? JSON.parse(saved) : true;
+  });
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editingTaskTitle, setEditingTaskTitle] = useState('');
@@ -19,6 +27,15 @@ export default function TasksPanel({ contextType, contextId, onRequestDelete }) 
 
   const openTasks = tasks.filter(t => !t.completed);
   const completedTasks = tasks.filter(t => t.completed);
+
+  // Save collapsed states to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('tasksPanel.collapsed', JSON.stringify(collapsed));
+  }, [collapsed]);
+
+  useEffect(() => {
+    localStorage.setItem('tasksPanel.completedCollapsed', JSON.stringify(completedCollapsed));
+  }, [completedCollapsed]);
 
   useEffect(() => {
     if (!contextId) return;

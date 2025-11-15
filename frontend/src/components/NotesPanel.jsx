@@ -7,7 +7,11 @@ export default function NotesPanel({ contextType, contextId, onRequestDelete }) 
   const { t } = useTranslation();
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    // Load collapsed state from localStorage
+    const saved = localStorage.getItem('notesPanel.collapsed');
+    return saved ? JSON.parse(saved) : false;
+  });
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [editingContent, setEditingContent] = useState('');
@@ -15,6 +19,11 @@ export default function NotesPanel({ contextType, contextId, onRequestDelete }) 
   const baseUrl = contextType === 'scene'
     ? `/api/scenes/${contextId}/notes`
     : `/api/chapters/${contextId}/notes`;
+
+  // Save collapsed state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('notesPanel.collapsed', JSON.stringify(collapsed));
+  }, [collapsed]);
 
   useEffect(() => {
     if (!contextId) return;
