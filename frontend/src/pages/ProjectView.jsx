@@ -576,21 +576,25 @@ export default function ProjectView() {
                 data-testid="scene-content-editor"
                 className="scene-editor"
               />
+              <SceneStats content={sceneContent} />
             </>
           ) : (
           // Modus 2: Kapitel-Übersicht
           activeChapterId ? (
-            <ChapterOverview
-              chapterTitle={chapterTitle}
-              setChapterTitle={(v) => { setChapterTitle(v); patchChapterInList(activeChapterId, { title: v }); }}
-              lastChapterSavedAt={lastChapterSavedAt}
-              saveChapter={() => saveChapterNow(activeChapterId, chapterTitle)}
-              scenesOfActive={scenesOfActive}
-              scenePreviewById={scenePreviewById}
-              openScene={(sceneId) => openScene(activeChapterId, sceneId)}
-              deleteScene={(sceneId) => deleteScene(sceneId, activeChapterId)}
-              addScene={() => addSceneForChapter(activeChapterId)}
-            />
+            <>
+              <ChapterOverview
+                chapterTitle={chapterTitle}
+                setChapterTitle={(v) => { setChapterTitle(v); patchChapterInList(activeChapterId, { title: v }); }}
+                lastChapterSavedAt={lastChapterSavedAt}
+                saveChapter={() => saveChapterNow(activeChapterId, chapterTitle)}
+                scenesOfActive={scenesOfActive}
+                scenePreviewById={scenePreviewById}
+                openScene={(sceneId) => openScene(activeChapterId, sceneId)}
+                deleteScene={(sceneId) => deleteScene(sceneId, activeChapterId)}
+                addScene={() => addSceneForChapter(activeChapterId)}
+              />
+              {scenesOfActive.length > 0 && <ChapterStats scenes={scenesOfActive} />}
+            </>
           ) : (
             // Modus 3: Gar kein Kapitel
             <div className="empty-state">
@@ -630,6 +634,111 @@ export default function ProjectView() {
           onCreateWorldElement={handleCreateWorldElement}
           onClose={() => setContextMenu(null)}
         />
+      )}
+    </div>
+  );
+}
+
+/* SceneStats-Komponente für Wortanzahl und Lesedauer */
+function SceneStats({ content }) {
+  const { t } = useTranslation();
+
+  const wordCount = React.useMemo(() => {
+    if (!content || !content.trim()) return 0;
+    return content.trim().split(/\s+/).length;
+  }, [content]);
+
+  const readingTime = React.useMemo(() => {
+    // Durchschnittliche Lesegeschwindigkeit: 200 Wörter pro Minute
+    const wordsPerMinute = 200;
+    const minutes = Math.ceil(wordCount / wordsPerMinute);
+    return minutes;
+  }, [wordCount]);
+
+  return (
+    <div style={{
+      display: 'flex',
+      gap: '1.5rem',
+      fontSize: '13px',
+      color: 'var(--muted)',
+      paddingTop: '0.5rem',
+      borderTop: '1px solid var(--border)'
+    }}>
+      <span>{t('writing.wordCount')}: {wordCount.toLocaleString()}</span>
+      <span>{t('writing.readingTime')}: {readingTime} {t('writing.minutes')}</span>
+    </div>
+  );
+}
+
+/* ChapterStats-Komponente für Kapitel-Statistiken mit Lazy Loading */
+function ChapterStats({ scenes }) {
+  const { t } = useTranslation();
+  const [loading, setLoading] = useState(true);
+  const [totalWordCount, setTotalWordCount] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSceneContents() {
+      if (!scenes || scenes.length === 0) {
+        setTotalWordCount(0);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        // Lade alle Szenen-Inhalte parallel
+        const results = await Promise.all(
+          scenes.map(scene => axios.get(`/api/scenes/${scene.id}`))
+        );
+
+        if (cancelled) return;
+
+        // Summiere die Wortanzahl aus allen Szenen
+        const total = results.reduce((sum, r) => {
+          const content = r.data?.content || '';
+          const words = content.trim() ? content.trim().split(/\s+/).length : 0;
+          return sum + words;
+        }, 0);
+
+        setTotalWordCount(total);
+      } catch (err) {
+        console.warn('Failed to load scene contents for stats', err);
+        setTotalWordCount(0);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    loadSceneContents();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [scenes]);
+
+  const readingTime = React.useMemo(() => {
+    const wordsPerMinute = 200;
+    return Math.ceil(totalWordCount / wordsPerMinute);
+  }, [totalWordCount]);
+
+  return (
+    <div style={{
+      display: 'flex',
+      gap: '1.5rem',
+      fontSize: '13px',
+      color: 'var(--muted)',
+      paddingTop: '0.5rem',
+      borderTop: '1px solid var(--border)'
+    }}>
+      {loading ? (
+        <span>{t('common.loading')}</span>
+      ) : (
+        <>
+          <span>{t('writing.chapterWordCount')}: {totalWordCount.toLocaleString()}</span>
+          <span>{t('writing.readingTime')}: {readingTime} {t('writing.minutes')}</span>
+        </>
       )}
     </div>
   );
@@ -685,7 +794,7 @@ function ChapterOverview({
               </div>
             );
           })}
-          {/* „Neue Szene“ als Kachel am Ende der letzten Reihe */}
+          {/* „Neue Szene" als Kachel am Ende der letzten Reihe */}
           <button className="scene-card add-card" onClick={addScene} title={t('writing.addScene')}>
             <BsPlus className="icon" />
             <span>{t('writing.addScene')}</span>
