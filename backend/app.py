@@ -17,13 +17,15 @@ load_dotenv()
 
 try:
     from backend.extensions import db
-    from backend.models import Project, Chapter, Scene, Character, WorldNode, User, Role, Map
+    from backend.models import (Project, Chapter, Scene, Character, WorldNode, User, Role, Map,
+                                  SceneNote, SceneTask, ChapterNote, ChapterTask)
     from backend.word_parser import parse_word_document
     from backend.security_config import get_security_config
     from backend.console_mail import ConsoleMailBackend
 except ImportError:
     from extensions import db
-    from models import Project, Chapter, Scene, Character, WorldNode, User, Role, Map
+    from models import (Project, Chapter, Scene, Character, WorldNode, User, Role, Map,
+                        SceneNote, SceneTask, ChapterNote, ChapterTask)
     from word_parser import parse_word_document
     from security_config import get_security_config
     from console_mail import ConsoleMailBackend
@@ -94,9 +96,8 @@ def create_app():
     if allowed_origins:
         allowed = [o.strip() for o in allowed_origins.split(",")]
     else:
-        # Default: Allow Amplify and writehaven.io domains
+        # Default: Allow writehaven.io domains
         allowed = [
-            "https://master.d1g3w3mv6woysa.amplifyapp.com",
             "https://www.writehaven.io",
             "https://writehaven.io"
         ]
@@ -1064,6 +1065,190 @@ Sent from WriteHaven Feedback Form
         if not verify_chapter_ownership(s.chapter_id, get_current_user().id):
             return forbidden()
         db.session.delete(s); db.session.commit()
+        return ok({"ok": True})
+
+    # ---------- Scene Notes ----------
+    @app.get("/api/scenes/<int:sid>/notes")
+    @token_auth_required
+    def list_scene_notes(sid):
+        s = Scene.query.get(sid)
+        if not s or not verify_chapter_ownership(s.chapter_id, get_current_user().id):
+            return forbidden()
+        notes = SceneNote.query.filter_by(scene_id=sid).order_by(SceneNote.created_at.desc()).all()
+        return ok([{"id": n.id, "scene_id": n.scene_id, "title": n.title,
+                    "content": n.content, "created_at": n.created_at.isoformat() if n.created_at else None,
+                    "updated_at": n.updated_at.isoformat() if n.updated_at else None} for n in notes])
+
+    @app.post("/api/scenes/<int:sid>/notes")
+    @token_auth_required
+    def create_scene_note(sid):
+        s = Scene.query.get(sid)
+        if not s or not verify_chapter_ownership(s.chapter_id, get_current_user().id):
+            return forbidden()
+        data = request.get_json() or {}
+        note = SceneNote(scene_id=sid, title=data.get("title", ""), content=data.get("content", ""))
+        db.session.add(note); db.session.commit()
+        return ok({"id": note.id, "scene_id": note.scene_id, "title": note.title, "content": note.content,
+                   "created_at": note.created_at.isoformat() if note.created_at else None}, 201)
+
+    @app.put("/api/scenes/<int:sid>/notes/<int:nid>")
+    @token_auth_required
+    def update_scene_note(sid, nid):
+        note = SceneNote.query.get(nid)
+        if not note or note.scene_id != sid: return not_found()
+        s = Scene.query.get(sid)
+        if not s or not verify_chapter_ownership(s.chapter_id, get_current_user().id):
+            return forbidden()
+        data = request.get_json() or {}
+        if (t := data.get("title")) is not None: note.title = t
+        if (c := data.get("content")) is not None: note.content = c
+        db.session.commit()
+        return ok({"id": note.id, "scene_id": note.scene_id, "title": note.title, "content": note.content})
+
+    @app.delete("/api/scenes/<int:sid>/notes/<int:nid>")
+    @token_auth_required
+    def delete_scene_note(sid, nid):
+        note = SceneNote.query.get(nid)
+        if not note or note.scene_id != sid: return not_found()
+        s = Scene.query.get(sid)
+        if not s or not verify_chapter_ownership(s.chapter_id, get_current_user().id):
+            return forbidden()
+        db.session.delete(note); db.session.commit()
+        return ok({"ok": True})
+
+    # ---------- Scene Tasks ----------
+    @app.get("/api/scenes/<int:sid>/tasks")
+    @token_auth_required
+    def list_scene_tasks(sid):
+        s = Scene.query.get(sid)
+        if not s or not verify_chapter_ownership(s.chapter_id, get_current_user().id):
+            return forbidden()
+        tasks = SceneTask.query.filter_by(scene_id=sid).order_by(SceneTask.created_at.asc()).all()
+        return ok([{"id": t.id, "scene_id": t.scene_id, "title": t.title, "completed": t.completed,
+                    "created_at": t.created_at.isoformat() if t.created_at else None} for t in tasks])
+
+    @app.post("/api/scenes/<int:sid>/tasks")
+    @token_auth_required
+    def create_scene_task(sid):
+        s = Scene.query.get(sid)
+        if not s or not verify_chapter_ownership(s.chapter_id, get_current_user().id):
+            return forbidden()
+        data = request.get_json() or {}
+        task = SceneTask(scene_id=sid, title=data.get("title", ""), completed=False)
+        db.session.add(task); db.session.commit()
+        return ok({"id": task.id, "scene_id": task.scene_id, "title": task.title, "completed": task.completed}, 201)
+
+    @app.put("/api/scenes/<int:sid>/tasks/<int:tid>")
+    @token_auth_required
+    def update_scene_task(sid, tid):
+        task = SceneTask.query.get(tid)
+        if not task or task.scene_id != sid: return not_found()
+        s = Scene.query.get(sid)
+        if not s or not verify_chapter_ownership(s.chapter_id, get_current_user().id):
+            return forbidden()
+        data = request.get_json() or {}
+        if (t := data.get("title")) is not None: task.title = t
+        if (c := data.get("completed")) is not None: task.completed = bool(c)
+        db.session.commit()
+        return ok({"id": task.id, "scene_id": task.scene_id, "title": task.title, "completed": task.completed})
+
+    @app.delete("/api/scenes/<int:sid>/tasks/<int:tid>")
+    @token_auth_required
+    def delete_scene_task(sid, tid):
+        task = SceneTask.query.get(tid)
+        if not task or task.scene_id != sid: return not_found()
+        s = Scene.query.get(sid)
+        if not s or not verify_chapter_ownership(s.chapter_id, get_current_user().id):
+            return forbidden()
+        db.session.delete(task); db.session.commit()
+        return ok({"ok": True})
+
+    # ---------- Chapter Notes ----------
+    @app.get("/api/chapters/<int:cid>/notes")
+    @token_auth_required
+    def list_chapter_notes(cid):
+        if not verify_chapter_ownership(cid, get_current_user().id):
+            return forbidden()
+        notes = ChapterNote.query.filter_by(chapter_id=cid).order_by(ChapterNote.created_at.desc()).all()
+        return ok([{"id": n.id, "chapter_id": n.chapter_id, "title": n.title,
+                    "content": n.content, "created_at": n.created_at.isoformat() if n.created_at else None,
+                    "updated_at": n.updated_at.isoformat() if n.updated_at else None} for n in notes])
+
+    @app.post("/api/chapters/<int:cid>/notes")
+    @token_auth_required
+    def create_chapter_note(cid):
+        if not verify_chapter_ownership(cid, get_current_user().id):
+            return forbidden()
+        data = request.get_json() or {}
+        note = ChapterNote(chapter_id=cid, title=data.get("title", ""), content=data.get("content", ""))
+        db.session.add(note); db.session.commit()
+        return ok({"id": note.id, "chapter_id": note.chapter_id, "title": note.title, "content": note.content,
+                   "created_at": note.created_at.isoformat() if note.created_at else None}, 201)
+
+    @app.put("/api/chapters/<int:cid>/notes/<int:nid>")
+    @token_auth_required
+    def update_chapter_note(cid, nid):
+        note = ChapterNote.query.get(nid)
+        if not note or note.chapter_id != cid: return not_found()
+        if not verify_chapter_ownership(cid, get_current_user().id):
+            return forbidden()
+        data = request.get_json() or {}
+        if (t := data.get("title")) is not None: note.title = t
+        if (c := data.get("content")) is not None: note.content = c
+        db.session.commit()
+        return ok({"id": note.id, "chapter_id": note.chapter_id, "title": note.title, "content": note.content})
+
+    @app.delete("/api/chapters/<int:cid>/notes/<int:nid>")
+    @token_auth_required
+    def delete_chapter_note(cid, nid):
+        note = ChapterNote.query.get(nid)
+        if not note or note.chapter_id != cid: return not_found()
+        if not verify_chapter_ownership(cid, get_current_user().id):
+            return forbidden()
+        db.session.delete(note); db.session.commit()
+        return ok({"ok": True})
+
+    # ---------- Chapter Tasks ----------
+    @app.get("/api/chapters/<int:cid>/tasks")
+    @token_auth_required
+    def list_chapter_tasks(cid):
+        if not verify_chapter_ownership(cid, get_current_user().id):
+            return forbidden()
+        tasks = ChapterTask.query.filter_by(chapter_id=cid).order_by(ChapterTask.created_at.asc()).all()
+        return ok([{"id": t.id, "chapter_id": t.chapter_id, "title": t.title, "completed": t.completed,
+                    "created_at": t.created_at.isoformat() if t.created_at else None} for t in tasks])
+
+    @app.post("/api/chapters/<int:cid>/tasks")
+    @token_auth_required
+    def create_chapter_task(cid):
+        if not verify_chapter_ownership(cid, get_current_user().id):
+            return forbidden()
+        data = request.get_json() or {}
+        task = ChapterTask(chapter_id=cid, title=data.get("title", ""), completed=False)
+        db.session.add(task); db.session.commit()
+        return ok({"id": task.id, "chapter_id": task.chapter_id, "title": task.title, "completed": task.completed}, 201)
+
+    @app.put("/api/chapters/<int:cid>/tasks/<int:tid>")
+    @token_auth_required
+    def update_chapter_task(cid, tid):
+        task = ChapterTask.query.get(tid)
+        if not task or task.chapter_id != cid: return not_found()
+        if not verify_chapter_ownership(cid, get_current_user().id):
+            return forbidden()
+        data = request.get_json() or {}
+        if (t := data.get("title")) is not None: task.title = t
+        if (c := data.get("completed")) is not None: task.completed = bool(c)
+        db.session.commit()
+        return ok({"id": task.id, "chapter_id": task.chapter_id, "title": task.title, "completed": task.completed})
+
+    @app.delete("/api/chapters/<int:cid>/tasks/<int:tid>")
+    @token_auth_required
+    def delete_chapter_task(cid, tid):
+        task = ChapterTask.query.get(tid)
+        if not task or task.chapter_id != cid: return not_found()
+        if not verify_chapter_ownership(cid, get_current_user().id):
+            return forbidden()
+        db.session.delete(task); db.session.commit()
         return ok({"ok": True})
 
     # ---------- Characters ----------
