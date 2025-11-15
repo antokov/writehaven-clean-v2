@@ -170,6 +170,86 @@ class Map(db.Model):
     project = db.relationship("Project", backref="map")
 
 
+class SceneNote(db.Model):
+    """Notes for scenes"""
+    __tablename__ = "scene_note"
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, primary_key=True)
+    scene_id = db.Column(
+        db.Integer, db.ForeignKey("scene.id"), nullable=False, index=True
+    )
+    title = db.Column(db.String(200), nullable=False, default="")
+    content = db.Column(db.Text, default="")
+    created_at = db.Column(db.DateTime, server_default=func.now())
+    updated_at = db.Column(
+        db.DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+    # Relationship
+    scene = db.relationship("Scene", backref=db.backref("notes", cascade="all, delete-orphan"))
+
+
+class SceneTask(db.Model):
+    """Tasks for scenes"""
+    __tablename__ = "scene_task"
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, primary_key=True)
+    scene_id = db.Column(
+        db.Integer, db.ForeignKey("scene.id"), nullable=False, index=True
+    )
+    title = db.Column(db.String(500), nullable=False)
+    completed = db.Column(db.Boolean, nullable=False, default=False)
+    created_at = db.Column(db.DateTime, server_default=func.now())
+    updated_at = db.Column(
+        db.DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+    # Relationship
+    scene = db.relationship("Scene", backref=db.backref("tasks", cascade="all, delete-orphan"))
+
+
+class ChapterNote(db.Model):
+    """Notes for chapters"""
+    __tablename__ = "chapter_note"
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, primary_key=True)
+    chapter_id = db.Column(
+        db.Integer, db.ForeignKey("chapter.id"), nullable=False, index=True
+    )
+    title = db.Column(db.String(200), nullable=False, default="")
+    content = db.Column(db.Text, default="")
+    created_at = db.Column(db.DateTime, server_default=func.now())
+    updated_at = db.Column(
+        db.DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+    # Relationship
+    chapter = db.relationship("Chapter", backref=db.backref("notes", cascade="all, delete-orphan"))
+
+
+class ChapterTask(db.Model):
+    """Tasks for chapters"""
+    __tablename__ = "chapter_task"
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, primary_key=True)
+    chapter_id = db.Column(
+        db.Integer, db.ForeignKey("chapter.id"), nullable=False, index=True
+    )
+    title = db.Column(db.String(500), nullable=False)
+    completed = db.Column(db.Boolean, nullable=False, default=False)
+    created_at = db.Column(db.DateTime, server_default=func.now())
+    updated_at = db.Column(
+        db.DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+    # Relationship
+    chapter = db.relationship("Chapter", backref=db.backref("tasks", cascade="all, delete-orphan"))
+
+
 class Role(db.Model, RoleMixin):
     """Flask-Security-Too Role Model"""
     __tablename__ = "role"

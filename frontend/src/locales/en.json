@@ -18,10 +18,13 @@
     "rename": "Rename",
     "remove": "Remove",
     "feedback": "Feedback",
-    "giveFeedback": "Give feedback"
+    "giveFeedback": "Give feedback",
+    "expand": "Expand",
+    "collapse": "Collapse"
   },
   "writing": {
     "structure": "Structure",
+    "toolsTitle": "Tools",
     "addChapter": "Add chapter",
     "addScene": "Add scene",
     "showChapter": "Show chapter",
@@ -66,6 +69,37 @@
     "context": {
       "createCharacter": "New character",
       "createWorldElement": "New world element"
+    },
+    "notes": {
+      "title": "Notes",
+      "addNote": "Add note",
+      "noNotes": "No notes yet",
+      "newNote": "New Note",
+      "editNote": "Edit Note",
+      "deleteNote": "Delete note",
+      "untitled": "Untitled",
+      "titlePlaceholder": "Note title",
+      "contentPlaceholder": "Note content...",
+      "saveFailed": "Failed to save note",
+      "deleteFailed": "Failed to delete note",
+      "deleteConfirm": "Do you really want to delete this note?"
+    },
+    "tasks": {
+      "title": "Tasks",
+      "addTask": "Add task",
+      "noTasks": "No tasks yet",
+      "newTaskPlaceholder": "Enter new task and press Enter...",
+      "completed": "Completed",
+      "markComplete": "Mark as complete",
+      "markIncomplete": "Mark as incomplete",
+      "deleteTask": "Delete task",
+      "createFailed": "Failed to create task",
+      "updateFailed": "Failed to update task",
+      "deleteFailed": "Failed to delete task",
+      "deleteConfirm": "Do you really want to delete this task?"
+    },
+    "tools": {
+      "selectContext": "Select a chapter or scene"
     }
   },
   "auth": {

@@ -18,10 +18,13 @@
     "rename": "Umbenennen",
     "remove": "Entfernen",
     "feedback": "Feedback",
-    "giveFeedback": "Feedback geben"
+    "giveFeedback": "Feedback geben",
+    "expand": "Ausklappen",
+    "collapse": "Einklappen"
   },
   "writing": {
     "structure": "Struktur",
+    "toolsTitle": "Tools",
     "tools": "Tools",
     "closeTools": "Tools schließen",
     "openTools": "Tools öffnen",
@@ -73,6 +76,37 @@
     "context": {
       "createCharacter": "Neuer Charakter",
       "createWorldElement": "Neues Weltelement"
+    },
+    "notes": {
+      "title": "Notizen",
+      "addNote": "Notiz hinzufügen",
+      "noNotes": "Keine Notizen vorhanden",
+      "newNote": "Neue Notiz",
+      "editNote": "Notiz bearbeiten",
+      "deleteNote": "Notiz löschen",
+      "untitled": "Ohne Titel",
+      "titlePlaceholder": "Titel der Notiz",
+      "contentPlaceholder": "Inhalt der Notiz...",
+      "saveFailed": "Notiz konnte nicht gespeichert werden",
+      "deleteFailed": "Notiz konnte nicht gelöscht werden",
+      "deleteConfirm": "Möchtest du diese Notiz wirklich löschen?"
+    },
+    "tasks": {
+      "title": "Aufgaben",
+      "addTask": "Aufgabe hinzufügen",
+      "noTasks": "Keine Aufgaben vorhanden",
+      "newTaskPlaceholder": "Neue Aufgabe eingeben und Enter drücken...",
+      "completed": "Erledigt",
+      "markComplete": "Als erledigt markieren",
+      "markIncomplete": "Als unerledigt markieren",
+      "deleteTask": "Aufgabe löschen",
+      "createFailed": "Aufgabe konnte nicht erstellt werden",
+      "updateFailed": "Aufgabe konnte nicht aktualisiert werden",
+      "deleteFailed": "Aufgabe konnte nicht gelöscht werden",
+      "deleteConfirm": "Möchtest du diese Aufgabe wirklich löschen?"
+    },
+    "tools": {
+      "selectContext": "Wähle ein Kapitel oder eine Szene aus"
     }
   },
   "auth": {

@@ -5,6 +5,8 @@ import { BsPlus, BsTrash, BsChevronDown, BsChevronRight } from 'react-icons/bs';
 
 import ConfirmModal from '../components/ConfirmModal';
 import TextContextMenu from '../components/TextContextMenu';
+import NotesPanel from '../components/NotesPanel';
+import TasksPanel from '../components/TasksPanel';
 import { useTranslation } from 'react-i18next';
 
 export default function ProjectView() {
@@ -608,7 +610,7 @@ export default function ProjectView() {
       {/* Right sidebar - Tools panel */}
       <aside className={`tools-panel ${toolsPanelOpen ? 'open' : 'closed'}`}>
         <div className="tools-header">
-          <span className="tools-title">{t('writing.tools')}</span>
+          <span className="tools-title">{t('writing.toolsTitle')}</span>
           <button
             className="icon-btn tools-toggle"
             onClick={() => setToolsPanelOpen(!toolsPanelOpen)}
@@ -620,7 +622,23 @@ export default function ProjectView() {
 
         {toolsPanelOpen && (
           <div className="tools-content">
-            {/* Tools content can be added here in the future */}
+            {activeSceneId && (
+              <>
+                <NotesPanel contextType="scene" contextId={activeSceneId} onRequestDelete={setConfirmModal} />
+                <TasksPanel contextType="scene" contextId={activeSceneId} onRequestDelete={setConfirmModal} />
+              </>
+            )}
+            {activeChapterId && !activeSceneId && (
+              <>
+                <NotesPanel contextType="chapter" contextId={activeChapterId} onRequestDelete={setConfirmModal} />
+                <TasksPanel contextType="chapter" contextId={activeChapterId} onRequestDelete={setConfirmModal} />
+              </>
+            )}
+            {!activeChapterId && !activeSceneId && (
+              <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>
+                {t('writing.tools.selectContext')}
+              </div>
+            )}
           </div>
         )}
       </aside>
