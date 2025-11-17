@@ -3,11 +3,13 @@ import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { generateMap, getBiomeColor } from '../utils/mapGenerator';
+import { BsDice5 } from 'react-icons/bs';
 import '../styles/mapview.css';
 
 export default function MapView() {
   const { id: projectId } = useParams();
   const { t } = useTranslation();
+  const [worldName, setWorldName] = useState('');
   const [seed, setSeed] = useState('');
   const [mapData, setMapData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -20,6 +22,7 @@ export default function MapView() {
   const [allPlaces, setAllPlaces] = useState([]); // All places with regionIds for map markers
   const svgRef = useRef(null);
   const saveTimeoutRef = useRef(null);
+  const nameTimeoutRef = useRef(null);
 
   // Load existing map on mount
   useEffect(() => {
@@ -48,6 +51,7 @@ export default function MapView() {
       if (res.data) {
         setSeed(res.data.seed);
         setMapData(res.data.data);
+        setWorldName(res.data.data?.name || '');
         setLastSaved(res.data.updated_at);
       }
     } catch (err) {
@@ -57,24 +61,44 @@ export default function MapView() {
     }
   }
 
-  async function handleGenerate() {
-    if (!seed.trim()) {
-      setError(t('map.errors.generateFailed'));
-      return;
+  // Handle world name change with auto-save
+  function handleWorldNameChange(newName) {
+    setWorldName(newName);
+
+    // Update in mapData
+    const updatedMapData = {
+      ...mapData,
+      name: newName
+    };
+    setMapData(updatedMapData);
+
+    // Debounce auto-save
+    if (nameTimeoutRef.current) {
+      clearTimeout(nameTimeoutRef.current);
     }
 
+    nameTimeoutRef.current = setTimeout(() => {
+      saveMap(updatedMapData);
+    }, 1000);
+  }
+
+  async function handleGenerate() {
     try {
       setLoading(true);
       setError(null);
 
+      // Generate random seed if not set
+      const newSeed = Math.random().toString(36).substring(2, 15);
+      setSeed(newSeed);
+
       // Generate large map with many cells for detailed zoom
       // Azgaar-style: Much smaller cells for detailed, realistic geography
       // Size: 4000x2400, cells: 4000 (similar to Azgaar's detail level)
-      const generated = generateMap(seed, 4000, 2400, 4000);
+      const generated = generateMap(newSeed, 4000, 2400, 4000);
       setMapData(generated);
 
       // Auto-save
-      await saveMap(generated);
+      await saveMap(generated, newSeed);
     } catch (err) {
       console.error('Map generation failed:', err);
       setError(t('map.errors.generateFailed'));
@@ -83,13 +107,13 @@ export default function MapView() {
     }
   }
 
-  async function saveMap(dataToSave = mapData) {
+  async function saveMap(dataToSave = mapData, seedToSave = seed) {
     if (!dataToSave) return;
 
     try {
       setSaving(true);
       await axios.post(`/api/projects/${projectId}/map`, {
-        seed,
+        seed: seedToSave,
         width: dataToSave.width,
         height: dataToSave.height,
         num_cells: dataToSave.numCells,
@@ -189,42 +213,59 @@ export default function MapView() {
     <div className="page-wrap map-page">
       {/* Left Sidebar - Controls */}
       <aside className="side">
-        <div className="panel">
-          <h3 className="panel-title">{t('map.generateNew')}</h3>
-
-          <div className="form-group">
-            <label className="label">{t('map.seedLabel')}</label>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <input
-                type="text"
-                value={seed}
-                onChange={e => setSeed(e.target.value)}
-                placeholder={t('map.seedPlaceholder')}
-                className="input"
-                style={{ flex: 1 }}
-              />
-              <button
-                onClick={() => setSeed(Math.random().toString(36).substring(2, 15))}
-                className="btn btn-secondary"
-                style={{ padding: '0 1rem' }}
-                title="Generate random seed"
-              >
-                🎲
-              </button>
-            </div>
-            <small className="hint">{t('map.seedHint')}</small>
+        <div className="tree">
+          <div className="tree-head">
+            <span className="tree-title">{t('map.title', 'Map')}</span>
+            <button
+              className="icon-btn"
+              onClick={handleGenerate}
+              disabled={loading}
+              title={t('map.generateRandom', 'Generate random map')}
+            >
+              <BsDice5 />
+            </button>
           </div>
 
-          <button
-            onClick={handleGenerate}
-            disabled={loading || !seed.trim()}
-            className="btn btn-primary"
-            style={{ width: '100%', marginTop: '0.5rem' }}
-          >
-            {loading ? t('map.generating') : t('map.generate')}
-          </button>
+          <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* World Name */}
+            <div>
+              <label className="small muted" style={{ marginBottom: '8px', display: 'block' }}>
+                {t('map.worldName', 'World Name')}
+              </label>
+              <input
+                type="text"
+                value={worldName}
+                onChange={e => handleWorldNameChange(e.target.value)}
+                placeholder={t('map.worldNamePlaceholder', 'Enter world name...')}
+                className="input"
+              />
+            </div>
 
-          {error && <div className="error-message" style={{ marginTop: '0.5rem' }}>{error}</div>}
+            {/* Biome Legend */}
+            {mapData && (
+              <div>
+                <label className="small muted" style={{ marginBottom: '8px', display: 'block' }}>
+                  {t('map.biomeLegend', 'Biomes')}
+                </label>
+                <div className="biome-legend">
+                  {['ocean', 'coast', 'plains', 'forest', 'desert', 'mountain', 'tundra'].map(biome => (
+                    <div key={biome} className="biome-item">
+                      <div className="biome-color" style={{ backgroundColor: getBiomeColor(biome) }} />
+                      <span className="biome-label">{t(`map.biomes.${biome}`, biome)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {error && <div className="error-message">{error}</div>}
+
+            {lastSaved && (
+              <div className="small muted">
+                {t('common.saved', { time: new Date(lastSaved).toLocaleTimeString() })}
+              </div>
+            )}
+          </div>
         </div>
       </aside>
 
@@ -263,24 +304,24 @@ export default function MapView() {
       {/* Right Sidebar - State Details */}
       {selectedState && (
         <aside className="side" style={{ borderLeft: '1px solid var(--border)' }}>
-          <div className="panel">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 className="panel-title">State Details</h3>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                {saving && <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Saving...</span>}
-                {!saving && lastSaved && <span style={{ fontSize: '0.875rem', color: 'var(--success)' }}>✓ Saved</span>}
-                <button
-                  onClick={() => setSelectedState(null)}
-                  className="btn btn-secondary"
-                  style={{ padding: '0.25rem 0.5rem', fontSize: '0.875rem' }}
-                >
-                  ✕
-                </button>
-              </div>
+          <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>
+                {t('map.regionDetails', 'Region Details')}
+              </h3>
+              <button
+                onClick={() => setSelectedState(null)}
+                className="btn btn-secondary-quiet"
+                style={{ padding: '4px 8px' }}
+              >
+                ✕
+              </button>
             </div>
 
-            <div className="form-group">
-              <label className="label">Name</label>
+            {/* Region Name */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label className="small muted">{t('map.regionName', 'Region Name')}</label>
               <input
                 type="text"
                 value={selectedState.name}
@@ -289,13 +330,14 @@ export default function MapView() {
                   handleStateUpdate(updatedState);
                 }}
                 className="input"
-                placeholder="Enter state name"
+                placeholder={t('map.regionNamePlaceholder', 'Enter region name')}
               />
             </div>
 
-            <div className="form-group">
-              <label className="label">Color</label>
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            {/* Region Color */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label className="small muted">{t('map.regionColor', 'Region Color')}</label>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <input
                   type="color"
                   value={selectedState.color}
@@ -303,31 +345,32 @@ export default function MapView() {
                     const updatedState = { ...selectedState, color: e.target.value };
                     handleStateUpdate(updatedState);
                   }}
-                  style={{ width: '50px', height: '36px', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer' }}
+                  style={{ width: '50px', height: '36px', border: '1px solid #e5e7eb', borderRadius: '4px', cursor: 'pointer' }}
                 />
-                <span className="hint" style={{ flex: 1 }}>{selectedState.color}</span>
+                <span className="small muted" style={{ flex: 1 }}>{selectedState.color}</span>
               </div>
             </div>
 
-            <div className="form-group">
-              <label className="label">Description</label>
+            {/* Description */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label className="small muted">{t('map.regionDescription', 'Description')}</label>
               <textarea
                 value={selectedState.description || ''}
                 onChange={(e) => {
                   const updatedState = { ...selectedState, description: e.target.value };
                   handleStateUpdate(updatedState);
                 }}
-                className="input"
-                placeholder="Add description..."
-                rows="4"
-                style={{ resize: 'vertical', fontFamily: 'inherit' }}
+                className="textarea"
+                placeholder={t('map.regionDescriptionPlaceholder', 'Add description...')}
+                rows={4}
               />
             </div>
 
-            <div className="form-group">
-              <label className="label">Stats</label>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                <div style={{ marginBottom: '0.25rem' }}>
+            {/* Stats */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label className="small muted">{t('map.regionStats', 'Statistics')}</label>
+              <div style={{ padding: '12px', background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px' }}>
+                <div style={{ marginBottom: '4px' }}>
                   <strong>Cells:</strong> {selectedState.cells.length}
                 </div>
                 <div>
@@ -336,57 +379,44 @@ export default function MapView() {
               </div>
             </div>
 
-            <div className="form-group">
-              <label className="label">Places in this Region ({placesInRegion.length})</label>
+            {/* Places in Region */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label className="small muted">
+                {t('map.placesInRegion', 'Places in this Region')} ({placesInRegion.length})
+              </label>
               {placesInRegion.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', marginTop: '0.5rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {placesInRegion.map(place => (
                     <div
                       key={place.id}
+                      className="panel"
                       style={{
-                        padding: '0.75rem',
-                        background: '#f8fafc',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '6px',
+                        padding: '12px',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '0.75rem',
-                        transition: 'all 0.2s ease',
-                        cursor: 'pointer'
+                        gap: '12px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'var(--hover-bg, #f1f5f9)';
-                        e.currentTarget.style.borderColor = 'var(--brand, #6366f1)';
+                        e.currentTarget.style.background = '#f1f5f9';
                         e.currentTarget.style.transform = 'translateX(2px)';
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = '#f8fafc';
-                        e.currentTarget.style.borderColor = '#e5e7eb';
+                        e.currentTarget.style.background = '#ffffff';
                         e.currentTarget.style.transform = 'translateX(0)';
                       }}
                       onClick={() => {
                         window.location.href = `/app/project/${projectId}/world`;
                       }}
                     >
-                      <div style={{
-                        width: '36px',
-                        height: '36px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: '#ffffff',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '1.25rem',
-                        flexShrink: 0
-                      }}>
+                      <div style={{ fontSize: '24px', lineHeight: 1, flexShrink: 0 }}>
                         {place.icon || '🏰'}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{
-                          fontWeight: 600,
-                          fontSize: '0.875rem',
-                          color: '#1e293b',
+                          fontWeight: 500,
+                          fontSize: '14px',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap'
@@ -394,38 +424,17 @@ export default function MapView() {
                           {place.title || 'Unnamed Place'}
                         </div>
                         {place.kind && (
-                          <div style={{
-                            fontSize: '0.75rem',
-                            color: '#64748b',
-                            marginTop: '2px'
-                          }}>
+                          <div className="small muted" style={{ marginTop: '2px' }}>
                             {place.kind}
                           </div>
                         )}
-                      </div>
-                      <div style={{
-                        fontSize: '0.75rem',
-                        color: 'var(--brand, #6366f1)',
-                        fontWeight: 500,
-                        flexShrink: 0
-                      }}>
-                        →
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div style={{
-                  padding: '1rem',
-                  fontSize: '0.875rem',
-                  color: 'var(--text-secondary)',
-                  textAlign: 'center',
-                  background: 'var(--bg-secondary, #f8fafc)',
-                  borderRadius: '6px',
-                  border: '1px dashed var(--border, #e5e7eb)',
-                  marginTop: '0.5rem'
-                }}>
-                  No places linked yet. Go to World section to link places.
+                <div className="small muted">
+                  {t('map.noPlacesLinked', 'No places linked yet. Go to World section to link places.')}
                 </div>
               )}
             </div>
