@@ -11,6 +11,21 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 20px;
+  /* Maximal 3 Spalten pro Zeile */
+  max-width: 100%;
+}
+
+/* Begrenzung auf maximal 3 Spalten */
+@media (min-width: 1200px) {
+  .fields-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .fields-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 /* Field Container */
