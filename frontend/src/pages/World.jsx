@@ -342,6 +342,7 @@ const ELEMENT_TYPES = [
     { key: "Beruf", label: "Beruf/Handwerk" },
     { key: "Zunft", label: "Zunft/Gilde" },
     { key: "Manufaktur", label: "Manufaktur/Betrieb" },
+    { key: "Firma", label: "Firma/Unternehmen" },
     { key: "Markt", label: "Markt/Marktplatz" },
     { key: "Handelsroute", label: "Handelsroute" },
     { key: "Bank", label: "Bank/Wechselstube" },
