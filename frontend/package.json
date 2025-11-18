@@ -24,7 +24,8 @@
     "react-icons": "^4.11.0",
     "react-router-dom": "^6.26.2",
     "reactflow": "^11.11.4",
-    "simplex-noise": "^4.0.3"
+    "simplex-noise": "^4.0.3",
+    "swiper": "^12.0.3"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.1.5",
