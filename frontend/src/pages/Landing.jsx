@@ -1,5 +1,10 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
+import { Swiper, SwiperSlide } from 'swiper/react'
+import { Navigation, Pagination, Autoplay, Keyboard } from 'swiper/modules'
+import 'swiper/css'
+import 'swiper/css/navigation'
+import 'swiper/css/pagination'
 import '../styles/landing.css'
 import logoUrl from '../assets/logo.png'
 
@@ -8,6 +13,21 @@ const BMAC_URL = import.meta.env.VITE_BMAC_URL || 'https://buymeacoffee.com/writ
 export default function Landing() {
   const [scrollY, setScrollY] = useState(0)
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
+  const [isPaused, setIsPaused] = useState(false)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxImage, setLightboxImage] = useState({ src: '', alt: '' })
+  const swiperRef = useRef(null)
+
+  const openLightbox = (src, alt) => {
+    setLightboxImage({ src, alt })
+    setLightboxOpen(true)
+    document.body.style.overflow = 'hidden'
+  }
+
+  const closeLightbox = () => {
+    setLightboxOpen(false)
+    document.body.style.overflow = ''
+  }
 
   useEffect(() => {
     const yearEl = document.getElementById('year')
@@ -67,6 +87,64 @@ export default function Landing() {
   const parallaxStyle = {
     transform: `translate(${(mousePos.x - window.innerWidth / 2) * 0.01}px, ${(mousePos.y - window.innerHeight / 2) * 0.01}px)`
   }
+
+  const features = [
+    {
+      id: 'writing',
+      title: 'Writing',
+      screenshot: '/landing/assets/screenshot1.jpeg',
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      description: 'Distraction-free editor with chapters, scenes, and smart structure. Focus on your story while we handle the organization.'
+    },
+    {
+      id: 'characters',
+      title: 'Characters',
+      screenshot: '/landing/assets/screenshot2.jpeg',
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      description: 'Deep character profiles, relationship graphs, and dynamic attributes. Track character arcs and connections throughout your story.'
+    },
+    {
+      id: 'world',
+      title: 'World Building',
+      screenshot: '/landing/assets/screenshot3.jpeg',
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      description: 'Create rich worlds with places, cultures, and complex relationships. Keep track of every detail that makes your world unique.'
+    },
+    {
+      id: 'map',
+      title: 'Map',
+      screenshot: '/landing/assets/screenshot4.jpeg',
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      description: 'Generate fantasy maps with biomes, regions, and landmarks. Visualize your world and link places directly to your story elements.'
+    },
+    {
+      id: 'export',
+      title: 'Export',
+      screenshot: '/landing/assets/screenshot5.jpeg',
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      description: 'Export your finished work to professional PDF or HTML formats. Beautiful formatting that makes your story ready to share.'
+    }
+  ]
 
   return (
     <div className="landing-page">
@@ -244,59 +322,106 @@ export default function Landing() {
           <div className="container">
             <div className="section-header fade-in-section">
               <span className="section-badge">Features</span>
-              <h2 className="section-title">Tools We'll Refine Together</h2>
+              <h2 className="section-title">See WriteHaven in Action</h2>
               <p className="section-subtitle">
-                Everything is evolving — your feedback sets priorities. Check out <a href="#about" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>what Writehaven is</a> and <a href="#preview" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>get inspired</a>.
+                Explore our features and see how they work. Everything is evolving — your feedback shapes the future of WriteHaven.
               </p>
             </div>
 
-            <div className="features-grid">
-              <div className="feature-card fade-in-section" style={{ animationDelay: '0.1s' }}>
-                <div className="feature-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </div>
-                <h3 className="feature-title">Smart Structure</h3>
-                <p className="feature-description">Organize your <a href="#about" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>chapters & scenes</a> — tell us what you're missing.</p>
-              </div>
+            <div className="features-carousel-container fade-in-section">
+              <Swiper
+                ref={swiperRef}
+                modules={[Navigation, Pagination, Autoplay, Keyboard]}
+                grabCursor={true}
+                centeredSlides={true}
+                slidesPerView={1.4}
+                spaceBetween={30}
+                breakpoints={{
+                  640: {
+                    slidesPerView: 1.5,
+                    spaceBetween: 40,
+                  },
+                  1024: {
+                    slidesPerView: 1.6,
+                    spaceBetween: 50,
+                  },
+                  1280: {
+                    slidesPerView: 1.8,
+                    spaceBetween: 60,
+                  },
+                }}
+                navigation={true}
+                pagination={{
+                  clickable: true,
+                  dynamicBullets: true
+                }}
+                keyboard={{ enabled: true }}
+                autoplay={{
+                  delay: 5000,
+                  disableOnInteraction: false,
+                  pauseOnMouseEnter: true,
+                }}
+                loop={true}
+                speed={600}
+                onMouseEnter={() => setIsPaused(true)}
+                onMouseLeave={() => setIsPaused(false)}
+                className="features-swiper"
+              >
+                {features.map((feature) => (
+                  <SwiperSlide key={feature.id}>
+                    <div className="feature-slide">
+                      <div className="feature-slide-content">
+                        {/* Screenshot */}
+                        <div
+                          className="feature-slide-screenshot"
+                          onClick={() => openLightbox(feature.screenshot, `${feature.title} feature`)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => e.key === 'Enter' && openLightbox(feature.screenshot, `${feature.title} feature`)}
+                        >
+                          <div className="screenshot-mockup-carousel">
+                            <div className="mockup-header">
+                              <div className="mockup-buttons">
+                                <span className="mockup-button red"></span>
+                                <span className="mockup-button yellow"></span>
+                                <span className="mockup-button green"></span>
+                              </div>
+                              <div className="mockup-title">WriteHaven</div>
+                            </div>
+                            <div className="mockup-content">
+                              <img
+                                src={feature.screenshot}
+                                alt={`${feature.title} feature`}
+                                className="screenshot-image"
+                              />
+                              <div className="screenshot-zoom-hint">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                  <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m-3-3h6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                                <span>Click to enlarge</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
 
-              <div className="feature-card fade-in-section" style={{ animationDelay: '0.2s' }}>
-                <div className="feature-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </div>
-                <h3 className="feature-title">Character Development</h3>
-                <p className="feature-description">Relation graph & bio — we’re testing UX & performance.</p>
-              </div>
+                        {/* Description */}
+                        <div className="feature-slide-info">
+                          <div className="feature-slide-icon">
+                            {feature.icon}
+                          </div>
+                          <h3 className="feature-slide-title">{feature.title}</h3>
+                          <p className="feature-slide-description">{feature.description}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </SwiperSlide>
+                ))}
+              </Swiper>
 
-              <div className="feature-card fade-in-section" style={{ animationDelay: '0.3s' }}>
-                <div className="feature-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </div>
-                <h3 className="feature-title">World Building</h3>
-                <p className="feature-description">Places, cultures & timelines — feedback welcome.</p>
-              </div>
-
-              <div className="feature-card fade-in-section" style={{ animationDelay: '0.4s' }}>
-                <div className="feature-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </div>
-                <h3 className="feature-title">AI Assistant</h3>
-                <p className="feature-description">Ideas, editing & summaries — under evaluation.</p>
-              </div>
-
-              <div className="feature-card fade-in-section" style={{ animationDelay: '0.5s' }}>
-                <div className="feature-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </div>
-                <h3 className="feature-title">Focused Writing</h3>
-                <p className="feature-description">Distraction-free — we’ll polish it together.</p>
-              </div>
-
-              <div className="feature-card fade-in-section" style={{ animationDelay: '0.6s' }}>
-                <div className="feature-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </div>
-                <h3 className="feature-title">Cloud Sync</h3>
-                <p className="feature-description">Backups & sync — reliability first.</p>
+              {/* Progress indicator */}
+              <div className={`carousel-status ${isPaused ? 'paused' : ''}`}>
+                <span className="status-dot"></span>
+                <span className="status-text">{isPaused ? 'Paused' : 'Auto-playing'}</span>
               </div>
             </div>
           </div>
@@ -451,6 +576,24 @@ export default function Landing() {
           </div>
         </div>
       </footer>
+
+      {/* Lightbox Modal */}
+      {lightboxOpen && (
+        <div
+          className="lightbox-overlay"
+          onClick={closeLightbox}
+          onKeyDown={(e) => e.key === 'Escape' && closeLightbox()}
+        >
+          <button className="lightbox-close" onClick={closeLightbox} aria-label="Close lightbox">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M6 18L18 6M6 6l12 12" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
+            <img src={lightboxImage.src} alt={lightboxImage.alt} className="lightbox-image" />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
