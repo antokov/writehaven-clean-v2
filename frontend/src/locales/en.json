@@ -301,6 +301,9 @@
       "createFailed": "Could not create character.",
       "deleteFailed": "Could not delete character."
     },
+    "tools": {
+      "selectCharacter": "Select a character to view notes and tasks."
+    },
     "attributes": {
       "add": "Add attribute",
       "select": "Select attribute",

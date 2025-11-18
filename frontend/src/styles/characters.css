@@ -106,6 +106,22 @@
   top: calc(var(--header-h, 56px) + var(--topnav-h, 44px));
   left: 0; right: 0; bottom: 0;
   overflow: hidden;
+  /* Override grid for 3-column layout with tools panel */
+  display: grid;
+  grid-template-columns: 280px 1fr 280px;
+  gap: 1.25rem;
+  padding: 1rem;
+}
+
+/* When Tools-Panel is closed, make the right column narrower */
+.characters-page:has(.tools-panel.closed) {
+  grid-template-columns: 280px 1fr 48px;
+}
+
+/* Tools panel in characters page */
+.characters-page .tools-panel {
+  height: 100%;
+  overflow: auto;
 }
 
 /* Linke Spalte (Sidebar) scrollt eigenstaendig */

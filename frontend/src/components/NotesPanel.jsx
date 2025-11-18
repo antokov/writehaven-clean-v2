@@ -18,6 +18,8 @@ export default function NotesPanel({ contextType, contextId, onRequestDelete }) 
 
   const baseUrl = contextType === 'scene'
     ? `/api/scenes/${contextId}/notes`
+    : contextType === 'character'
+    ? `/api/characters/${contextId}/notes`
     : `/api/chapters/${contextId}/notes`;
 
   // Save collapsed state to localStorage whenever it changes

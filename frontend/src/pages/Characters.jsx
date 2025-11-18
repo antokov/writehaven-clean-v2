@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useLocation } from "react-router-dom";
-import { BsPlus, BsTrash } from "react-icons/bs";
+import { BsPlus, BsTrash, BsChevronDown, BsChevronRight } from "react-icons/bs";
+import NotesPanel from "../components/NotesPanel";
+import TasksPanel from "../components/TasksPanel";
 import { TbNetwork, TbTopologyStar3 } from "react-icons/tb";
 import { createPortal } from "react-dom";
 import axios from "axios";
@@ -1008,6 +1010,7 @@ export default function Characters() {
   const [showGraph, setShowGraph] = useState(false);
   const [showWorldGraph, setShowWorldGraph] = useState(false);
   const [confirmModal, setConfirmModal] = useState(null);
+  const [toolsPanelOpen, setToolsPanelOpen] = useState(true);
 
   const saveTimer = useRef(null);
   const isLoadingRef = useRef(false);
@@ -1283,6 +1286,35 @@ export default function Characters() {
           </>
         )}
       </main>
+
+      {/* Right sidebar - Tools panel */}
+      <aside className={`tools-panel ${toolsPanelOpen ? 'open' : 'closed'}`}>
+        <div className="tools-header">
+          <span className="tools-title">{t('writing.toolsTitle')}</span>
+          <button
+            className="icon-btn tools-toggle"
+            onClick={() => setToolsPanelOpen(!toolsPanelOpen)}
+            aria-label={toolsPanelOpen ? t('writing.closeTools') : t('writing.openTools')}
+          >
+            {toolsPanelOpen ? <BsChevronRight /> : <BsChevronDown />}
+          </button>
+        </div>
+
+        {toolsPanelOpen && (
+          <div className="tools-content">
+            {activeId ? (
+              <>
+                <NotesPanel contextType="character" contextId={activeId} onRequestDelete={setConfirmModal} />
+                <TasksPanel contextType="character" contextId={activeId} onRequestDelete={setConfirmModal} />
+              </>
+            ) : (
+              <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>
+                {t('characters.tools.selectCharacter')}
+              </div>
+            )}
+          </div>
+        )}
+      </aside>
 
       {confirmModal && <ConfirmModal {...confirmModal} />}
     </div>

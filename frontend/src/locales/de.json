@@ -308,6 +308,9 @@
       "createFailed": "Charakter konnte nicht erstellt werden.",
       "deleteFailed": "Charakter konnte nicht gelöscht werden."
     },
+    "tools": {
+      "selectCharacter": "Wähle einen Charakter aus, um Notizen und Aufgaben zu sehen."
+    },
     "attributes": {
       "add": "Attribut hinzufügen",
       "select": "Attribut wählen",

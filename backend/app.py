@@ -18,14 +18,14 @@ load_dotenv()
 try:
     from backend.extensions import db
     from backend.models import (Project, Chapter, Scene, Character, WorldNode, User, Role, Map,
-                                  SceneNote, SceneTask, ChapterNote, ChapterTask)
+                                  SceneNote, SceneTask, ChapterNote, ChapterTask, CharacterNote, CharacterTask)
     from backend.word_parser import parse_word_document
     from backend.security_config import get_security_config
     from backend.console_mail import ConsoleMailBackend
 except ImportError:
     from extensions import db
     from models import (Project, Chapter, Scene, Character, WorldNode, User, Role, Map,
-                        SceneNote, SceneTask, ChapterNote, ChapterTask)
+                        SceneNote, SceneTask, ChapterNote, ChapterTask, CharacterNote, CharacterTask)
     from word_parser import parse_word_document
     from security_config import get_security_config
     from console_mail import ConsoleMailBackend
@@ -1247,6 +1247,94 @@ Sent from WriteHaven Feedback Form
         task = ChapterTask.query.get(tid)
         if not task or task.chapter_id != cid: return not_found()
         if not verify_chapter_ownership(cid, get_current_user().id):
+            return forbidden()
+        db.session.delete(task); db.session.commit()
+        return ok({"ok": True})
+
+    # ---------- Character Notes ----------
+    @app.get("/api/characters/<int:cid>/notes")
+    @token_auth_required
+    def list_character_notes(cid):
+        if not verify_character_ownership(cid, get_current_user().id):
+            return forbidden()
+        notes = CharacterNote.query.filter_by(character_id=cid).order_by(CharacterNote.created_at.desc()).all()
+        return ok([{"id": n.id, "character_id": n.character_id, "title": n.title,
+                    "content": n.content, "created_at": n.created_at.isoformat() if n.created_at else None,
+                    "updated_at": n.updated_at.isoformat() if n.updated_at else None} for n in notes])
+
+    @app.post("/api/characters/<int:cid>/notes")
+    @token_auth_required
+    def create_character_note(cid):
+        if not verify_character_ownership(cid, get_current_user().id):
+            return forbidden()
+        data = request.get_json() or {}
+        note = CharacterNote(character_id=cid, title=data.get("title", ""), content=data.get("content", ""))
+        db.session.add(note); db.session.commit()
+        return ok({"id": note.id, "character_id": note.character_id, "title": note.title, "content": note.content,
+                   "created_at": note.created_at.isoformat() if note.created_at else None}, 201)
+
+    @app.put("/api/characters/<int:cid>/notes/<int:nid>")
+    @token_auth_required
+    def update_character_note(cid, nid):
+        note = CharacterNote.query.get(nid)
+        if not note or note.character_id != cid: return not_found()
+        if not verify_character_ownership(cid, get_current_user().id):
+            return forbidden()
+        data = request.get_json() or {}
+        if (t := data.get("title")) is not None: note.title = t
+        if (c := data.get("content")) is not None: note.content = c
+        db.session.commit()
+        return ok({"id": note.id, "character_id": note.character_id, "title": note.title, "content": note.content})
+
+    @app.delete("/api/characters/<int:cid>/notes/<int:nid>")
+    @token_auth_required
+    def delete_character_note(cid, nid):
+        note = CharacterNote.query.get(nid)
+        if not note or note.character_id != cid: return not_found()
+        if not verify_character_ownership(cid, get_current_user().id):
+            return forbidden()
+        db.session.delete(note); db.session.commit()
+        return ok({"ok": True})
+
+    # ---------- Character Tasks ----------
+    @app.get("/api/characters/<int:cid>/tasks")
+    @token_auth_required
+    def list_character_tasks(cid):
+        if not verify_character_ownership(cid, get_current_user().id):
+            return forbidden()
+        tasks = CharacterTask.query.filter_by(character_id=cid).order_by(CharacterTask.created_at.asc()).all()
+        return ok([{"id": t.id, "character_id": t.character_id, "title": t.title, "completed": t.completed,
+                    "created_at": t.created_at.isoformat() if t.created_at else None} for t in tasks])
+
+    @app.post("/api/characters/<int:cid>/tasks")
+    @token_auth_required
+    def create_character_task(cid):
+        if not verify_character_ownership(cid, get_current_user().id):
+            return forbidden()
+        data = request.get_json() or {}
+        task = CharacterTask(character_id=cid, title=data.get("title", ""), completed=False)
+        db.session.add(task); db.session.commit()
+        return ok({"id": task.id, "character_id": task.character_id, "title": task.title, "completed": task.completed}, 201)
+
+    @app.put("/api/characters/<int:cid>/tasks/<int:tid>")
+    @token_auth_required
+    def update_character_task(cid, tid):
+        task = CharacterTask.query.get(tid)
+        if not task or task.character_id != cid: return not_found()
+        if not verify_character_ownership(cid, get_current_user().id):
+            return forbidden()
+        data = request.get_json() or {}
+        if (t := data.get("title")) is not None: task.title = t
+        if (c := data.get("completed")) is not None: task.completed = bool(c)
+        db.session.commit()
+        return ok({"id": task.id, "character_id": task.character_id, "title": task.title, "completed": task.completed})
+
+    @app.delete("/api/characters/<int:cid>/tasks/<int:tid>")
+    @token_auth_required
+    def delete_character_task(cid, tid):
+        task = CharacterTask.query.get(tid)
+        if not task or task.character_id != cid: return not_found()
+        if not verify_character_ownership(cid, get_current_user().id):
             return forbidden()
         db.session.delete(task); db.session.commit()
         return ok({"ok": True})
