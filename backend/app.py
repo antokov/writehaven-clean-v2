@@ -18,14 +18,16 @@ load_dotenv()
 try:
     from backend.extensions import db
     from backend.models import (Project, Chapter, Scene, Character, WorldNode, User, Role, Map,
-                                  SceneNote, SceneTask, ChapterNote, ChapterTask, CharacterNote, CharacterTask)
+                                  SceneNote, SceneTask, ChapterNote, ChapterTask, CharacterNote, CharacterTask,
+                                  WorldNodeNote, WorldNodeTask)
     from backend.word_parser import parse_word_document
     from backend.security_config import get_security_config
     from backend.console_mail import ConsoleMailBackend
 except ImportError:
     from extensions import db
     from models import (Project, Chapter, Scene, Character, WorldNode, User, Role, Map,
-                        SceneNote, SceneTask, ChapterNote, ChapterTask, CharacterNote, CharacterTask)
+                        SceneNote, SceneTask, ChapterNote, ChapterTask, CharacterNote, CharacterTask,
+                        WorldNodeNote, WorldNodeTask)
     from word_parser import parse_word_document
     from security_config import get_security_config
     from console_mail import ConsoleMailBackend
@@ -1494,6 +1496,149 @@ Sent from WriteHaven Feedback Form
         w = verify_world_ownership(w_id, get_current_user().id)
         if not w: return not_found()
         db.session.delete(w); db.session.commit()
+        return ok({"ok": True})
+
+    # ---------- WorldNode Notes ----------
+    @app.get("/api/world/<int:wid>/notes")
+    @token_auth_required
+    def list_worldnode_notes(wid):
+        w = verify_world_ownership(wid, get_current_user().id)
+        if not w: return not_found()
+        notes = WorldNodeNote.query.filter_by(worldnode_id=wid).order_by(WorldNodeNote.created_at.desc()).all()
+        return ok([{
+            "id": n.id,
+            "worldnode_id": n.worldnode_id,
+            "title": n.title,
+            "content": n.content,
+            "created_at": n.created_at.isoformat() if n.created_at else None,
+            "updated_at": n.updated_at.isoformat() if n.updated_at else None
+        } for n in notes])
+
+    @app.post("/api/world/<int:wid>/notes")
+    @token_auth_required
+    def create_worldnode_note(wid):
+        w = verify_world_ownership(wid, get_current_user().id)
+        if not w: return not_found()
+        data = request.get_json() or {}
+        note = WorldNodeNote(
+            worldnode_id=wid,
+            title=data.get("title", ""),
+            content=data.get("content", "")
+        )
+        db.session.add(note)
+        db.session.commit()
+        return ok({
+            "id": note.id,
+            "worldnode_id": note.worldnode_id,
+            "title": note.title,
+            "content": note.content,
+            "created_at": note.created_at.isoformat() if note.created_at else None,
+            "updated_at": note.updated_at.isoformat() if note.updated_at else None
+        }, 201)
+
+    @app.put("/api/world/<int:wid>/notes/<int:nid>")
+    @token_auth_required
+    def update_worldnode_note(wid, nid):
+        w = verify_world_ownership(wid, get_current_user().id)
+        if not w: return not_found()
+        note = WorldNodeNote.query.filter_by(id=nid, worldnode_id=wid).first()
+        if not note: return not_found()
+        data = request.get_json() or {}
+        note.title = data.get("title", note.title)
+        note.content = data.get("content", note.content)
+        db.session.commit()
+        return ok({
+            "id": note.id,
+            "worldnode_id": note.worldnode_id,
+            "title": note.title,
+            "content": note.content,
+            "created_at": note.created_at.isoformat() if note.created_at else None,
+            "updated_at": note.updated_at.isoformat() if note.updated_at else None
+        })
+
+    @app.delete("/api/world/<int:wid>/notes/<int:nid>")
+    @token_auth_required
+    def delete_worldnode_note(wid, nid):
+        w = verify_world_ownership(wid, get_current_user().id)
+        if not w: return not_found()
+        note = WorldNodeNote.query.filter_by(id=nid, worldnode_id=wid).first()
+        if not note: return not_found()
+        db.session.delete(note)
+        db.session.commit()
+        return ok({"ok": True})
+
+    # ---------- WorldNode Tasks ----------
+    @app.get("/api/world/<int:wid>/tasks")
+    @token_auth_required
+    def list_worldnode_tasks(wid):
+        w = verify_world_ownership(wid, get_current_user().id)
+        if not w: return not_found()
+        tasks = WorldNodeTask.query.filter_by(worldnode_id=wid).order_by(WorldNodeTask.created_at.asc()).all()
+        return ok([{
+            "id": t.id,
+            "worldnode_id": t.worldnode_id,
+            "title": t.title,
+            "completed": t.completed,
+            "created_at": t.created_at.isoformat() if t.created_at else None,
+            "updated_at": t.updated_at.isoformat() if t.updated_at else None
+        } for t in tasks])
+
+    @app.post("/api/world/<int:wid>/tasks")
+    @token_auth_required
+    def create_worldnode_task(wid):
+        w = verify_world_ownership(wid, get_current_user().id)
+        if not w: return not_found()
+        data = request.get_json() or {}
+        title = data.get("title", "").strip()
+        if not title:
+            return bad_request("Title is required")
+        task = WorldNodeTask(
+            worldnode_id=wid,
+            title=title,
+            completed=False
+        )
+        db.session.add(task)
+        db.session.commit()
+        return ok({
+            "id": task.id,
+            "worldnode_id": task.worldnode_id,
+            "title": task.title,
+            "completed": task.completed,
+            "created_at": task.created_at.isoformat() if task.created_at else None,
+            "updated_at": task.updated_at.isoformat() if task.updated_at else None
+        }, 201)
+
+    @app.put("/api/world/<int:wid>/tasks/<int:tid>")
+    @token_auth_required
+    def update_worldnode_task(wid, tid):
+        w = verify_world_ownership(wid, get_current_user().id)
+        if not w: return not_found()
+        task = WorldNodeTask.query.filter_by(id=tid, worldnode_id=wid).first()
+        if not task: return not_found()
+        data = request.get_json() or {}
+        if "title" in data:
+            task.title = data["title"]
+        if "completed" in data:
+            task.completed = data["completed"]
+        db.session.commit()
+        return ok({
+            "id": task.id,
+            "worldnode_id": task.worldnode_id,
+            "title": task.title,
+            "completed": task.completed,
+            "created_at": task.created_at.isoformat() if task.created_at else None,
+            "updated_at": task.updated_at.isoformat() if task.updated_at else None
+        })
+
+    @app.delete("/api/world/<int:wid>/tasks/<int:tid>")
+    @token_auth_required
+    def delete_worldnode_task(wid, tid):
+        w = verify_world_ownership(wid, get_current_user().id)
+        if not w: return not_found()
+        task = WorldNodeTask.query.filter_by(id=tid, worldnode_id=wid).first()
+        if not task: return not_found()
+        db.session.delete(task)
+        db.session.commit()
         return ok({"ok": True})
 
     # ---------- Maps ----------

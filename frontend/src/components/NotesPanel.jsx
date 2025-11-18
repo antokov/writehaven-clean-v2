@@ -20,6 +20,8 @@ export default function NotesPanel({ contextType, contextId, onRequestDelete }) 
     ? `/api/scenes/${contextId}/notes`
     : contextType === 'character'
     ? `/api/characters/${contextId}/notes`
+    : contextType === 'worldnode'
+    ? `/api/world/${contextId}/notes`
     : `/api/chapters/${contextId}/notes`;
 
   // Save collapsed state to localStorage whenever it changes

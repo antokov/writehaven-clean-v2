@@ -290,6 +290,46 @@ class CharacterTask(db.Model):
     character = db.relationship("Character", backref=db.backref("tasks", cascade="all, delete-orphan"))
 
 
+class WorldNodeNote(db.Model):
+    """Notes for world nodes"""
+    __tablename__ = "worldnode_note"
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, primary_key=True)
+    worldnode_id = db.Column(
+        db.Integer, db.ForeignKey("worldnode.id"), nullable=False, index=True
+    )
+    title = db.Column(db.String(200), nullable=False, default="")
+    content = db.Column(db.Text, default="")
+    created_at = db.Column(db.DateTime, server_default=func.now())
+    updated_at = db.Column(
+        db.DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+    # Relationship
+    worldnode = db.relationship("WorldNode", backref=db.backref("notes", cascade="all, delete-orphan"))
+
+
+class WorldNodeTask(db.Model):
+    """Tasks for world nodes"""
+    __tablename__ = "worldnode_task"
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, primary_key=True)
+    worldnode_id = db.Column(
+        db.Integer, db.ForeignKey("worldnode.id"), nullable=False, index=True
+    )
+    title = db.Column(db.String(500), nullable=False)
+    completed = db.Column(db.Boolean, nullable=False, default=False)
+    created_at = db.Column(db.DateTime, server_default=func.now())
+    updated_at = db.Column(
+        db.DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+    # Relationship
+    worldnode = db.relationship("WorldNode", backref=db.backref("tasks", cascade="all, delete-orphan"))
+
+
 class Role(db.Model, RoleMixin):
     """Flask-Security-Too Role Model"""
     __tablename__ = "role"

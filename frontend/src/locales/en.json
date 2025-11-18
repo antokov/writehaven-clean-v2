@@ -617,6 +617,9 @@
       "title": "Delete element",
       "message": "Do you really want to delete the element \"{{title}}\"? This action cannot be undone."
     },
+    "tools": {
+      "selectElement": "Select an element to view notes and tasks."
+    },
     "typeCategories": {
       "geo": "Places & Geography",
       "infrastructure": "Infrastructure",

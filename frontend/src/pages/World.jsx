@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import axios from "axios";
-import { BsPlus, BsTrash, BsSearch } from "react-icons/bs";
+import { BsPlus, BsTrash, BsSearch, BsChevronDown, BsChevronRight } from "react-icons/bs";
 import ConfirmModal from "../components/ConfirmModal";
+import NotesPanel from "../components/NotesPanel";
+import TasksPanel from "../components/TasksPanel";
 import { TbNetwork, TbTopologyStar3 } from "react-icons/tb";
 import { createPortal } from "react-dom";
 import ReactFlow, {
@@ -1246,6 +1248,7 @@ export default function World() {
   const [showWorldGraph, setShowWorldGraph] = useState(false);
   const [confirmModal, setConfirmModal] = useState(null);
   const [mapRegions, setMapRegions] = useState([]);
+  const [toolsPanelOpen, setToolsPanelOpen] = useState(true);
 
   const hasHandledNewElement = useRef(false);
 
@@ -1513,6 +1516,35 @@ export default function World() {
           </>
         )}
       </main>
+
+      {/* Right sidebar - Tools panel */}
+      <aside className={`tools-panel ${toolsPanelOpen ? 'open' : 'closed'}`}>
+        <div className="tools-header">
+          <span className="tools-title">{t('writing.toolsTitle')}</span>
+          <button
+            className="icon-btn tools-toggle"
+            onClick={() => setToolsPanelOpen(!toolsPanelOpen)}
+            aria-label={toolsPanelOpen ? t('writing.closeTools') : t('writing.openTools')}
+          >
+            {toolsPanelOpen ? <BsChevronRight /> : <BsChevronDown />}
+          </button>
+        </div>
+
+        {toolsPanelOpen && (
+          <div className="tools-content">
+            {activeId ? (
+              <>
+                <NotesPanel contextType="worldnode" contextId={activeId} onRequestDelete={setConfirmModal} />
+                <TasksPanel contextType="worldnode" contextId={activeId} onRequestDelete={setConfirmModal} />
+              </>
+            ) : (
+              <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>
+                {t('world.tools.selectElement')}
+              </div>
+            )}
+          </div>
+        )}
+      </aside>
 
       {confirmModal && <ConfirmModal {...confirmModal} />}
     </div>

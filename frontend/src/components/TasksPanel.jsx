@@ -25,6 +25,8 @@ export default function TasksPanel({ contextType, contextId, onRequestDelete }) 
     ? `/api/scenes/${contextId}/tasks`
     : contextType === 'character'
     ? `/api/characters/${contextId}/tasks`
+    : contextType === 'worldnode'
+    ? `/api/world/${contextId}/tasks`
     : `/api/chapters/${contextId}/tasks`;
 
   const openTasks = tasks.filter(t => !t.completed);
