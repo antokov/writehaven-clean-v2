@@ -157,8 +157,11 @@
 
 .scene-card-title{
   font-weight: 800;
+  font-size: 1rem;
+  color: var(--text);
+  flex-shrink: 0;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%;
-  padding-right: 28px; /* Platz f�r Delete-Icon */
+  padding-right: 28px; /* Platz für Delete-Icon */
 }
 
 .scene-card-preview{
