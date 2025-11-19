@@ -1,17 +1,13 @@
 import React from 'react'
 import { Outlet } from 'react-router-dom'
-import TopNav from '../components/TopNav.jsx'
 
 function ProjectLayout() {
   return (
-    <>
-      <TopNav />
-      <Outlet />
-    </>
+    <Outlet />
   )
 }
 
-// Default-Export (wichtig für: import ProjectLayout from '...'):
+// Default-Export (wichtig fï¿½r: import ProjectLayout from '...'):
 export default ProjectLayout
-// Optional zusätzlich als Named-Export:
+// Optional zusï¿½tzlich als Named-Export:
 export { ProjectLayout }

@@ -202,10 +202,11 @@
   position: relative;
   z-index: 2;
   background: #fff;
-  border: 1px solid var(--line);
+  border: none;
+  border-left: 1px solid var(--line);
   border-radius: 0;
   padding: 0;
-  box-shadow: var(--shadow-1);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   overflow: hidden;

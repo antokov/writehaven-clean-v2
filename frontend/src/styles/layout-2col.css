@@ -1,10 +1,10 @@
-/* Seite unter Header + TopNav exakt auf Viewport begrenzen */
+/* Seite unter Header exakt auf Viewport begrenzen */
 .page-wrap{
-  height: calc(100dvh - var(--header-h) - var(--topnav-h)); /* dvh = robuster */
+  height: calc(100dvh - var(--header-h)); /* dvh = robuster */
   display: grid;
   grid-template-columns: 280px 1fr 280px;
-  gap: 1.25rem;
-  padding: 1rem;
+  gap: 0;
+  padding: 0;
   background: var(--page-bg);
   overflow: hidden; /* äußeres Scrollen verhindern */
 }
@@ -18,10 +18,11 @@
 .side{
   position:relative; z-index:2;
   background: var(--panel-bg);
-  border: 1px solid var(--line);
+  border: none;
+  border-right: 1px solid var(--line);
   border-radius: 0;
   padding: .9rem;
-  box-shadow: var(--shadow-1);
+  box-shadow: none;
   overflow: auto;  /* interner Scroll */
 }
 
@@ -33,13 +34,13 @@
   overflow: auto; /* interner Scroll */
 }
 
-/* Panel f�llt die Spaltenh�he */
+/* Panel füllt die Spaltenhöhe */
 .panel{
   background: var(--panel-bg);
-  border: 1px solid var(--line);
+  border: none;
   border-radius: 0;
   padding: .9rem;
-  box-shadow: var(--shadow-1);
+  box-shadow: none;
   height: 100%;
   display:flex; flex-direction:column;
 }

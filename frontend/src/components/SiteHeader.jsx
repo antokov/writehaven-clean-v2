@@ -1,6 +1,6 @@
 ﻿// src/components/SiteHeader.jsx
 import { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate, useParams } from 'react-router-dom';
 import { MessageSquare, User, Settings, LogOut, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import FeedbackModal from './FeedbackModal';
@@ -10,11 +10,14 @@ import { useTranslation } from 'react-i18next';
 
 export default function SiteHeader() {
   const { t } = useTranslation();
+  const { id } = useParams();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const menuRef = useRef(null);
+
+  const base = id ? `/app/project/${id}` : null;
 
   const handleLogout = () => {
     logout();
@@ -43,6 +46,18 @@ export default function SiteHeader() {
             <img className="brand-logo" src={logoUrl} alt="Writehaven" />
           </span>
         </Link>
+
+        {/* Project Navigation - nur wenn in Projekt */}
+        {base && (
+          <nav className="header-nav">
+            <NavLink end to={base} className="header-tab">{t('navigation.writing')}</NavLink>
+            <NavLink to={`${base}/characters`} className="header-tab">{t('navigation.characters')}</NavLink>
+            <NavLink to={`${base}/world`} className="header-tab">{t('navigation.world')}</NavLink>
+            <NavLink to={`${base}/map`} className="header-tab">{t('navigation.map')}</NavLink>
+            <NavLink to={`${base}/export`} className="header-tab">{t('navigation.export')}</NavLink>
+            <NavLink to={`${base}/settings`} className="header-tab">{t('navigation.projectSettings')}</NavLink>
+          </nav>
+        )}
 
         <div className="header-actions">
           {/* Feedback Button */}
