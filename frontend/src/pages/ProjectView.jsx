@@ -7,7 +7,14 @@ import ConfirmModal from '../components/ConfirmModal';
 import TextContextMenu from '../components/TextContextMenu';
 import NotesPanel from '../components/NotesPanel';
 import TasksPanel from '../components/TasksPanel';
+import SceneStatusDropdown, { STATUS_OPTIONS } from '../components/SceneStatusDropdown';
 import { useTranslation } from 'react-i18next';
+
+// Create status map for quick lookup
+const STATUS_MAP = STATUS_OPTIONS.reduce((acc, status) => {
+  acc[status.value] = status;
+  return acc;
+}, {});
 
 export default function ProjectView() {
   const { id } = useParams();
@@ -28,6 +35,7 @@ export default function ProjectView() {
   // Editor (Szene)
   const [sceneTitle, setSceneTitle] = useState('');
   const [sceneContent, setSceneContent] = useState('');
+  const [sceneStatus, setSceneStatus] = useState('Idea');
   const [lastSavedAt, setLastSavedAt] = useState(null);
 
   // Kapitel-Übersicht / -Titel
@@ -42,7 +50,7 @@ export default function ProjectView() {
 
   // Autosave & Snapshot (Szene)
   const saveTimer = useRef(null);
-  const snapshotRef = useRef({ id: null, title: '', content: '' });
+  const snapshotRef = useRef({ id: null, title: '', content: '', status: 'Idea' });
 
   // Debounce (Kapitel)
   const chapterSaveTimer = useRef(null);
@@ -58,7 +66,8 @@ export default function ProjectView() {
     setActiveSceneId(null);
     setSceneTitle('');
     setSceneContent('');
-    snapshotRef.current = { id: null, title: '', content: '' };
+    setSceneStatus('Idea');
+    snapshotRef.current = { id: null, title: '', content: '', status: 'Idea' };
   }
 
   // exakt ein Kapitel expandieren
@@ -138,13 +147,13 @@ export default function ProjectView() {
   }, [pid]);
 
   /* --------------------------- Szene speichern -------------------------- */
-  async function saveSceneNow(id, title, content) {
+  async function saveSceneNow(id, title, content, status) {
     if (!id) return;
     try {
-      await axios.put(`/api/scenes/${id}`, { title, content });
-      snapshotRef.current = { id, title, content };
+      await axios.put(`/api/scenes/${id}`, { title, content, status });
+      snapshotRef.current = { id, title, content, status };
       setLastSavedAt(new Date());
-      if (activeChapterId) patchSceneInTree(activeChapterId, id, { title });
+      if (activeChapterId) patchSceneInTree(activeChapterId, id, { title, status });
       const txt = (content || '').replace(/\s+/g, ' ').trim();
       setScenePreviewById(prev => ({ ...prev, [id]: txt }));
     } catch (err) {
@@ -154,9 +163,9 @@ export default function ProjectView() {
 
   async function flushIfDirty() {
     const snap = snapshotRef.current;
-    if (activeSceneId && (sceneTitle !== snap.title || sceneContent !== snap.content)) {
+    if (activeSceneId && (sceneTitle !== snap.title || sceneContent !== snap.content || sceneStatus !== snap.status)) {
       if (saveTimer.current) clearTimeout(saveTimer.current);
-      await saveSceneNow(activeSceneId, sceneTitle, sceneContent);
+      await saveSceneNow(activeSceneId, sceneTitle, sceneContent, sceneStatus);
     }
   }
 
@@ -164,11 +173,11 @@ export default function ProjectView() {
     const snap = snapshotRef.current;
     if (!activeSceneId) return;
     const changed =
-      activeSceneId !== snap.id || sceneTitle !== snap.title || sceneContent !== snap.content;
+      activeSceneId !== snap.id || sceneTitle !== snap.title || sceneContent !== snap.content || sceneStatus !== snap.status;
     if (!changed) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      saveSceneNow(activeSceneId, sceneTitle, sceneContent);
+      saveSceneNow(activeSceneId, sceneTitle, sceneContent, sceneStatus);
     }, 600);
   }
 
@@ -176,7 +185,7 @@ export default function ProjectView() {
     scheduleSceneAutosave();
     return () => clearTimeout(saveTimer.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSceneId, sceneTitle, sceneContent]);
+  }, [activeSceneId, sceneTitle, sceneContent, sceneStatus]);
 
   useEffect(() => {
     if (!activeSceneId) return;
@@ -187,8 +196,8 @@ export default function ProjectView() {
   useEffect(() => {
     return () => {
       const snap = snapshotRef.current;
-      if (activeSceneId && (sceneTitle !== snap.title || sceneContent !== snap.content)) {
-        saveSceneNow(activeSceneId, sceneTitle, sceneContent);
+      if (activeSceneId && (sceneTitle !== snap.title || sceneContent !== snap.content || sceneStatus !== snap.status)) {
+        saveSceneNow(activeSceneId, sceneTitle, sceneContent, sceneStatus);
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -267,8 +276,9 @@ export default function ProjectView() {
       setActiveSceneId(s.id);
       setSceneTitle(s.title || '');
       setSceneContent(s.content || '');
-      snapshotRef.current = { id: s.id, title: s.title || '', content: s.content || '' };
-      patchSceneInTree(chapterId, s.id, { title: s.title || '' });
+      setSceneStatus(s.status || 'Idea');
+      snapshotRef.current = { id: s.id, title: s.title || '', content: s.content || '', status: s.status || 'Idea' };
+      patchSceneInTree(chapterId, s.id, { title: s.title || '', status: s.status || 'Idea' });
       const txt = (s.content || '').replace(/\s+/g, ' ').trim();
       setScenePreviewById(prev => ({ ...prev, [s.id]: txt }));
     } catch (err) {
@@ -522,19 +532,27 @@ export default function ProjectView() {
 
                   {open && (
                     <ul className="tree-scenes">
-                      {scenes.map(s => (
-                        <li key={s.id} className={`tree-scene ${activeSceneId === s.id ? 'active' : ''}`} data-testid={`scene-${s.id}`}>
-                          <div className="tree-row scene-row" onClick={() => onSelectScene(ch.id, s)}>
-                            <span className="tree-dot" aria-hidden />
-                            <span className="tree-name">{s.title}</span>
-                            <div className="row-actions" onClick={e => e.stopPropagation()}>
-                              <button className="icon-btn danger" title={t('writing.deleteScene')} onClick={() => deleteScene(s.id, ch.id)} data-testid={`delete-scene-${s.id}`}>
-                                <BsTrash />
-                              </button>
+                      {scenes.map(s => {
+                        const statusInfo = STATUS_MAP[s.status] || STATUS_MAP['Idea'];
+                        const StatusIcon = statusInfo.icon;
+                        return (
+                          <li key={s.id} className={`tree-scene ${activeSceneId === s.id ? 'active' : ''}`} data-testid={`scene-${s.id}`}>
+                            <div
+                              className="tree-row scene-row"
+                              onClick={() => onSelectScene(ch.id, s)}
+                              style={{ borderLeft: `5px solid ${statusInfo.color}` }}
+                            >
+                              <StatusIcon className="scene-status-icon" style={{ color: statusInfo.color }} />
+                              <span className="tree-name">{s.title}</span>
+                              <div className="row-actions" onClick={e => e.stopPropagation()}>
+                                <button className="icon-btn danger" title={t('writing.deleteScene')} onClick={() => deleteScene(s.id, ch.id)} data-testid={`delete-scene-${s.id}`}>
+                                  <BsTrash />
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        </li>
-                      ))}
+                          </li>
+                        );
+                      })}
                       {!scenes.length && <li className="tree-empty">{t('writing.noScenes')}</li>}
                     </ul>
                   )}
@@ -561,9 +579,18 @@ export default function ProjectView() {
                       patchSceneInTree(activeChapterId, activeSceneId, { title: v });
                     }
                   }}
-                  onBlur={() => saveSceneNow(activeSceneId, sceneTitle, sceneContent)}
+                  onBlur={() => saveSceneNow(activeSceneId, sceneTitle, sceneContent, sceneStatus)}
                   placeholder={t('writing.sceneTitlePlaceholder')}
                   data-testid="scene-title-input"
+                />
+                <SceneStatusDropdown
+                  value={sceneStatus}
+                  onChange={(newStatus) => {
+                    setSceneStatus(newStatus);
+                    if (activeChapterId && activeSceneId) {
+                      patchSceneInTree(activeChapterId, activeSceneId, { status: newStatus });
+                    }
+                  }}
                 />
                 <div style={{marginLeft:'auto', fontSize:12, color:'var(--muted)'}}>
                   {lastSavedAt ? <>{t('writing.savedAt', { time: lastSavedAt.toLocaleTimeString() })}</> : '—'}
@@ -572,7 +599,7 @@ export default function ProjectView() {
               <textarea
                 value={sceneContent}
                 onChange={(e) => setSceneContent(e.target.value)}
-                onBlur={() => saveSceneNow(activeSceneId, sceneTitle, sceneContent)}
+                onBlur={() => saveSceneNow(activeSceneId, sceneTitle, sceneContent, sceneStatus)}
                 onContextMenu={handleContextMenu}
                 placeholder={t('writing.sceneContentPlaceholder')}
                 data-testid="scene-content-editor"

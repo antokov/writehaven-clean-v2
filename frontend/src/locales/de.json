@@ -107,6 +107,14 @@
     },
     "tools": {
       "selectContext": "Wähle ein Kapitel oder eine Szene aus"
+    },
+    "sceneStatus": {
+      "Idea": "Grobe Szene-Idee, vielleicht nur 1–2 Sätze",
+      "Outlined": "Szene ist strukturiert (Beatliste, Stichworte, wer ist dabei, Ziel/Konflikt klar)",
+      "Drafting": "Du schreibst aktiv daran",
+      "Revising": "Rohfassung steht, du überarbeitest Sprache, Logik, Emotion",
+      "Polished": "Für dich \"fertig\", nur noch kleine Korrekturen",
+      "Final": "Abgeschlossen / ins Manuskript integriert"
     }
   },
   "auth": {

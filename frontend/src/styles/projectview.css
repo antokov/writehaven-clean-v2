@@ -31,6 +31,16 @@
   border:1px solid var(--line);
   background: var(--panel-bg);
   cursor:pointer;
+  padding-left: .45rem;
+}
+.scene-row {
+  padding-left: .65rem;
+}
+
+.scene-status-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  margin-right: 4px;
 }
 .tree-row:hover{ background:#f8fafc; }
 .chapter-row{ font-weight:700; }
@@ -39,23 +49,20 @@
 .tree-name{ flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .row-actions{ display:flex; align-items:center; gap:.25rem; }
 
-.tree-dot{
-  width:6px; height:6px; border-radius:999px;
-  background: color-mix(in oklab, var(--brand) 68%, #0f172a 32%);
-  display:inline-block;
-}
+/* .tree-dot removed - now using colored left border on scenes */
 
 .tree-chapter.active > .chapter-row{ border-color: var(--brand); }
 .tree-scene.active > .scene-row{ border-color: var(--brand); }
 
 /* --- Editor ------------------------------------------------------------- */
 .scene-title{
-  width:100%;
+  flex: 1;
   height:40px;
   border:1px solid var(--line);
   background:#fff; color:var(--text);
   padding:8px 10px; box-sizing:border-box;
-  font-weight:700; margin-bottom:10px;
+  font-weight:700;
+  transform: translateY(-4px);
 }
 
 .scene-editor{

@@ -100,6 +100,14 @@
     },
     "tools": {
       "selectContext": "Select a chapter or scene"
+    },
+    "sceneStatus": {
+      "Idea": "Rough scene idea, maybe just 1-2 sentences",
+      "Outlined": "Scene is structured (beat list, keywords, who's involved, goal/conflict clear)",
+      "Drafting": "You're actively writing it",
+      "Revising": "Draft is done, you're revising language, logic, emotion",
+      "Polished": "\"Done\" for you, only small corrections needed",
+      "Final": "Completed / integrated into manuscript"
     }
   },
   "auth": {
