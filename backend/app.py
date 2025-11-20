@@ -184,31 +184,48 @@ def create_app():
                     scene_columns = [col['name'] for col in inspector.get_columns('scene')]
                     if 'status' not in scene_columns:
                         print("🔄 Auto-migration: Adding status to scene table...")
+                        # Use raw connection with explicit transaction to avoid AUTOCOMMIT issues
+                        conn = db.engine.raw_connection()
                         try:
+                            cursor = conn.cursor()
+
                             # Add column (works for both SQLite and PostgreSQL)
-                            db.session.execute(text("ALTER TABLE scene ADD COLUMN status VARCHAR(50);"))
-                            db.session.commit()
+                            print("  Executing: ALTER TABLE scene ADD COLUMN status VARCHAR(50);")
+                            cursor.execute("ALTER TABLE scene ADD COLUMN status VARCHAR(50);")
+                            conn.commit()
                             print("  Column added, setting default values...")
 
                             # Set default for existing rows
-                            db.session.execute(text("UPDATE scene SET status = 'Idea' WHERE status IS NULL;"))
-                            db.session.commit()
+                            print("  Executing: UPDATE scene SET status = 'Idea' WHERE status IS NULL;")
+                            cursor.execute("UPDATE scene SET status = 'Idea' WHERE status IS NULL;")
+                            conn.commit()
                             print("  Default values set")
 
                             # For PostgreSQL: Set column default for future inserts
                             try:
-                                db.session.execute(text("ALTER TABLE scene ALTER COLUMN status SET DEFAULT 'Idea';"))
-                                db.session.commit()
+                                print("  Executing: ALTER TABLE scene ALTER COLUMN status SET DEFAULT 'Idea';")
+                                cursor.execute("ALTER TABLE scene ALTER COLUMN status SET DEFAULT 'Idea';")
+                                conn.commit()
                                 print("  Default constraint added")
                             except Exception as e:
-                                print(f"  Note: Could not set default constraint (might be SQLite): {e}")
+                                print(f"  Note: Could not set default constraint: {e}")
 
+                            cursor.close()
+                            conn.close()
                             print("✅ scene.status column added successfully")
-                        except (ProgrammingError, OperationalError) as e:
+
+                            # Clear SQLAlchemy cache so it picks up the new column
+                            db.session.expire_all()
+
+                        except Exception as e:
                             print(f"⚠️  Could not add status column: {e}")
                             import traceback
                             traceback.print_exc()
-                            db.session.rollback()
+                            try:
+                                conn.rollback()
+                                conn.close()
+                            except:
+                                pass
 
                 # Check if worldnode table needs region_id column
                 if 'worldnode' in inspector.get_table_names():
