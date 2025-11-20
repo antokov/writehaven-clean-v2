@@ -143,23 +143,43 @@ def auto_migrate():
                     except:
                         pass
 
-            # Migrate scene table if needed (add status column)
-            if scene_needs_status:
-                print("🔄 Auto-migration: Adding status to scene table...")
+            # Migrate scene table - add status column if it doesn't exist
+            # Use PostgreSQL-specific IF NOT EXISTS for safety
+            print("🔄 Checking and adding status column to scene table...")
+            try:
+                if 'postgresql' in db_uri:
+                    # PostgreSQL: Use DO block to check and add column if not exists
+                    conn.execute(text("""
+                        DO $$
+                        BEGIN
+                            IF NOT EXISTS (
+                                SELECT 1 FROM information_schema.columns
+                                WHERE table_name = 'scene' AND column_name = 'status'
+                            ) THEN
+                                ALTER TABLE scene ADD COLUMN status VARCHAR(50) DEFAULT 'Idea';
+                                UPDATE scene SET status = 'Idea' WHERE status IS NULL;
+                                RAISE NOTICE 'status column added successfully';
+                            ELSE
+                                RAISE NOTICE 'status column already exists';
+                            END IF;
+                        END $$;
+                    """))
+                    conn.commit()
+                    print("✅ scene.status column migration completed")
+                else:
+                    # SQLite fallback
+                    if scene_needs_status:
+                        conn.execute(text("ALTER TABLE scene ADD COLUMN status VARCHAR(50) DEFAULT 'Idea';"))
+                        conn.commit()
+                        conn.execute(text("UPDATE scene SET status = 'Idea' WHERE status IS NULL;"))
+                        conn.commit()
+                        print("✅ scene.status column added successfully")
+            except (ProgrammingError, OperationalError) as e:
+                print(f"⚠️  Could not add status column: {e}")
                 try:
-                    # SQLite doesn't support NOT NULL in ALTER TABLE, so add column with default
-                    conn.execute(text("ALTER TABLE scene ADD COLUMN status VARCHAR(50) DEFAULT 'Idea';"))
-                    conn.commit()
-                    # Update any NULL values to 'Idea'
-                    conn.execute(text("UPDATE scene SET status = 'Idea' WHERE status IS NULL;"))
-                    conn.commit()
-                    print("✅ scene.status column added successfully")
-                except (ProgrammingError, OperationalError) as e:
-                    print(f"⚠️  Could not add status column: {e}")
-                    try:
-                        conn.rollback()
-                    except:
-                        pass
+                    conn.rollback()
+                except:
+                    pass
 
             if not needs_migration and not worldnode_needs_migration and not scene_needs_status:
                 print("Database connected successfully: " + db_uri.split('@')[1] if '@' in db_uri else db_uri[:50] + "...")
