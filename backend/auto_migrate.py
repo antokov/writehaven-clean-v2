@@ -144,38 +144,48 @@ def auto_migrate():
                         pass
 
             # Migrate scene table - add status column if it doesn't exist
-            # Use PostgreSQL-specific IF NOT EXISTS for safety
-            print("🔄 Checking and adding status column to scene table...")
+            print("🔄 Checking scene table for status column...")
+
+            # First, check if column really exists
             try:
-                if 'postgresql' in db_uri:
-                    # PostgreSQL: Use DO block to check and add column if not exists
-                    conn.execute(text("""
-                        DO $$
-                        BEGIN
-                            IF NOT EXISTS (
-                                SELECT 1 FROM information_schema.columns
-                                WHERE table_name = 'scene' AND column_name = 'status'
-                            ) THEN
-                                ALTER TABLE scene ADD COLUMN status VARCHAR(50) DEFAULT 'Idea';
-                                UPDATE scene SET status = 'Idea' WHERE status IS NULL;
-                                RAISE NOTICE 'status column added successfully';
-                            ELSE
-                                RAISE NOTICE 'status column already exists';
-                            END IF;
-                        END $$;
-                    """))
+                check_result = conn.execute(text("""
+                    SELECT column_name
+                    FROM information_schema.columns
+                    WHERE table_name = 'scene' AND column_name = 'status'
+                """))
+                has_status = check_result.fetchone() is not None
+                print(f"   Status column exists: {has_status}")
+
+                if not has_status:
+                    print("   Adding status column with ALTER TABLE...")
+                    # Use simple ALTER TABLE like other migrations
+                    conn.execute(text("ALTER TABLE scene ADD COLUMN status VARCHAR(50) DEFAULT 'Idea';"))
                     conn.commit()
-                    print("✅ scene.status column migration completed")
-                else:
-                    # SQLite fallback
-                    if scene_needs_status:
-                        conn.execute(text("ALTER TABLE scene ADD COLUMN status VARCHAR(50) DEFAULT 'Idea';"))
-                        conn.commit()
+                    print("   Column added, committing transaction...")
+
+                    # Verify it was added
+                    verify_result = conn.execute(text("""
+                        SELECT column_name
+                        FROM information_schema.columns
+                        WHERE table_name = 'scene' AND column_name = 'status'
+                    """))
+                    verified = verify_result.fetchone() is not None
+                    print(f"   Verification: status column exists = {verified}")
+
+                    if verified:
+                        # Update existing rows
                         conn.execute(text("UPDATE scene SET status = 'Idea' WHERE status IS NULL;"))
                         conn.commit()
-                        print("✅ scene.status column added successfully")
+                        print("✅ scene.status column added and verified successfully")
+                    else:
+                        print("❌ ERROR: Column was not added despite successful ALTER TABLE")
+                else:
+                    print("✅ scene.status column already exists")
+
             except (ProgrammingError, OperationalError) as e:
                 print(f"⚠️  Could not add status column: {e}")
+                import traceback
+                print(f"Traceback: {traceback.format_exc()}")
                 try:
                     conn.rollback()
                 except:
