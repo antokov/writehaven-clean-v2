@@ -64,26 +64,7 @@ def auto_migrate():
             scene_needs_status = False
             if 'scene' in inspector.get_table_names():
                 scene_columns = [col['name'] for col in inspector.get_columns('scene')]
-                print(f"🔍 DEBUG: scene table columns found by inspector: {scene_columns}")
-
-                # Double-check with direct SQL query (PostgreSQL)
-                if 'postgresql' in db_uri:
-                    try:
-                        result = conn.execute(text("""
-                            SELECT column_name
-                            FROM information_schema.columns
-                            WHERE table_name = 'scene'
-                        """))
-                        actual_columns = [row[0] for row in result]
-                        print(f"🔍 DEBUG: scene table columns from information_schema: {actual_columns}")
-                        scene_needs_status = 'status' not in actual_columns
-                    except Exception as e:
-                        print(f"🔍 DEBUG: Could not query information_schema: {e}")
-                        scene_needs_status = 'status' not in scene_columns
-                else:
-                    scene_needs_status = 'status' not in scene_columns
-
-                print(f"🔍 DEBUG: scene_needs_status = {scene_needs_status}")
+                scene_needs_status = 'status' not in scene_columns
 
             if needs_migration:
                 print("🔄 Auto-migration: Updating user table schema...")
