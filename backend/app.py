@@ -356,6 +356,30 @@ def create_app():
             db_ok = f"error: {e.__class__.__name__}: {e}"
         return jsonify({"status": "ok", "db": db_ok}), 200
 
+    # ---------- Debug: Check scene table columns ----------
+    @app.get("/api/debug/scene-columns")
+    def debug_scene_columns():
+        try:
+            from sqlalchemy import inspect as sa_inspect
+            inspector = sa_inspect(db.engine)
+            columns = inspector.get_columns('scene')
+            column_names = [col['name'] for col in columns]
+
+            # Also try a raw query
+            result = db.session.execute(text("SELECT * FROM scene LIMIT 1")).fetchone()
+            actual_keys = list(result._mapping.keys()) if result else []
+
+            return jsonify({
+                "inspector_columns": column_names,
+                "has_status_in_inspector": "status" in column_names,
+                "actual_query_keys": actual_keys,
+                "has_status_in_query": "status" in actual_keys,
+                "scene_model_columns": [c.name for c in Scene.__table__.columns]
+            }), 200
+        except Exception as e:
+            import traceback
+            return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
     # ---------- Auth mit Flask-Security-Too ----------
     @app.post("/api/auth/register")
     def register():
