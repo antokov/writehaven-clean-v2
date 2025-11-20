@@ -108,14 +108,14 @@
   overflow: hidden;
   /* Override grid for 3-column layout with tools panel */
   display: grid;
-  grid-template-columns: 280px 1fr 280px;
+  grid-template-columns: minmax(220px, 1fr) minmax(500px, 3fr) minmax(220px, 1fr); /* ~25% / 50% / 25% */
   gap: 0;
   padding: 0;
 }
 
 /* When Tools-Panel is closed, make the right column narrower */
 .characters-page:has(.tools-panel.closed) {
-  grid-template-columns: 280px 1fr 48px;
+  grid-template-columns: minmax(220px, 1fr) minmax(500px, 3fr) 48px;
 }
 
 /* Tools panel in characters page */
