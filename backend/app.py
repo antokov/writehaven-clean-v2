@@ -174,11 +174,55 @@ def create_app():
 
             # Auto-Migration: Update existing schema if needed
             try:
-                try:
-                    from backend.auto_migrate import auto_migrate
-                except ImportError:
-                    from auto_migrate import auto_migrate
-                auto_migrate()
+                from sqlalchemy import inspect
+                from sqlalchemy.exc import OperationalError, ProgrammingError
+
+                inspector = inspect(db.engine)
+
+                # Check if scene table needs status column
+                if 'scene' in inspector.get_table_names():
+                    scene_columns = [col['name'] for col in inspector.get_columns('scene')]
+                    if 'status' not in scene_columns:
+                        print("🔄 Auto-migration: Adding status to scene table...")
+                        try:
+                            # Add column (works for both SQLite and PostgreSQL)
+                            db.session.execute(text("ALTER TABLE scene ADD COLUMN status VARCHAR(50);"))
+                            db.session.commit()
+                            print("  Column added, setting default values...")
+
+                            # Set default for existing rows
+                            db.session.execute(text("UPDATE scene SET status = 'Idea' WHERE status IS NULL;"))
+                            db.session.commit()
+                            print("  Default values set")
+
+                            # For PostgreSQL: Set column default for future inserts
+                            try:
+                                db.session.execute(text("ALTER TABLE scene ALTER COLUMN status SET DEFAULT 'Idea';"))
+                                db.session.commit()
+                                print("  Default constraint added")
+                            except Exception as e:
+                                print(f"  Note: Could not set default constraint (might be SQLite): {e}")
+
+                            print("✅ scene.status column added successfully")
+                        except (ProgrammingError, OperationalError) as e:
+                            print(f"⚠️  Could not add status column: {e}")
+                            import traceback
+                            traceback.print_exc()
+                            db.session.rollback()
+
+                # Check if worldnode table needs region_id column
+                if 'worldnode' in inspector.get_table_names():
+                    worldnode_columns = [col['name'] for col in inspector.get_columns('worldnode')]
+                    if 'region_id' not in worldnode_columns:
+                        print("🔄 Auto-migration: Adding region_id to worldnode table...")
+                        try:
+                            db.session.execute(text('ALTER TABLE worldnode ADD COLUMN region_id INTEGER;'))
+                            db.session.commit()
+                            print("✅ worldnode.region_id column added successfully")
+                        except (ProgrammingError, OperationalError) as e:
+                            print(f"⚠️  Could not add region_id column: {e}")
+                            db.session.rollback()
+
             except Exception as e:
                 print(f"Auto-migration skipped: {e}")
                 import traceback
@@ -1015,7 +1059,7 @@ Sent from WriteHaven Feedback Form
                 .all())
         return ok([{
             "id": s.id, "chapter_id": s.chapter_id, "title": s.title,
-            "order_index": s.order_index, "content": s.content
+            "order_index": s.order_index, "content": s.content, "status": s.status
         } for s in rows])
 
     @app.post("/api/chapters/<int:cid>/scenes")
@@ -1026,14 +1070,15 @@ Sent from WriteHaven Feedback Form
         s = Scene(chapter_id=cid,
                   title=(data.get("title") or "Neue Szene").strip(),
                   order_index=int(data.get("order_index", 0)),
-                  content=data.get("content", "") or "")
+                  content=data.get("content", "") or "",
+                  status=data.get("status", "Idea"))
         try:
             db.session.add(s); db.session.commit()
         except IntegrityError:
             db.session.rollback()
             return bad_request("Database integrity error while creating scene.")
         return ok({"id": s.id, "title": s.title, "order_index": s.order_index,
-                   "chapter_id": s.chapter_id, "content": s.content}, 201)
+                   "chapter_id": s.chapter_id, "content": s.content, "status": s.status}, 201)
 
     @app.get("/api/scenes/<int:sid>")
     @token_auth_required
@@ -1043,7 +1088,7 @@ Sent from WriteHaven Feedback Form
             return forbidden()
         if not s: return not_found()
         return ok({"id": s.id, "chapter_id": s.chapter_id, "title": s.title,
-                   "order_index": s.order_index, "content": s.content})
+                   "order_index": s.order_index, "content": s.content, "status": s.status})
 
     @app.put("/api/scenes/<int:sid>")
     @token_auth_required
@@ -1055,9 +1100,10 @@ Sent from WriteHaven Feedback Form
         data = request.get_json() or {}
         if (t := data.get("title")) is not None:   s.title = t.strip()
         if (c := data.get("content")) is not None: s.content = c
+        if (st := data.get("status")) is not None: s.status = st
         db.session.commit()
         return ok({"id": s.id, "title": s.title, "order_index": s.order_index,
-                   "chapter_id": s.chapter_id, "content": s.content})
+                   "chapter_id": s.chapter_id, "content": s.content, "status": s.status})
 
     @app.delete("/api/scenes/<int:sid>")
     @token_auth_required
