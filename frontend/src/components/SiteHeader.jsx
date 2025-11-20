@@ -1,7 +1,19 @@
 ﻿// src/components/SiteHeader.jsx
 import { useState, useRef, useEffect } from 'react';
 import { Link, NavLink, useNavigate, useParams } from 'react-router-dom';
-import { MessageSquare, User, Settings, LogOut, ChevronDown } from 'lucide-react';
+import {
+  MessageSquare,
+  User,
+  Settings,
+  LogOut,
+  ChevronDown,
+  Edit3,
+  Users,
+  Globe2,
+  Map as MapIcon,
+  Share,
+  Sliders
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import FeedbackModal from './FeedbackModal';
 import logoUrl from '../assets/logo.png';
@@ -50,12 +62,30 @@ export default function SiteHeader() {
         {/* Project Navigation - nur wenn in Projekt */}
         {base && (
           <nav className="header-nav">
-            <NavLink end to={base} className="header-tab">{t('navigation.writing')}</NavLink>
-            <NavLink to={`${base}/characters`} className="header-tab">{t('navigation.characters')}</NavLink>
-            <NavLink to={`${base}/world`} className="header-tab">{t('navigation.world')}</NavLink>
-            <NavLink to={`${base}/map`} className="header-tab">{t('navigation.map')}</NavLink>
-            <NavLink to={`${base}/export`} className="header-tab">{t('navigation.export')}</NavLink>
-            <NavLink to={`${base}/settings`} className="header-tab">{t('navigation.projectSettings')}</NavLink>
+            <NavLink end to={base} className="header-tab">
+              <Edit3 size={16} />
+              <span>{t('navigation.writing')}</span>
+            </NavLink>
+            <NavLink to={`${base}/characters`} className="header-tab">
+              <Users size={16} />
+              <span>{t('navigation.characters')}</span>
+            </NavLink>
+            <NavLink to={`${base}/world`} className="header-tab">
+              <Globe2 size={16} />
+              <span>{t('navigation.world')}</span>
+            </NavLink>
+            <NavLink to={`${base}/map`} className="header-tab">
+              <MapIcon size={16} />
+              <span>{t('navigation.map')}</span>
+            </NavLink>
+            <NavLink to={`${base}/export`} className="header-tab">
+              <Share size={16} />
+              <span>{t('navigation.export')}</span>
+            </NavLink>
+            <NavLink to={`${base}/settings`} className="header-tab">
+              <Sliders size={16} />
+              <span>{t('navigation.projectSettings')}</span>
+            </NavLink>
           </nav>
         )}
 

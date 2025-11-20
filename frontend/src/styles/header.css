@@ -66,6 +66,7 @@
   position: relative;
   display: inline-flex;
   align-items: center;
+  gap: 6px;
   height: 100%;
   padding: 8px 2px;
   color: rgba(255, 255, 255, 0.7);
@@ -75,6 +76,11 @@
   border: 0;
   background: transparent;
   transition: color 0.2s ease;
+}
+
+.header-tab svg {
+  width: 16px;
+  height: 16px;
 }
 
 .header-tab:hover {
