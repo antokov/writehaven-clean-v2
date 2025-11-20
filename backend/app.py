@@ -1026,65 +1026,133 @@ Sent from WriteHaven Feedback Form
     def list_scenes(cid):
         if not verify_chapter_ownership(cid, get_current_user().id):
             return forbidden()
-        rows = (Scene.query.filter_by(chapter_id=cid)
-                .order_by(Scene.order_index.asc(), Scene.id.asc())
-                .all())
+        rows = db.session.execute(text("""
+            SELECT id, chapter_id, title, content, status, order_index
+            FROM scene
+            WHERE chapter_id = :cid
+            ORDER BY order_index ASC, id ASC
+        """), {"cid": cid}).mappings().all()
         return ok([{
-            "id": s.id, "chapter_id": s.chapter_id, "title": s.title,
-            "order_index": s.order_index, "content": s.content, "status": s.status
-        } for s in rows])
+            "id": row["id"],
+            "chapter_id": row["chapter_id"],
+            "title": row["title"],
+            "order_index": row["order_index"],
+            "content": row["content"],
+            "status": row["status"]
+        } for row in rows])
 
     @app.post("/api/chapters/<int:cid>/scenes")
     @token_auth_required
     def create_scene(cid):
         if not verify_chapter_ownership(cid, get_current_user().id): return forbidden()
         data = request.get_json() or {}
-        s = Scene(chapter_id=cid,
-                  title=(data.get("title") or "Neue Szene").strip(),
-                  order_index=int(data.get("order_index", 0)),
-                  content=data.get("content", "") or "",
-                  status=data.get("status", "Idea"))
+        payload = {
+            "chapter_id": cid,
+            "title": (data.get("title") or "Neue Szene").strip(),
+            "order_index": int(data.get("order_index", 0)),
+            "content": data.get("content", "") or "",
+            "status": data.get("status") or "Idea"
+        }
         try:
-            db.session.add(s); db.session.commit()
+            row = db.session.execute(text("""
+                INSERT INTO scene (chapter_id, title, order_index, content, status)
+                VALUES (:chapter_id, :title, :order_index, :content, :status)
+                RETURNING id, chapter_id, title, content, status, order_index
+            """), payload).mappings().first()
+            db.session.commit()
         except IntegrityError:
             db.session.rollback()
             return bad_request("Database integrity error while creating scene.")
-        return ok({"id": s.id, "title": s.title, "order_index": s.order_index,
-                   "chapter_id": s.chapter_id, "content": s.content, "status": s.status}, 201)
+        return ok({
+            "id": row["id"],
+            "title": row["title"],
+            "order_index": row["order_index"],
+            "chapter_id": row["chapter_id"],
+            "content": row["content"],
+            "status": row["status"]
+        }, 201)
 
     @app.get("/api/scenes/<int:sid>")
     @token_auth_required
     def get_scene(sid):
-        s = Scene.query.get(sid)
-        if s and not verify_chapter_ownership(s.chapter_id, get_current_user().id):
+        row = db.session.execute(text("""
+            SELECT id, chapter_id, title, content, status, order_index
+            FROM scene
+            WHERE id = :id
+        """), {"id": sid}).mappings().first()
+        if row and not verify_chapter_ownership(row["chapter_id"], get_current_user().id):
             return forbidden()
-        if not s: return not_found()
-        return ok({"id": s.id, "chapter_id": s.chapter_id, "title": s.title,
-                   "order_index": s.order_index, "content": s.content, "status": s.status})
+        if not row: return not_found()
+        return ok({
+            "id": row["id"],
+            "chapter_id": row["chapter_id"],
+            "title": row["title"],
+            "order_index": row["order_index"],
+            "content": row["content"],
+            "status": row["status"]
+        })
 
     @app.put("/api/scenes/<int:sid>")
     @token_auth_required
     def update_scene(sid):
-        s = Scene.query.get(sid)
-        if not s: return not_found()
-        if not verify_chapter_ownership(s.chapter_id, get_current_user().id):
+        existing = db.session.execute(text("""
+            SELECT id, chapter_id, title, content, status, order_index
+            FROM scene
+            WHERE id = :id
+        """), {"id": sid}).mappings().first()
+        if not existing: return not_found()
+        if not verify_chapter_ownership(existing["chapter_id"], get_current_user().id):
             return forbidden()
         data = request.get_json() or {}
-        if (t := data.get("title")) is not None:   s.title = t.strip()
-        if (c := data.get("content")) is not None: s.content = c
-        if (st := data.get("status")) is not None: s.status = st
+        updates = []
+        params = {"id": sid}
+        if (t := data.get("title")) is not None:
+            updates.append("title = :title")
+            params["title"] = t.strip()
+        if (c := data.get("content")) is not None:
+            updates.append("content = :content")
+            params["content"] = c
+        if (st := data.get("status")) is not None:
+            updates.append("status = :status")
+            params["status"] = st
+
+        if not updates:
+            return ok({
+                "id": existing["id"],
+                "title": existing["title"],
+                "order_index": existing["order_index"],
+                "chapter_id": existing["chapter_id"],
+                "content": existing["content"],
+                "status": existing["status"]
+            })
+
+        update_sql = text(f"""
+            UPDATE scene
+            SET {', '.join(updates)}, updated_at = CURRENT_TIMESTAMP
+            WHERE id = :id
+            RETURNING id, chapter_id, title, content, status, order_index
+        """)
+        row = db.session.execute(update_sql, params).mappings().first()
         db.session.commit()
-        return ok({"id": s.id, "title": s.title, "order_index": s.order_index,
-                   "chapter_id": s.chapter_id, "content": s.content, "status": s.status})
+        return ok({
+            "id": row["id"],
+            "title": row["title"],
+            "order_index": row["order_index"],
+            "chapter_id": row["chapter_id"],
+            "content": row["content"],
+            "status": row["status"]
+        })
 
     @app.delete("/api/scenes/<int:sid>")
     @token_auth_required
     def delete_scene(sid):
-        s = Scene.query.get(sid)
-        if not s: return not_found()
-        if not verify_chapter_ownership(s.chapter_id, get_current_user().id):
+        row = db.session.execute(text("SELECT chapter_id FROM scene WHERE id = :id"), {"id": sid}).first()
+        if not row: return not_found()
+        chapter_id = row.chapter_id if hasattr(row, "chapter_id") else row[0]
+        if not verify_chapter_ownership(chapter_id, get_current_user().id):
             return forbidden()
-        db.session.delete(s); db.session.commit()
+        db.session.execute(text("DELETE FROM scene WHERE id = :id"), {"id": sid})
+        db.session.commit()
         return ok({"ok": True})
 
     # ---------- Scene Notes ----------
