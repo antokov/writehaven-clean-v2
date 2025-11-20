@@ -60,6 +60,31 @@ def auto_migrate():
                 worldnode_columns = [col['name'] for col in inspector.get_columns('worldnode')]
                 worldnode_needs_migration = 'region_id' not in worldnode_columns
 
+            # Check if scene table needs status column
+            scene_needs_status = False
+            if 'scene' in inspector.get_table_names():
+                scene_columns = [col['name'] for col in inspector.get_columns('scene')]
+                print(f"🔍 DEBUG: scene table columns found by inspector: {scene_columns}")
+
+                # Double-check with direct SQL query (PostgreSQL)
+                if 'postgresql' in db_uri:
+                    try:
+                        result = conn.execute(text("""
+                            SELECT column_name
+                            FROM information_schema.columns
+                            WHERE table_name = 'scene'
+                        """))
+                        actual_columns = [row[0] for row in result]
+                        print(f"🔍 DEBUG: scene table columns from information_schema: {actual_columns}")
+                        scene_needs_status = 'status' not in actual_columns
+                    except Exception as e:
+                        print(f"🔍 DEBUG: Could not query information_schema: {e}")
+                        scene_needs_status = 'status' not in scene_columns
+                else:
+                    scene_needs_status = 'status' not in scene_columns
+
+                print(f"🔍 DEBUG: scene_needs_status = {scene_needs_status}")
+
             if needs_migration:
                 print("🔄 Auto-migration: Updating user table schema...")
 
@@ -137,7 +162,25 @@ def auto_migrate():
                     except:
                         pass
 
-            if not needs_migration and not worldnode_needs_migration:
+            # Migrate scene table if needed (add status column)
+            if scene_needs_status:
+                print("🔄 Auto-migration: Adding status to scene table...")
+                try:
+                    # SQLite doesn't support NOT NULL in ALTER TABLE, so add column with default
+                    conn.execute(text("ALTER TABLE scene ADD COLUMN status VARCHAR(50) DEFAULT 'Idea';"))
+                    conn.commit()
+                    # Update any NULL values to 'Idea'
+                    conn.execute(text("UPDATE scene SET status = 'Idea' WHERE status IS NULL;"))
+                    conn.commit()
+                    print("✅ scene.status column added successfully")
+                except (ProgrammingError, OperationalError) as e:
+                    print(f"⚠️  Could not add status column: {e}")
+                    try:
+                        conn.rollback()
+                    except:
+                        pass
+
+            if not needs_migration and not worldnode_needs_migration and not scene_needs_status:
                 print("Database connected successfully: " + db_uri.split('@')[1] if '@' in db_uri else db_uri[:50] + "...")
 
     except Exception as e:
