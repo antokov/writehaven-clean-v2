@@ -485,7 +485,7 @@ export default function ProjectView() {
   const scenesOfActive = activeChapterId ? (scenesByChapter[activeChapterId] || []) : [];
 
   return (
-    <div className="page-wrap">
+    <div className="page-wrap project-view-page">
       <aside className="side">
         <div className="tree">
           <div className="tree-head">
