@@ -23,6 +23,7 @@ try:
     from backend.word_parser import parse_word_document
     from backend.security_config import get_security_config
     from backend.console_mail import ConsoleMailBackend
+    from backend.auto_migrate import auto_migrate
 except ImportError:
     from extensions import db
     from models import (Project, Chapter, Scene, Character, WorldNode, User, Role, Map,
@@ -31,6 +32,7 @@ except ImportError:
     from word_parser import parse_word_document
     from security_config import get_security_config
     from console_mail import ConsoleMailBackend
+    from auto_migrate import auto_migrate
 
 
 # ---------- DB URI helpers ----------
@@ -170,80 +172,9 @@ def create_app():
         # Nur beim Start versuchen, nicht crashen wenn DB nicht erreichbar
         try:
             db.Model.metadata.create_all(bind=db.engine, checkfirst=True)
-            print("Database schema created/verified successfully")
 
-            # Auto-Migration: Update existing schema if needed
-            try:
-                from sqlalchemy import inspect
-                from sqlalchemy.exc import OperationalError, ProgrammingError
-
-                inspector = inspect(db.engine)
-
-                # Check if scene table needs status column
-                if 'scene' in inspector.get_table_names():
-                    scene_columns = [col['name'] for col in inspector.get_columns('scene')]
-                    if 'status' not in scene_columns:
-                        print("🔄 Auto-migration: Adding status to scene table...")
-                        # Use raw connection with explicit transaction to avoid AUTOCOMMIT issues
-                        conn = db.engine.raw_connection()
-                        try:
-                            cursor = conn.cursor()
-
-                            # Add column (works for both SQLite and PostgreSQL)
-                            print("  Executing: ALTER TABLE scene ADD COLUMN status VARCHAR(50);")
-                            cursor.execute("ALTER TABLE scene ADD COLUMN status VARCHAR(50);")
-                            conn.commit()
-                            print("  Column added, setting default values...")
-
-                            # Set default for existing rows
-                            print("  Executing: UPDATE scene SET status = 'Idea' WHERE status IS NULL;")
-                            cursor.execute("UPDATE scene SET status = 'Idea' WHERE status IS NULL;")
-                            conn.commit()
-                            print("  Default values set")
-
-                            # For PostgreSQL: Set column default for future inserts
-                            try:
-                                print("  Executing: ALTER TABLE scene ALTER COLUMN status SET DEFAULT 'Idea';")
-                                cursor.execute("ALTER TABLE scene ALTER COLUMN status SET DEFAULT 'Idea';")
-                                conn.commit()
-                                print("  Default constraint added")
-                            except Exception as e:
-                                print(f"  Note: Could not set default constraint: {e}")
-
-                            cursor.close()
-                            conn.close()
-                            print("✅ scene.status column added successfully")
-
-                            # Clear SQLAlchemy cache so it picks up the new column
-                            db.session.expire_all()
-
-                        except Exception as e:
-                            print(f"⚠️  Could not add status column: {e}")
-                            import traceback
-                            traceback.print_exc()
-                            try:
-                                conn.rollback()
-                                conn.close()
-                            except:
-                                pass
-
-                # Check if worldnode table needs region_id column
-                if 'worldnode' in inspector.get_table_names():
-                    worldnode_columns = [col['name'] for col in inspector.get_columns('worldnode')]
-                    if 'region_id' not in worldnode_columns:
-                        print("🔄 Auto-migration: Adding region_id to worldnode table...")
-                        try:
-                            db.session.execute(text('ALTER TABLE worldnode ADD COLUMN region_id INTEGER;'))
-                            db.session.commit()
-                            print("✅ worldnode.region_id column added successfully")
-                        except (ProgrammingError, OperationalError) as e:
-                            print(f"⚠️  Could not add region_id column: {e}")
-                            db.session.rollback()
-
-            except Exception as e:
-                print(f"Auto-migration skipped: {e}")
-                import traceback
-                traceback.print_exc()
+            # Run auto_migrate to handle schema updates
+            auto_migrate()
 
             # Verifiziere Datenbankverbindung
             db.session.execute(text("SELECT 1"))
