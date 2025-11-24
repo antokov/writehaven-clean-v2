@@ -1,28 +1,32 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
+import LanguageDetector from 'i18next-browser-languagedetector'
 
-import en from './locales/en.json'
-import de from './locales/de.json'
+import enLanding from './locales/en/landing.json'
+import deLanding from './locales/de/landing.json'
 
 const resources = {
-  en: { translation: en },
-  de: { translation: de }
+  en: {
+    landing: enLanding
+  },
+  de: {
+    landing: deLanding
+  }
 }
 
-// Lade gespeicherte Sprache aus localStorage oder verwende Englisch als Standard
-const savedLanguage = localStorage.getItem('language')
-const initialLanguage = savedLanguage && (savedLanguage === 'en' || savedLanguage === 'de')
-  ? savedLanguage
-  : 'en'
-
 i18n
+  .use(LanguageDetector)
   .use(initReactI18next)
   .init({
     resources,
-    lng: initialLanguage, // Use saved language or default to English
     fallbackLng: 'en',
+    defaultNS: 'landing',
     interpolation: {
-      escapeValue: false // React already escapes
+      escapeValue: false
+    },
+    detection: {
+      order: ['localStorage', 'navigator'],
+      caches: ['localStorage']
     }
   })
 

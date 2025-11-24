@@ -1,16 +1,19 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import { Navigation, Pagination, Autoplay, Keyboard } from 'swiper/modules'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 import 'swiper/css'
 import 'swiper/css/navigation'
 import 'swiper/css/pagination'
 import '../styles/landing.css'
 import logoUrl from '../assets/logo.png'
 
-const BMAC_URL = import.meta.env.VITE_BMAC_URL || 'https://buymeacoffee.com/writehaven' // TODO
+const BMAC_URL = import.meta.env.VITE_BMAC_URL || 'https://buymeacoffee.com/writehaven'
 
 export default function Landing() {
+  const { t } = useTranslation('landing')
   const [scrollY, setScrollY] = useState(0)
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
   const [isPaused, setIsPaused] = useState(false)
@@ -91,58 +94,48 @@ export default function Landing() {
   const features = [
     {
       id: 'writing',
-      title: 'Writing',
       screenshot: '/landing/assets/screenshot1.jpeg',
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
-      ),
-      description: 'Distraction-free editor with chapters, scenes, and smart structure. Focus on your story while we handle the organization.'
+      )
     },
     {
       id: 'characters',
-      title: 'Characters',
       screenshot: '/landing/assets/screenshot2.jpeg',
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
-      ),
-      description: 'Deep character profiles, relationship graphs, and dynamic attributes. Track character arcs and connections throughout your story.'
+      )
     },
     {
       id: 'world',
-      title: 'World Building',
       screenshot: '/landing/assets/screenshot3.jpeg',
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
-      ),
-      description: 'Create rich worlds with places, cultures, and complex relationships. Keep track of every detail that makes your world unique.'
+      )
     },
     {
       id: 'map',
-      title: 'Map',
       screenshot: '/landing/assets/screenshot4.jpeg',
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
-      ),
-      description: 'Generate fantasy maps with biomes, regions, and landmarks. Visualize your world and link places directly to your story elements.'
+      )
     },
     {
       id: 'export',
-      title: 'Export',
       screenshot: '/landing/assets/screenshot5.jpeg',
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
-      ),
-      description: 'Export your finished work to professional PDF or HTML formats. Beautiful formatting that makes your story ready to share.'
+      )
     }
   ]
 
@@ -160,11 +153,12 @@ export default function Landing() {
             <span className="brand-text">Writehaven</span>
           </Link>
           <nav>
-            <a href="#features" className="nav-link">Features</a>
-            <a href="#preview" className="nav-link">Inspiration</a>
-            <a href="#support" className="nav-link">Support</a>
+            <a href="#features" className="nav-link">{t('nav.features')}</a>
+            <a href="#preview" className="nav-link">{t('nav.inspiration')}</a>
+            <a href="#support" className="nav-link">{t('nav.support')}</a>
+            <LanguageSwitcher />
             <Link to="/app" className="btn btn-primary">
-              <span>Launch app</span>
+              <span>{t('nav.launchApp')}</span>
               <svg className="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path d="M5 12h14M12 5l7 7-7 7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
@@ -183,45 +177,50 @@ export default function Landing() {
             <div className="hero-text" style={parallaxStyle}>
               <div className="hero-badge fade-in-section">
                 <span className="badge-dot"></span>
-                <span>Pilot phase — we’re inviting testers</span>
+                <span>{t('hero.badge')}</span>
               </div>
 
               <h1 className="hero-title fade-in-section">
-                Novel Writing & Worldbuilding App for <span className="gradient-text">Immersive Worlds</span>
+                {t('hero.title')}<span className="gradient-text">{t('hero.titleHighlight')}</span>
               </h1>
 
               <p className="hero-lead fade-in-section">
-                Writehaven is a novel writing app with worldbuilding tools, character management, and timelines for stories. Currently in early pilot — if you're up for testing and sharing feedback, you're in the right place. Explore our <a href="#features" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>writing features</a> and <a href="#about" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>learn more</a> about the platform.
+                {t('hero.lead')}
+                <a href="#features" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>
+                  {t('hero.leadLinkFeatures')}
+                </a>
+                {t('hero.leadAnd')}
+                <a href="#about" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>
+                  {t('hero.leadLinkAbout')}
+                </a>
+                {t('hero.leadEnd')}
               </p>
 
               <div className="hero-cta fade-in-section">
                 <Link to="/app" className="btn btn-hero">
-                  <span>Join as a tester</span>
+                  <span>{t('hero.ctaJoin')}</span>
                   <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <path d="M13 7l5 5m0 0l-5 5m5-5H6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </Link>
 
-                {/* PROMINENT: Buy me a coffee in the hero as well */}
                 <a href={BMAC_URL} target="_blank" rel="noreferrer" className="btn btn-hero" aria-label="Buy me a coffee">
-                  <span>☕ Buy me a coffee</span>
+                  <span>{t('hero.ctaCoffee')}</span>
                 </a>
-
-          
               </div>
 
               <div className="hero-stats fade-in-section">
                 <div className="stat">
-                  <div className="stat-value">Status</div>
-                  <div className="stat-label">Private pilot</div>
+                  <div className="stat-value">{t('hero.statsStatus')}</div>
+                  <div className="stat-label">{t('hero.statsStatusValue')}</div>
                 </div>
                 <div className="stat">
-                  <div className="stat-value">Focus</div>
-                  <div className="stat-label">Stability & feedback</div>
+                  <div className="stat-value">{t('hero.statsFocus')}</div>
+                  <div className="stat-label">{t('hero.statsFocusValue')}</div>
                 </div>
                 <div className="stat">
-                  <div className="stat-value">Looking for</div>
-                  <div className="stat-label">Authors willing to test</div>
+                  <div className="stat-value">{t('hero.statsLooking')}</div>
+                  <div className="stat-label">{t('hero.statsLookingValue')}</div>
                 </div>
               </div>
             </div>
@@ -234,10 +233,18 @@ export default function Landing() {
         <section id="about" className="section">
           <div className="container">
             <div className="section-header fade-in-section">
-              <span className="section-badge">What is Writehaven?</span>
-              <h2 className="section-title">A Focused Studio for Long-Form Stories</h2>
+              <span className="section-badge">{t('about.badge')}</span>
+              <h2 className="section-title">{t('about.title')}</h2>
               <p className="section-subtitle">
-                Writehaven brings planning, <a href="#features" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>world building</a>, and writing together — currently in pilot with a focus on stability, ease of use, and honest feedback. <a href="#support" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>Support the project</a> to help us grow.
+                {t('about.subtitle')}
+                <a href="#features" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>
+                  {t('about.subtitleLink')}
+                </a>
+                {t('about.subtitleMiddle')}
+                <a href="#support" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>
+                  {t('about.subtitleLinkSupport')}
+                </a>
+                {t('about.subtitleEnd')}
               </p>
             </div>
 
@@ -248,20 +255,25 @@ export default function Landing() {
                     <path d="M4 6h16M6 10h12M8 14h8M10 18h4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </div>
-                <h3 className="feature-title">At a Glance</h3>
-                <p className="feature-description">Workspace for novels, series, and RPG worlds — <a href="#features" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>plan, build, write</a>.</p>
+                <h3 className="feature-title">{t('about.glanceTitle')}</h3>
+                <p className="feature-description">
+                  {t('about.glanceDesc')}
+                  <a href="#features" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>
+                    {t('about.glanceDescLink')}
+                  </a>.
+                </p>
                 <ul className="pricing-features" style={{ marginTop: '0.75rem' }}>
                   <li className="feature-item">
                     <svg className="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 13l4 4L19 7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    <span>Structure chapters & scenes</span>
+                    <span>{t('about.glanceItem1')}</span>
                   </li>
                   <li className="feature-item">
                     <svg className="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 13l4 4L19 7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    <span>Characters, relations, places & timelines</span>
+                    <span>{t('about.glanceItem2')}</span>
                   </li>
                   <li className="feature-item">
                     <svg className="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 13l4 4L19 7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    <span>Focused editor, optional AI helper</span>
+                    <span>{t('about.glanceItem3')}</span>
                   </li>
                 </ul>
               </div>
@@ -272,20 +284,20 @@ export default function Landing() {
                     <path d="M17 20h5v-2a3 3 0 00-5.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M12 7a3 3 0 110-6 3 3 0 010 6z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </div>
-                <h3 className="feature-title">Who Is It For?</h3>
-                <p className="feature-description">For authors building long-form stories.</p>
+                <h3 className="feature-title">{t('about.whoTitle')}</h3>
+                <p className="feature-description">{t('about.whoDesc')}</p>
                 <ul className="pricing-features" style={{ marginTop: '0.75rem' }}>
                   <li className="feature-item">
                     <svg className="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 13l4 4L19 7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    <span>Novels, series, RPG worlds</span>
+                    <span>{t('about.whoItem1')}</span>
                   </li>
                   <li className="feature-item">
                     <svg className="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 13l4 4L19 7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    <span>People who like structured workflows</span>
+                    <span>{t('about.whoItem2')}</span>
                   </li>
                   <li className="feature-item">
                     <svg className="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 13l4 4L19 7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    <span>Testers willing to give honest feedback</span>
+                    <span>{t('about.whoItem3')}</span>
                   </li>
                 </ul>
               </div>
@@ -296,20 +308,20 @@ export default function Landing() {
                     <path d="M18 6L6 18M6 6l12 12" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </div>
-                <h3 className="feature-title">What It Isn't</h3>
-                <p className="feature-description">A clear scope so we stay focused.</p>
+                <h3 className="feature-title">{t('about.notTitle')}</h3>
+                <p className="feature-description">{t('about.notDesc')}</p>
                 <ul className="pricing-features" style={{ marginTop: '0.75rem' }}>
                   <li className="feature-item">
                     <svg className="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 13l4 4L19 7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    <span>No social network, no public publishing</span>
+                    <span>{t('about.notItem1')}</span>
                   </li>
                   <li className="feature-item">
                     <svg className="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 13l4 4L19 7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    <span>No “one-click bestseller” promises</span>
+                    <span>{t('about.notItem2')}</span>
                   </li>
                   <li className="feature-item">
                     <svg className="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 13l4 4L19 7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    <span>No distractions — focus on writing</span>
+                    <span>{t('about.notItem3')}</span>
                   </li>
                 </ul>
               </div>
@@ -321,11 +333,9 @@ export default function Landing() {
         <section id="features" className="section features-section">
           <div className="container">
             <div className="section-header fade-in-section">
-              <span className="section-badge">Features</span>
-              <h2 className="section-title">See WriteHaven in Action</h2>
-              <p className="section-subtitle">
-                Write your novel, manage characters and relationships, and build rich fantasy worlds. Explore our features and see how they work — everything is evolving, and your feedback shapes the future of WriteHaven.
-              </p>
+              <span className="section-badge">{t('features.badge')}</span>
+              <h2 className="section-title">{t('features.title')}</h2>
+              <p className="section-subtitle">{t('features.subtitle')}</p>
             </div>
 
             <div className="features-carousel-container fade-in-section">
@@ -374,10 +384,10 @@ export default function Landing() {
                         {/* Screenshot */}
                         <div
                           className="feature-slide-screenshot"
-                          onClick={() => openLightbox(feature.screenshot, `${feature.title} feature`)}
+                          onClick={() => openLightbox(feature.screenshot, t(`features.${feature.id}.title`))}
                           role="button"
                           tabIndex={0}
-                          onKeyDown={(e) => e.key === 'Enter' && openLightbox(feature.screenshot, `${feature.title} feature`)}
+                          onKeyDown={(e) => e.key === 'Enter' && openLightbox(feature.screenshot, t(`features.${feature.id}.title`))}
                         >
                           <div className="screenshot-mockup-carousel">
                             <div className="mockup-header">
@@ -391,14 +401,14 @@ export default function Landing() {
                             <div className="mockup-content">
                               <img
                                 src={feature.screenshot}
-                                alt={`${feature.title} feature`}
+                                alt={t(`features.${feature.id}.title`)}
                                 className="screenshot-image"
                               />
                               <div className="screenshot-zoom-hint">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                   <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m-3-3h6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                                 </svg>
-                                <span>Click to enlarge</span>
+                                <span>{t('features.zoomHint')}</span>
                               </div>
                             </div>
                           </div>
@@ -409,8 +419,8 @@ export default function Landing() {
                           <div className="feature-slide-icon">
                             {feature.icon}
                           </div>
-                          <h3 className="feature-slide-title">{feature.title}</h3>
-                          <p className="feature-slide-description">{feature.description}</p>
+                          <h3 className="feature-slide-title">{t(`features.${feature.id}.title`)}</h3>
+                          <p className="feature-slide-description">{t(`features.${feature.id}.description`)}</p>
                         </div>
                       </div>
                     </div>
@@ -421,7 +431,7 @@ export default function Landing() {
               {/* Progress indicator */}
               <div className={`carousel-status ${isPaused ? 'paused' : ''}`}>
                 <span className="status-dot"></span>
-                <span className="status-text">{isPaused ? 'Paused' : 'Auto-playing'}</span>
+                <span className="status-text">{isPaused ? t('features.pausedStatus') : t('features.autoplayStatus')}</span>
               </div>
             </div>
           </div>
@@ -436,8 +446,11 @@ export default function Landing() {
               <div className="quote-icon">
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/></svg>
               </div>
-              <p className="quote-text">“The morning smelled of iron and storm…”</p>
-              <footer className="quote-author"><span className="author-name">Example from your work</span><span className="author-role">Chapter I</span></footer>
+              <p className="quote-text">{t('quotes.quote1')}</p>
+              <footer className="quote-author">
+                <span className="author-name">{t('quotes.quote1Author')}</span>
+                <span className="author-role">{t('quotes.quote1Role')}</span>
+              </footer>
             </blockquote>
           </div>
         </section>
@@ -450,25 +463,24 @@ export default function Landing() {
               <div className="quote-icon">
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983z"/></svg>
               </div>
-              <p className="quote-text">“Between the lines of the archive lay names…”</p>
-              <footer className="quote-author"><span className="author-name">Your story is taking shape</span><span className="author-role">Chapter VII</span></footer>
+              <p className="quote-text">{t('quotes.quote2')}</p>
+              <footer className="quote-author">
+                <span className="author-name">{t('quotes.quote2Author')}</span>
+                <span className="author-role">{t('quotes.quote2Role')}</span>
+              </footer>
             </blockquote>
           </div>
         </section>
 
-        {/* SUPPORT – centered single-column block */}
+        {/* SUPPORT */}
         <section id="support" className="section pricing-section">
           <div className="container">
             <div className="section-header fade-in-section">
-              <span className="section-badge">Support</span>
-              <h2 className="section-title">☕ Buy me a coffee</h2>
-              <p className="section-subtitle">
-                Writehaven is in pilot. Infrastructure (servers, DB, storage) isn’t cheap — if you like the
-                project, you can support it with a coffee.
-              </p>
+              <span className="section-badge">{t('support.badge')}</span>
+              <h2 className="section-title">{t('support.title')}</h2>
+              <p className="section-subtitle">{t('support.subtitle')}</p>
             </div>
 
-            {/* NEW: centered card */}
             <div className="support-centered fade-in-section">
               <div className="support-hero" aria-hidden="true">
                 <div className="coffee-medallion coffee-lg">
@@ -479,11 +491,18 @@ export default function Landing() {
                 </div>
               </div>
 
-              <span className="thanks-pill">❤️ Thank you!</span>
+              <span className="thanks-pill">{t('support.thanks')}</span>
 
-              <h3 className="support-heading">Support the Project</h3>
+              <h3 className="support-heading">{t('support.heading')}</h3>
               <p className="support-copy">
-                Your coffee helps with server &amp; storage costs and speeds up the pilot roadmap. See all our <a href="#features" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>features</a> and <Link to="/app" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>start writing</Link>.
+                {t('support.copy')}
+                <a href="#features" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>
+                  {t('support.copyLinkFeatures')}
+                </a>
+                {t('support.copyAnd')}
+                <Link to="/app" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>
+                  {t('support.copyLinkStart')}
+                </Link>.
               </p>
 
               <ul className="benefits-grid">
@@ -491,31 +510,29 @@ export default function Landing() {
                   <svg className="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <path d="M5 13l4 4L19 7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
-                  <span>Covers server &amp; database costs</span>
+                  <span>{t('support.benefit1')}</span>
                 </li>
                 <li className="feature-item">
                   <svg className="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <path d="M5 13l4 4L19 7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
-                  <span>Enables more testing capacity &amp; backups</span>
+                  <span>{t('support.benefit2')}</span>
                 </li>
                 <li className="feature-item">
                   <svg className="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <path d="M5 13l4 4L19 7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
-                  <span>Speeds up the pilot roadmap</span>
+                  <span>{t('support.benefit3')}</span>
                 </li>
               </ul>
 
               <a href={BMAC_URL} target="_blank" rel="noreferrer" className="btn btn-primary btn-hero support-cta-btn">
-                Buy me a coffee now
+                {t('support.ctaButton')}
               </a>
-              <span className="support-note">You’ll be redirected to “Buy Me a Coffee”. Thanks! 💜</span>
+              <span className="support-note">{t('support.note')}</span>
             </div>
           </div>
         </section>
-
-
       </main>
 
       <footer className="landing-footer">
@@ -523,53 +540,62 @@ export default function Landing() {
           <div className="footer-content">
             <div className="footer-brand">
               <img src={logoUrl} alt="Writehaven" className="footer-logo" />
-              <p className="footer-tagline">The creative <a href="#about" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>writing workspace</a> — currently in pilot. <a href="#features" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>Explore features</a>.</p>
+              <p className="footer-tagline">
+                {t('footer.tagline')}
+                <a href="#about" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>
+                  {t('footer.taglineLink')}
+                </a>
+                {t('footer.taglineMiddle')}
+                <a href="#features" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>
+                  {t('footer.taglineLinkFeatures')}
+                </a>.
+              </p>
             </div>
 
             <div className="footer-links">
               <div className="footer-column">
-                <h4 className="footer-title">Product</h4>
+                <h4 className="footer-title">{t('footer.productTitle')}</h4>
                 <ul className="footer-list">
-                  <li><a href="#features">Features</a></li>
-                  <li><a href="#pilot">Pilot</a></li>
-                  <li><a href="#support">Support</a></li>
-                  <li><Link to="/app">App</Link></li>
-                  <li><a href="#">Changelog</a></li>
+                  <li><a href="#features">{t('footer.productFeatures')}</a></li>
+                  <li><a href="#pilot">{t('footer.productPilot')}</a></li>
+                  <li><a href="#support">{t('footer.productSupport')}</a></li>
+                  <li><Link to="/app">{t('footer.productApp')}</Link></li>
+                  <li><a href="#">{t('footer.productChangelog')}</a></li>
                 </ul>
               </div>
 
               <div className="footer-column">
-                <h4 className="footer-title">Resources</h4>
+                <h4 className="footer-title">{t('footer.resourcesTitle')}</h4>
                 <ul className="footer-list">
-                  <li><a href="#">Blog</a></li>
-                  <li><a href="#">Tutorials (soon)</a></li>
-                  <li><a href="#">Community</a></li>
-                  <li><a href={BMAC_URL} target="_blank" rel="noreferrer">Support: ☕</a></li>
+                  <li><a href="#">{t('footer.resourcesBlog')}</a></li>
+                  <li><a href="#">{t('footer.resourcesTutorials')}</a></li>
+                  <li><a href="#">{t('footer.resourcesCommunity')}</a></li>
+                  <li><a href={BMAC_URL} target="_blank" rel="noreferrer">{t('footer.resourcesSupportCoffee')}</a></li>
                 </ul>
               </div>
 
               <div className="footer-column">
-                <h4 className="footer-title">Company</h4>
+                <h4 className="footer-title">{t('footer.companyTitle')}</h4>
                 <ul className="footer-list">
-                  <li><a href="#">About</a></li>
-                  <li><a href="#">Careers</a></li>
-                  <li><a href="#">Contact</a></li>
+                  <li><a href="#">{t('footer.companyAbout')}</a></li>
+                  <li><a href="#">{t('footer.companyCareers')}</a></li>
+                  <li><a href="#">{t('footer.companyContact')}</a></li>
                 </ul>
               </div>
 
               <div className="footer-column">
-                <h4 className="footer-title">Legal</h4>
+                <h4 className="footer-title">{t('footer.legalTitle')}</h4>
                 <ul className="footer-list">
-                  <li><a href="#">Imprint</a></li>
-                  <li><a href="#">Privacy</a></li>
-                  <li><a href="#">Terms</a></li>
+                  <li><a href="#">{t('footer.legalImprint')}</a></li>
+                  <li><a href="#">{t('footer.legalPrivacy')}</a></li>
+                  <li><a href="#">{t('footer.legalTerms')}</a></li>
                 </ul>
               </div>
             </div>
           </div>
 
           <div className="footer-bottom">
-            <p className="copyright">© <span id="year"></span> Writehaven. All rights reserved.</p>
+            <p className="copyright">© <span id="year"></span> {t('footer.copyright')}</p>
             <div className="social-links">
               {/* Social icons */}
             </div>
