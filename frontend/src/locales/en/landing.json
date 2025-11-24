@@ -25,12 +25,12 @@
   },
   "about": {
     "badge": "What is Writehaven?",
-    "title": "A Focused Studio for Long-Form Stories",
-    "subtitle": "Writehaven brings planning, ",
-    "subtitleLink": "world building",
-    "subtitleMiddle": ", and writing together — currently in pilot with a focus on stability, ease of use, and honest feedback. ",
-    "subtitleLinkSupport": "Support the project",
-    "subtitleEnd": " to help us grow.",
+    "title": "A Novel Writing & Worldbuilding Workspace",
+    "subtitle": "Writehaven is a novel writing and worldbuilding app for long-form stories. Plan chapters and scenes, create characters and relationships, and build rich fantasy or RPG worlds in one focused place. Explore the ",
+    "subtitleLink": "worldbuilding and planning features",
+    "subtitleMiddle": " or ",
+    "subtitleLinkSupport": "support the project",
+    "subtitleEnd": " while we’re in pilot.",
     "glanceTitle": "At a Glance",
     "glanceDesc": "Workspace for novels, series, and RPG worlds — ",
     "glanceDescLink": "plan, build, write",
@@ -50,7 +50,7 @@
   },
   "features": {
     "badge": "Features",
-    "title": "See WriteHaven in Action",
+    "title": "Novel Writing, Characters & Worldbuilding in One App",
     "subtitle": "Write your novel, manage characters and relationships, and build rich fantasy worlds. Explore our features and see how they work — everything is evolving, and your feedback shapes the future of WriteHaven.",
     "writing": {
       "title": "Writing",
