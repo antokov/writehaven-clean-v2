@@ -187,11 +187,11 @@ export default function Landing() {
               </div>
 
               <h1 className="hero-title fade-in-section">
-                The Writing App for <span className="gradient-text">Immersive Worlds</span>
+                Novel Writing & Worldbuilding App for <span className="gradient-text">Immersive Worlds</span>
               </h1>
 
               <p className="hero-lead fade-in-section">
-                Early pilot. If you're up for testing and sharing feedback, you're in the right place. Explore our <a href="#features" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>writing features</a> and <a href="#about" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>learn more</a> about the platform.
+                Writehaven is a novel writing app with worldbuilding tools, character management, and timelines for stories. Currently in early pilot — if you're up for testing and sharing feedback, you're in the right place. Explore our <a href="#features" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>writing features</a> and <a href="#about" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>learn more</a> about the platform.
               </p>
 
               <div className="hero-cta fade-in-section">
@@ -249,7 +249,7 @@ export default function Landing() {
                   </svg>
                 </div>
                 <h3 className="feature-title">At a Glance</h3>
-                <p className="feature-description">Workspace for novels & series — <a href="#features" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>plan, build, write</a>.</p>
+                <p className="feature-description">Workspace for novels, series, and RPG worlds — <a href="#features" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>plan, build, write</a>.</p>
                 <ul className="pricing-features" style={{ marginTop: '0.75rem' }}>
                   <li className="feature-item">
                     <svg className="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 13l4 4L19 7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -324,7 +324,7 @@ export default function Landing() {
               <span className="section-badge">Features</span>
               <h2 className="section-title">See WriteHaven in Action</h2>
               <p className="section-subtitle">
-                Explore our features and see how they work. Everything is evolving — your feedback shapes the future of WriteHaven.
+                Write your novel, manage characters and relationships, and build rich fantasy worlds. Explore our features and see how they work — everything is evolving, and your feedback shapes the future of WriteHaven.
               </p>
             </div>
 
