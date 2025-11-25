@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import axios from "axios";
-import { BsPlus, BsTrash, BsSearch, BsChevronDown, BsChevronRight } from "react-icons/bs";
+import { BsPlus, BsTrash, BsSearch, BsChevronDown, BsChevronRight, BsWrench } from "react-icons/bs";
 import ConfirmModal from "../components/ConfirmModal";
 import NotesPanel from "../components/NotesPanel";
 import TasksPanel from "../components/TasksPanel";
@@ -1249,7 +1249,18 @@ export default function World() {
   const [showWorldGraph, setShowWorldGraph] = useState(false);
   const [confirmModal, setConfirmModal] = useState(null);
   const [mapRegions, setMapRegions] = useState([]);
-  const [toolsPanelOpen, setToolsPanelOpen] = useState(true);
+  const [toolsPanelOpen, setToolsPanelOpen] = useState(() => {
+    // Load open state from localStorage
+    const saved = localStorage.getItem('toolsPanel.open');
+    return saved ? JSON.parse(saved) : true;
+  });
+  const [notesCount, setNotesCount] = useState(0);
+  const [tasksCount, setTasksCount] = useState(0);
+
+  // Save tools panel state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('toolsPanel.open', JSON.stringify(toolsPanelOpen));
+  }, [toolsPanelOpen]);
 
   const hasHandledNewElement = useRef(false);
 
@@ -1520,31 +1531,72 @@ export default function World() {
 
       {/* Right sidebar - Tools panel */}
       <aside className={`tools-panel ${toolsPanelOpen ? 'open' : 'closed'}`}>
-        <div className="tools-header">
+        <div className="tools-header" style={{ display: toolsPanelOpen ? 'flex' : 'none' }}>
           <span className="tools-title">{t('writing.toolsTitle')}</span>
           <button
             className="icon-btn tools-toggle"
             onClick={() => setToolsPanelOpen(!toolsPanelOpen)}
-            aria-label={toolsPanelOpen ? t('writing.closeTools') : t('writing.openTools')}
+            aria-label={t('writing.closeTools')}
           >
-            {toolsPanelOpen ? <BsChevronRight /> : <BsChevronDown />}
+            <BsChevronRight />
           </button>
         </div>
 
-        {toolsPanelOpen && (
-          <div className="tools-content">
-            {activeId ? (
-              <>
-                <NotesPanel contextType="worldnode" contextId={activeId} onRequestDelete={setConfirmModal} />
-                <TasksPanel contextType="worldnode" contextId={activeId} onRequestDelete={setConfirmModal} />
-              </>
-            ) : (
-              <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>
-                {t('world.tools.selectElement')}
-              </div>
-            )}
+        <div className="tools-content" style={{ display: toolsPanelOpen ? 'flex' : 'none' }}>
+          {activeId ? (
+            <>
+              <NotesPanel
+                contextType="worldnode"
+                contextId={activeId}
+                onRequestDelete={setConfirmModal}
+                onCountChange={setNotesCount}
+              />
+              <TasksPanel
+                contextType="worldnode"
+                contextId={activeId}
+                onRequestDelete={setConfirmModal}
+                onCountChange={setTasksCount}
+              />
+            </>
+          ) : (
+            <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>
+              {t('world.tools.selectElement')}
+            </div>
+          )}
+        </div>
+
+        {/* Hidden panels for count updates when collapsed */}
+        {!toolsPanelOpen && activeId && (
+          <div style={{ display: 'none' }}>
+            <NotesPanel
+              contextType="worldnode"
+              contextId={activeId}
+              onRequestDelete={setConfirmModal}
+              onCountChange={setNotesCount}
+            />
+            <TasksPanel
+              contextType="worldnode"
+              contextId={activeId}
+              onRequestDelete={setConfirmModal}
+              onCountChange={setTasksCount}
+            />
           </div>
         )}
+
+        <div className="tools-collapsed-view" style={{ display: toolsPanelOpen ? 'none' : 'flex' }}>
+          <button
+            className="tools-collapsed-toggle"
+            onClick={() => setToolsPanelOpen(true)}
+            aria-label={t('writing.openTools')}
+            title={t('writing.openTools')}
+          >
+            <BsWrench className="tools-icon" />
+            <div className="tools-badges">
+              {notesCount > 0 && <span className="tool-badge notes-badge">{notesCount}</span>}
+              {tasksCount > 0 && <span className="tool-badge tasks-badge">{tasksCount}</span>}
+            </div>
+          </button>
+        </div>
       </aside>
 
       {confirmModal && <ConfirmModal {...confirmModal} />}

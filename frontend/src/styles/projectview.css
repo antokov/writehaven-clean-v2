@@ -224,7 +224,8 @@
 }
 
 .tools-panel.closed {
-  /* Grid-Spalte wird über :has() Selector angepasst */
+  width: 60px;
+  min-width: 60px;
 }
 
 .tools-header {
@@ -244,16 +245,8 @@
   text-overflow: ellipsis;
 }
 
-.tools-panel.closed .tools-title {
-  display: none;
-}
-
 .tools-toggle {
   margin-left: auto;
-}
-
-.tools-panel.closed .tools-toggle {
-  margin: 0 auto;
 }
 
 .tools-content {
@@ -263,6 +256,68 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+/* Collapsed sidebar view */
+.tools-collapsed-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem 0;
+  height: 100%;
+}
+
+.tools-collapsed-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 0.5rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text);
+  transition: background 0.2s ease, color 0.2s ease;
+  border-radius: 0;
+}
+
+.tools-collapsed-toggle:hover {
+  background: #f8fafc;
+  color: var(--brand);
+}
+
+.tools-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.tools-badges {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.tool-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 20px;
+  padding: 0 0.4rem;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  line-height: 1;
+}
+
+.notes-badge {
+  background: #3b82f6;
+}
+
+.tasks-badge {
+  background: #10b981;
 }
 
 .tool-section {
@@ -323,6 +378,29 @@
   font-weight: 700;
   font-size: 0.85rem;
   letter-spacing: 0.3px;
+}
+
+.panel-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 0.4rem;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  line-height: 1;
+  margin-right: 0.25rem;
+}
+
+.panel-count.notes-count {
+  background: #3b82f6;
+}
+
+.panel-count.tasks-count {
+  background: #10b981;
 }
 
 .panel-content {

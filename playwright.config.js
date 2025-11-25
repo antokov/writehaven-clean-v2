@@ -22,10 +22,18 @@ export default defineConfig({
     },
   ],
 
-  webServer: {
-    command: 'cd frontend && npm run dev',
-    url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120000,
-  },
+  webServer: [
+    {
+      command: 'cd backend && .venv/Scripts/python.exe setup_test_db.py && set SQLITE_PATH=test.db && .venv/Scripts/python.exe app.py',
+      url: 'http://localhost:5000/api/health',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120000,
+    },
+    {
+      command: 'cd frontend && npm run dev',
+      url: 'http://localhost:5173',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120000,
+    },
+  ],
 });

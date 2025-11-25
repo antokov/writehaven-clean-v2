@@ -103,6 +103,7 @@ class Scene(db.Model):
     )
     title = db.Column(db.String(200), nullable=False, default="Neue Szene")
     content = db.Column(db.Text, default="")
+    status = db.Column(db.String(50), nullable=False, default="Idea")
     order_index = db.Column(db.Integer, nullable=False, default=0)
     created_at = db.Column(db.DateTime, server_default=func.now())
     updated_at = db.Column(

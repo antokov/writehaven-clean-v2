@@ -3,7 +3,7 @@ import axios from 'axios';
 import { BsPlus, BsTrash, BsChevronDown, BsChevronRight, BsCheck, BsX } from 'react-icons/bs';
 import { useTranslation } from 'react-i18next';
 
-export default function NotesPanel({ contextType, contextId, onRequestDelete }) {
+export default function NotesPanel({ contextType, contextId, onRequestDelete, onCountChange }) {
   const { t } = useTranslation();
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -40,7 +40,9 @@ export default function NotesPanel({ contextType, contextId, onRequestDelete }) 
     setLoading(true);
     try {
       const response = await axios.get(baseUrl);
-      setNotes(response.data || []);
+      const loadedNotes = response.data || [];
+      setNotes(loadedNotes);
+      if (onCountChange) onCountChange(loadedNotes.length);
     } catch (err) {
       console.error('Failed to load notes', err);
     } finally {
@@ -114,6 +116,7 @@ export default function NotesPanel({ contextType, contextId, onRequestDelete }) 
           {collapsed ? <BsChevronRight /> : <BsChevronDown />}
         </button>
         <span className="panel-title">{t('writing.notes.title')}</span>
+        {notes.length > 0 && <span className="panel-count notes-count">{notes.length}</span>}
         {!collapsed && (
           <button
             className="icon-btn"

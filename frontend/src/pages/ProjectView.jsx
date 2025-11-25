@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
-import { BsPlus, BsTrash, BsChevronDown, BsChevronRight } from 'react-icons/bs';
+import { BsPlus, BsTrash, BsChevronDown, BsChevronRight, BsWrench } from 'react-icons/bs';
 
 import ConfirmModal from '../components/ConfirmModal';
 import TextContextMenu from '../components/TextContextMenu';
@@ -46,7 +46,18 @@ export default function ProjectView() {
   const [expanded, setExpanded] = useState({}); // { [chapterId]: true }
 
   // Tools panel (right sidebar)
-  const [toolsPanelOpen, setToolsPanelOpen] = useState(true);
+  const [toolsPanelOpen, setToolsPanelOpen] = useState(() => {
+    // Load open state from localStorage
+    const saved = localStorage.getItem('toolsPanel.open');
+    return saved ? JSON.parse(saved) : true;
+  });
+  const [notesCount, setNotesCount] = useState(0);
+  const [tasksCount, setTasksCount] = useState(0);
+
+  // Save tools panel state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('toolsPanel.open', JSON.stringify(toolsPanelOpen));
+  }, [toolsPanelOpen]);
 
   // Autosave & Snapshot (Szene)
   const saveTimer = useRef(null);
@@ -485,7 +496,7 @@ export default function ProjectView() {
   const scenesOfActive = activeChapterId ? (scenesByChapter[activeChapterId] || []) : [];
 
   return (
-    <div className="page-wrap project-view-page">
+    <div className="page-wrap">
       <aside className="side">
         <div className="tree">
           <div className="tree-head">
@@ -636,38 +647,109 @@ export default function ProjectView() {
 
       {/* Right sidebar - Tools panel */}
       <aside className={`tools-panel ${toolsPanelOpen ? 'open' : 'closed'}`}>
-        <div className="tools-header">
+        <div className="tools-header" style={{ display: toolsPanelOpen ? 'flex' : 'none' }}>
           <span className="tools-title">{t('writing.toolsTitle')}</span>
           <button
             className="icon-btn tools-toggle"
             onClick={() => setToolsPanelOpen(!toolsPanelOpen)}
-            aria-label={toolsPanelOpen ? t('writing.closeTools') : t('writing.openTools')}
+            aria-label={t('writing.closeTools')}
           >
-            {toolsPanelOpen ? <BsChevronRight /> : <BsChevronDown />}
+            <BsChevronRight />
           </button>
         </div>
 
-        {toolsPanelOpen && (
-          <div className="tools-content">
+        <div className="tools-content" style={{ display: toolsPanelOpen ? 'flex' : 'none' }}>
+          {activeSceneId && (
+            <>
+              <NotesPanel
+                contextType="scene"
+                contextId={activeSceneId}
+                onRequestDelete={setConfirmModal}
+                onCountChange={setNotesCount}
+              />
+              <TasksPanel
+                contextType="scene"
+                contextId={activeSceneId}
+                onRequestDelete={setConfirmModal}
+                onCountChange={setTasksCount}
+              />
+            </>
+          )}
+          {activeChapterId && !activeSceneId && (
+            <>
+              <NotesPanel
+                contextType="chapter"
+                contextId={activeChapterId}
+                onRequestDelete={setConfirmModal}
+                onCountChange={setNotesCount}
+              />
+              <TasksPanel
+                contextType="chapter"
+                contextId={activeChapterId}
+                onRequestDelete={setConfirmModal}
+                onCountChange={setTasksCount}
+              />
+            </>
+          )}
+          {!activeChapterId && !activeSceneId && (
+            <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>
+              {t('writing.tools.selectContext')}
+            </div>
+          )}
+        </div>
+
+        {/* Hidden panels for count updates when collapsed */}
+        {!toolsPanelOpen && (
+          <div style={{ display: 'none' }}>
             {activeSceneId && (
               <>
-                <NotesPanel contextType="scene" contextId={activeSceneId} onRequestDelete={setConfirmModal} />
-                <TasksPanel contextType="scene" contextId={activeSceneId} onRequestDelete={setConfirmModal} />
+                <NotesPanel
+                  contextType="scene"
+                  contextId={activeSceneId}
+                  onRequestDelete={setConfirmModal}
+                  onCountChange={setNotesCount}
+                />
+                <TasksPanel
+                  contextType="scene"
+                  contextId={activeSceneId}
+                  onRequestDelete={setConfirmModal}
+                  onCountChange={setTasksCount}
+                />
               </>
             )}
             {activeChapterId && !activeSceneId && (
               <>
-                <NotesPanel contextType="chapter" contextId={activeChapterId} onRequestDelete={setConfirmModal} />
-                <TasksPanel contextType="chapter" contextId={activeChapterId} onRequestDelete={setConfirmModal} />
+                <NotesPanel
+                  contextType="chapter"
+                  contextId={activeChapterId}
+                  onRequestDelete={setConfirmModal}
+                  onCountChange={setNotesCount}
+                />
+                <TasksPanel
+                  contextType="chapter"
+                  contextId={activeChapterId}
+                  onRequestDelete={setConfirmModal}
+                  onCountChange={setTasksCount}
+                />
               </>
-            )}
-            {!activeChapterId && !activeSceneId && (
-              <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>
-                {t('writing.tools.selectContext')}
-              </div>
             )}
           </div>
         )}
+
+        <div className="tools-collapsed-view" style={{ display: toolsPanelOpen ? 'none' : 'flex' }}>
+          <button
+            className="tools-collapsed-toggle"
+            onClick={() => setToolsPanelOpen(true)}
+            aria-label={t('writing.openTools')}
+            title={t('writing.openTools')}
+          >
+            <BsWrench className="tools-icon" />
+            <div className="tools-badges">
+              {notesCount > 0 && <span className="tool-badge notes-badge">{notesCount}</span>}
+              {tasksCount > 0 && <span className="tool-badge tasks-badge">{tasksCount}</span>}
+            </div>
+          </button>
+        </div>
       </aside>
 
       {confirmModal && <ConfirmModal {...confirmModal} />}

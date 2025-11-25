@@ -2,15 +2,17 @@ import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
 
-import enLanding from './locales/en/landing.json'
-import deLanding from './locales/de/landing.json'
+import enTranslations from './locales/en.json'
+import deTranslations from './locales/de.json'
 
 const resources = {
   en: {
-    landing: enLanding
+    translation: enTranslations,
+    landing: enTranslations.landing
   },
   de: {
-    landing: deLanding
+    translation: deTranslations,
+    landing: deTranslations.landing
   }
 }
 
@@ -20,7 +22,7 @@ i18n
   .init({
     resources,
     fallbackLng: 'en',
-    defaultNS: 'landing',
+    defaultNS: 'translation',
     interpolation: {
       escapeValue: false
     },

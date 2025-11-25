@@ -3,7 +3,7 @@ import axios from 'axios';
 import { BsPlus, BsTrash, BsPencil, BsCheck, BsChevronDown, BsChevronRight } from 'react-icons/bs';
 import { useTranslation } from 'react-i18next';
 
-export default function TasksPanel({ contextType, contextId, onRequestDelete }) {
+export default function TasksPanel({ contextType, contextId, onRequestDelete, onCountChange }) {
   const { t } = useTranslation();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -52,7 +52,9 @@ export default function TasksPanel({ contextType, contextId, onRequestDelete }) 
     setLoading(true);
     try {
       const response = await axios.get(baseUrl);
-      setTasks(response.data || []);
+      const loadedTasks = response.data || [];
+      setTasks(loadedTasks);
+      if (onCountChange) onCountChange(loadedTasks.filter(t => !t.completed).length);
     } catch (err) {
       console.error('Failed to load tasks', err);
     } finally {
@@ -147,6 +149,7 @@ export default function TasksPanel({ contextType, contextId, onRequestDelete }) 
           {collapsed ? <BsChevronRight /> : <BsChevronDown />}
         </button>
         <span className="panel-title">{t('writing.tasks.title')}</span>
+        {openTasks.length > 0 && <span className="panel-count tasks-count">{openTasks.length}</span>}
       </div>
 
       {!collapsed && (
