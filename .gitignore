@@ -22,6 +22,9 @@ Thumbs.db
 .vscode/
 *.code-workspace
 
+# Claude Code
+.claude/settings.local.json
+
 # Visual Studio
 .vs/
 *.suo
@@ -93,6 +96,12 @@ app.db
 test.db
 instance/
 
+# Test & Development files
+backend/setup_test_db.py
+login.json
+test_pdf.json
+nul
+
 # Logs
 *.log
 pip-log.txt
@@ -142,6 +151,10 @@ coverage/
 .nyc_output/
 *.lcov
 
+# Playwright
+playwright-report/
+test-results/
+
 # Misc
 .env.local
 .env.development.local
@@ -182,6 +195,7 @@ scratchpad.md
 
 # Temporary documentation snapshots
 snapshot.md
+docs/
 
 # ============================================
 # Visual Studio / .NET (Legacy)
