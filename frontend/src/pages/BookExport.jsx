@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import { useTranslation } from "react-i18next";
+import { parseEpigrams } from "../utils/epigramParser";
 import "../styles/bookexport.css";
 
 // ---------- Helpers ----------
@@ -137,7 +138,56 @@ export default function BookExport() {
         chNo += 1;
         const scenes = ch.scenes || [];
         const scenesHTML = scenes
-          .map((sc, idx) => paragraphsHTML(sc.content || "", idx === 0, locale))
+          .map((sc, idx) => {
+            const content = sc.content || "";
+            const epigrams = parseEpigrams(content);
+
+            // If no epigrams, just render as paragraphs
+            if (epigrams.length === 0) {
+              return paragraphsHTML(content, idx === 0, locale);
+            }
+
+            // Split content into epigram and text parts
+            const parts = [];
+            let lastIndex = 0;
+
+            epigrams.forEach(epigram => {
+              // Add text before epigram
+              if (epigram.startIndex > lastIndex) {
+                const textBefore = content.substring(lastIndex, epigram.startIndex);
+                parts.push({ type: 'text', content: textBefore });
+              }
+
+              // Add epigram
+              parts.push({ type: 'epigram', data: epigram });
+
+              lastIndex = epigram.endIndex;
+            });
+
+            // Add remaining text
+            if (lastIndex < content.length) {
+              parts.push({ type: 'text', content: content.substring(lastIndex) });
+            }
+
+            // Render each part
+            return parts.map((part, i) => {
+              if (part.type === 'epigram') {
+                const { text, source } = part.data;
+                const sourceHTML = source
+                  ? `<div class="epigram-source">— ${escapeHtml(source)}</div>`
+                  : '';
+                return `
+                  <div class="epigram-preview">
+                    <div class="epigram-text">${escapeHtml(text)}</div>
+                    ${sourceHTML}
+                  </div>
+                `;
+              } else {
+                // Render text as paragraphs
+                return paragraphsHTML(part.content, idx === 0 && i === 0, locale);
+              }
+            }).join('\n');
+          })
           .join("\n");
 
         return `
@@ -173,7 +223,18 @@ export default function BookExport() {
     @bottom-center{content: counter(page); font-family: var(--book-font); font-size:10pt; color:#444}
   }
 
+  /* Title page without page numbers */
+  @page title-page {
+    @top-center{content: none;}
+    @bottom-center{content: none;}
+  }
+
   /* Typography */
+  .title-page {
+    page: title-page;
+    text-align: center;
+    margin-top: 35mm;
+  }
   h1.chapter-title{
     break-before: page;
     font-weight:600;font-size:18pt;text-align:center;margin:0 0 10mm;
@@ -182,6 +243,47 @@ export default function BookExport() {
   .book p{text-align:justify;margin:0 0 3.2mm;text-indent:1.2em;widows:2;orphans:2}
   .book h1 + p{ text-indent:0 }
   .dropcap:first-letter{ float:left;font-size:3.2em;line-height:0.8;padding-right:.1em }
+
+  /* Epigram Styles */
+  .epigram-preview {
+    max-width: 600px;
+    margin: 8mm auto;
+    padding: 4mm 0;
+    position: relative;
+    page-break-inside: avoid;
+    page-break-before: avoid;
+    border-top: 1px solid #6c757d;
+    border-bottom: 1px solid #6c757d;
+  }
+  .epigram-preview .epigram-text {
+    font-style: italic;
+    color: #495057;
+    font-size: 1em;
+    line-height: 1.8;
+    margin-bottom: 3mm;
+    text-align: justify;
+  }
+  .epigram-preview .epigram-source {
+    text-align: left;
+    font-size: 0.9em;
+    color: #6c757d;
+    font-style: normal;
+    margin-top: 3mm;
+    font-weight: 500;
+  }
+
+  /* Print-specific epigram styles */
+  @media print {
+    .epigram-preview {
+      page-break-inside: avoid;
+      margin: 8mm auto;
+      padding: 6mm 10mm;
+    }
+    .epigram-preview::before,
+    .epigram-preview::after {
+      color: #bbb;
+    }
+  }
 
   /* Screen preview page styling */
   body {
@@ -230,7 +332,7 @@ export default function BookExport() {
 </head>
 <body>
   <div class="book">
-    <section style="break-before:page;text-align:center;margin-top:35mm">
+    <section class="title-page">
       <h1 style="font-family:'EB Garamond',Georgia,serif;font-size:28pt;margin:0 0 3mm">
         ${bookTitle}
       </h1>

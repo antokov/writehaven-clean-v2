@@ -8,7 +8,9 @@ import TextContextMenu from '../components/TextContextMenu';
 import NotesPanel from '../components/NotesPanel';
 import TasksPanel from '../components/TasksPanel';
 import SceneStatusDropdown, { STATUS_OPTIONS } from '../components/SceneStatusDropdown';
+import EpigramHighlight from '../components/EpigramHighlight';
 import { useTranslation } from 'react-i18next';
+import '../styles/epigram.css';
 
 // Create status map for quick lookup
 const STATUS_MAP = STATUS_OPTIONS.reduce((acc, status) => {
@@ -62,6 +64,7 @@ export default function ProjectView() {
   // Autosave & Snapshot (Szene)
   const saveTimer = useRef(null);
   const snapshotRef = useRef({ id: null, title: '', content: '', status: 'Idea' });
+  const textareaRef = useRef(null);
 
   // Debounce (Kapitel)
   const chapterSaveTimer = useRef(null);
@@ -607,15 +610,22 @@ export default function ProjectView() {
                   {lastSavedAt ? <>{t('writing.savedAt', { time: lastSavedAt.toLocaleTimeString() })}</> : '—'}
                 </div>
               </div>
-              <textarea
-                value={sceneContent}
-                onChange={(e) => setSceneContent(e.target.value)}
-                onBlur={() => saveSceneNow(activeSceneId, sceneTitle, sceneContent, sceneStatus)}
-                onContextMenu={handleContextMenu}
-                placeholder={t('writing.sceneContentPlaceholder')}
-                data-testid="scene-content-editor"
-                className="scene-editor"
-              />
+              <div className="epigram-editor-wrapper">
+                <EpigramHighlight
+                  value={sceneContent}
+                  textareaRef={textareaRef}
+                />
+                <textarea
+                  ref={textareaRef}
+                  value={sceneContent}
+                  onChange={(e) => setSceneContent(e.target.value)}
+                  onBlur={() => saveSceneNow(activeSceneId, sceneTitle, sceneContent, sceneStatus)}
+                  onContextMenu={handleContextMenu}
+                  placeholder={t('writing.sceneContentPlaceholder')}
+                  data-testid="scene-content-editor"
+                  className="scene-editor"
+                />
+              </div>
               <SceneStats content={sceneContent} />
             </>
           ) : (
