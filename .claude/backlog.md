@@ -9,7 +9,7 @@
 ## 🟡 Follow-up Stories
 <!-- Items deferred by Dev or identified by Tester -->
 <!-- Format: - [ ] FS-XX: description -->
-- [ ] FS-01: Add Vitest unit tests for `paragraphsHTML`
+- [x] FS-01: Add Vitest unit tests for `paragraphsHTML` — DONE (16 tests in exportUtils.test.js)
 - [x] FS-04: Connect Schreibgeist to real Claude/AI backend — DONE.
 - [x] FS-07: Schreibgeist — selective context (chapters, scenes, characters) — DONE.
 - [x] FS-12: Schreibgeist — „Aktuelle Szene" als auswählbarer Kontext — DONE.
@@ -45,6 +45,8 @@
 - [Schreibgeist Live AI (2026-06-01)]: Real Claude API (claude-sonnet-4-6) connected; book context (title, chapters, characters) in system prompt; error handling for missing key.
 - [UI/UX Consistency Pass (2026-06-01)]: Fixed 9 CSS inconsistencies: chat bubble radius, input/btn radius, tab animation pattern, CSS variable aliases, missing btn classes.
 - [Schreibgeist Chat Panel (2026-06-01)]: Frontend-only prototype; tabs "Tools"/"Schreibgeist" in ProjectView right sidebar; chat UI with user/AI bubbles, typing indicator, mock responses; no backend.
+- [Export Input Handling + Tests (2026-06-01)]: `escapeHtml`/`smartQuotes`/`paragraphsHTML` extrahiert nach `exportUtils.js`; 16 Vitest-Tests (EC-01–EC-08); FS-01 resolved; `vite.config.js` mit `test.environment: node`.
+- [Export Absatzabstand entfernt (2026-06-01)]: 2 chirurgische Änderungen; `spaceAfter=0` in ReportLab `body_style`; `margin:0` in `.book p` CSS; Einzug und Kapitel-Stile unberührt.
 - [Fix smartQuotes contextual detection (2026-06-01)]: Replaced blind toggle with prev-char heuristic; `"` after non-whitespace/non-bracket → CLOSE. Fixes single trailing `"` being wrongly rendered as `„`.
 - [Character Gallery (2026-06-01)]: New `gallery_json` TEXT column on `character`; migration in `auto_migrate.py`; `POST/DELETE /api/characters/<cid>/gallery`; `CharacterGallery` + `GalleryLightbox` components; images stored in `static/uploads/gallery/<cid>/`.
 - [Character Avatar Lightbox (2026-06-01)]: Click on avatar opens `AvatarLightbox` portal (90vw/85vh, Escape to close); separate edit-icon button triggers file picker; character name shown as caption.

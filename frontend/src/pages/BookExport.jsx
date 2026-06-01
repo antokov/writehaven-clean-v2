@@ -1,39 +1,10 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+﻿import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import { useTranslation } from "react-i18next";
 import { parseEpigrams } from "../utils/epigramParser";
+import { escapeHtml, smartQuotes, paragraphsHTML } from "../utils/exportUtils";
 import "../styles/bookexport.css";
-
-// ---------- Helpers ----------
-const escapeHtml = (s = "") =>
-  s.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
-
-// locale-aware smart quotes: "..." -> „…“ (de) / “…” (en et al.)
-function smartQuotes(text = "", locale = "en") {
-  const isDe = locale.toLowerCase().startsWith("de");
-  const OPEN  = isDe ? "\u201E" : "\u201C";
-  const CLOSE = "\u201D";
-  return text.replace(/"/g, (_, offset) => {
-    const prev = offset > 0 ? text[offset - 1] : "";
-    return /\S/.test(prev) && !/[\(\[\{]/.test(prev) ? CLOSE : OPEN;
-  });
-}
-
-// paragraphs to HTML <p>, first paragraph optional drop cap
-function paragraphsHTML(text, firstIsDropcap = false, locale = "en") {
-  const parts = (text || "")
-    .split(/\n+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  return parts
-    .map((p, i) => {
-      const cls = firstIsDropcap && i === 0 ? ' class="dropcap"' : "";
-      return `<p${cls}>${escapeHtml(smartQuotes(p, locale))}</p>`;
-    })
-    .join("\n");
-}
 
 const escReg = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -241,7 +212,7 @@ export default function BookExport() {
     font-weight:600;font-size:18pt;text-align:center;margin:0 0 10mm;
     string-set: running-chapter content(text);
   }
-  .book p{text-align:justify;margin:0 0 3.2mm;text-indent:1.2em;widows:2;orphans:2}
+  .book p{text-align:justify;margin:0;text-indent:1.2em;widows:2;orphans:2}
   .book h1 + p{ text-indent:0 }
   .dropcap:first-letter{ float:left;font-size:3.2em;line-height:0.8;padding-right:.1em }
 

@@ -2039,7 +2039,7 @@ Sent from WriteHaven Feedback Form
                 keepWithNext=True
             )
 
-            # Body: font-size:11pt; line-height:1.42; text-indent:1.2em; margin-bottom:3.2mm
+            # Body: font-size:11pt; line-height:1.42; text-indent:1.2em; no space between paragraphs
             body_style = ParagraphStyle(
                 'Body',
                 fontName='Times-Roman',
@@ -2047,7 +2047,7 @@ Sent from WriteHaven Feedback Form
                 leading=11 * 1.42,
                 alignment=TA_JUSTIFY,
                 firstLineIndent=1.2 * 11,  # 1.2em
-                spaceAfter=3.2*mm
+                spaceAfter=0
             )
 
             # First paragraph after chapter: text-indent:0
