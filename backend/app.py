@@ -1434,6 +1434,7 @@ Sent from WriteHaven Feedback Form
             "name": c.name,
             "summary": c.summary,
             "avatar_url": c.avatar_url,
+            "gallery": _loads(c.gallery_json or "[]"),
             "profile": _loads(c.profile_json or "{}"),
         }
 
@@ -1500,6 +1501,94 @@ Sent from WriteHaven Feedback Form
         if not c: return not_found()
         db.session.delete(c); db.session.commit()
         return ok({"ok": True})
+
+    @app.post("/api/characters/<int:cid>/upload-avatar")
+    @token_auth_required
+    def upload_character_avatar(cid):
+        c = verify_character_ownership(cid, get_current_user().id)
+        if not c: return not_found()
+
+        if 'avatar' not in request.files:
+            return bad_request("Keine Datei hochgeladen")
+
+        file = request.files['avatar']
+        if file.filename == '':
+            return bad_request("Leere Datei")
+
+        allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+        ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+        if ext not in allowed_extensions:
+            return bad_request("Ungültiges Dateiformat. Erlaubt: PNG, JPG, JPEG, GIF, WEBP")
+
+        import uuid
+        upload_folder = os.path.join(app.static_folder, 'uploads', 'avatars')
+        os.makedirs(upload_folder, exist_ok=True)
+        filename = f"{uuid.uuid4().hex}.{ext}"
+        filepath = os.path.join(upload_folder, filename)
+        file.save(filepath)
+
+        avatar_url = f"/uploads/avatars/{filename}"
+        c.avatar_url = avatar_url
+        db.session.commit()
+
+        return ok({"avatar_url": avatar_url})
+
+    @app.post("/api/characters/<int:cid>/gallery")
+    @token_auth_required
+    def upload_character_gallery(cid):
+        c = verify_character_ownership(cid, get_current_user().id)
+        if not c: return not_found()
+
+        if 'image' not in request.files:
+            return bad_request("Keine Datei hochgeladen")
+
+        file = request.files['image']
+        if file.filename == '':
+            return bad_request("Leere Datei")
+
+        allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+        ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+        if ext not in allowed_extensions:
+            return bad_request("Ungültiges Dateiformat. Erlaubt: PNG, JPG, JPEG, GIF, WEBP")
+
+        import uuid
+        upload_folder = os.path.join(app.static_folder, 'uploads', 'gallery', str(cid))
+        os.makedirs(upload_folder, exist_ok=True)
+        filename = f"{uuid.uuid4().hex}.{ext}"
+        filepath = os.path.join(upload_folder, filename)
+        file.save(filepath)
+
+        image_url = f"/uploads/gallery/{cid}/{filename}"
+        gallery = _loads(c.gallery_json or "[]")
+        if not isinstance(gallery, list):
+            gallery = []
+        gallery.append(image_url)
+        c.gallery_json = _dumps(gallery)
+        db.session.commit()
+
+        return ok({"gallery": gallery})
+
+    @app.delete("/api/characters/<int:cid>/gallery")
+    @token_auth_required
+    def remove_character_gallery_image(cid):
+        c = verify_character_ownership(cid, get_current_user().id)
+        if not c: return not_found()
+
+        data = request.get_json() or {}
+        index = data.get("index")
+        if index is None or not isinstance(index, int):
+            return bad_request("index required")
+
+        gallery = _loads(c.gallery_json or "[]")
+        if not isinstance(gallery, list):
+            gallery = []
+
+        if 0 <= index < len(gallery):
+            gallery.pop(index)
+
+        c.gallery_json = _dumps(gallery)
+        db.session.commit()
+        return ok({"gallery": gallery})
 
     # ---------- World ----------
     @app.get("/api/projects/<int:pid>/world")

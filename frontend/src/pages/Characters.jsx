@@ -22,7 +22,7 @@ import "reactflow/dist/style.css";
 import { useTranslation } from "react-i18next";
 
 /* ---------------- Beziehungen (i18n Labels, deutsche Werte bleiben gespeichert) ---------------- */
-export const REL_OPTIONS = [
+const REL_OPTIONS = [
   { value: "Freundschaft",     key: "friendship" },
   { value: "Familie",          key: "family" },
   { value: "Feindschaft",      key: "enmity" },
@@ -34,9 +34,9 @@ export const REL_OPTIONS = [
 ];
 
 // Falls andere Stellen noch REL_TYPES nutzen:
-export const REL_TYPES = REL_OPTIONS.map(o => o.value);
+const REL_TYPES = REL_OPTIONS.map(o => o.value);
 
-export function relTypeLabel(type, t) {
+function relTypeLabel(type, t) {
   const opt = REL_OPTIONS.find(o => o.value === type);
   return opt ? t(`characters.relations.types.${opt.key}`) : type;
 }
@@ -779,14 +779,237 @@ function MentionsTab({ characterId, projectId }) {
   );
 }
 
+/* ---------------- Avatar Lightbox ---------------- */
+function AvatarLightbox({ open, onClose, avatarUrl, characterName }) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return createPortal(
+    <div className="char-lightbox-backdrop" onClick={onClose}>
+      <button className="char-lightbox-close" onClick={onClose} title="Schließen">✕</button>
+      <img
+        className="char-lightbox-img"
+        src={avatarUrl}
+        alt={characterName || "Charakter-Portrait"}
+        onClick={(e) => e.stopPropagation()}
+      />
+      {characterName && (
+        <div className="char-lightbox-caption" onClick={(e) => e.stopPropagation()}>
+          {characterName}
+        </div>
+      )}
+    </div>,
+    document.body
+  );
+}
+
+/* ---------------- Gallery Lightbox ---------------- */
+function GalleryLightbox({ open, onClose, images, initialIndex, characterName }) {
+  const [idx, setIdx] = useState(initialIndex || 0);
+
+  useEffect(() => { setIdx(initialIndex || 0); }, [initialIndex]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft") setIdx(i => (i - 1 + images.length) % images.length);
+      if (e.key === "ArrowRight") setIdx(i => (i + 1) % images.length);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose, images.length]);
+
+  if (!open || images.length === 0) return null;
+
+  return createPortal(
+    <div className="char-lightbox-backdrop" onClick={onClose}>
+      <button className="char-lightbox-close" onClick={onClose} title="Schließen">✕</button>
+      {images.length > 1 && (
+        <button
+          className="char-lightbox-nav prev"
+          onClick={(e) => { e.stopPropagation(); setIdx(i => (i - 1 + images.length) % images.length); }}
+        >‹</button>
+      )}
+      <img
+        className="char-lightbox-img"
+        src={images[idx]}
+        alt={`${characterName || "Galerie"} ${idx + 1}`}
+        onClick={(e) => e.stopPropagation()}
+      />
+      {images.length > 1 && (
+        <button
+          className="char-lightbox-nav next"
+          onClick={(e) => { e.stopPropagation(); setIdx(i => (i + 1) % images.length); }}
+        >›</button>
+      )}
+      <div className="char-lightbox-counter" onClick={(e) => e.stopPropagation()}>
+        {idx + 1} / {images.length}
+        {characterName ? ` · ${characterName}` : ""}
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+/* ---------------- Gallery Strip ---------------- */
+function CharacterGallery({ images, onUpload, onRemove, uploading }) {
+  const fileInputRef = useRef(null);
+  const [lightboxIdx, setLightboxIdx] = useState(null);
+
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) onUpload(files);
+    e.target.value = "";
+  };
+
+  return (
+    <>
+      <div className={`char-gallery-section ${uploading ? "char-gallery-uploading" : ""}`}>
+        {images.map((url, i) => (
+          <div key={url + i} className="char-gallery-thumb" onClick={() => setLightboxIdx(i)}>
+            <img className="char-gallery-img" src={url} alt={`Galerie ${i + 1}`} />
+            <button
+              className="char-gallery-del"
+              title="Bild entfernen"
+              onClick={(e) => { e.stopPropagation(); onRemove(i); }}
+            >×</button>
+          </div>
+        ))}
+        <button
+          className="char-gallery-add"
+          title="Bild zur Galerie hinzufügen"
+          onClick={() => fileInputRef.current?.click()}
+        >+</button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/gif,image/webp"
+          multiple
+          style={{ display: "none" }}
+          onChange={handleFileChange}
+        />
+      </div>
+      <GalleryLightbox
+        open={lightboxIdx !== null}
+        onClose={() => setLightboxIdx(null)}
+        images={images}
+        initialIndex={lightboxIdx || 0}
+        characterName={null}
+      />
+    </>
+  );
+}
+
+/* ---------------- Avatar Upload ---------------- */
+function CharacterAvatar({ avatarUrl, onUpload, onRemove, uploading, characterName }) {
+  const fileInputRef = useRef(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
+  const openPicker = () => {
+    if (!uploading) fileInputRef.current?.click();
+  };
+
+  const handleAvatarClick = () => {
+    if (uploading) return;
+    if (avatarUrl) setLightboxOpen(true);
+    else openPicker();
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) onUpload(file);
+    e.target.value = "";
+  };
+
+  return (
+    <>
+      <div className="char-avatar-section">
+        <div
+          className={`char-avatar-wrap ${uploading ? "char-avatar-uploading" : ""}`}
+          onClick={handleAvatarClick}
+          title={avatarUrl ? "Bild vergrößern" : "Bild hochladen"}
+          style={{ cursor: avatarUrl ? "zoom-in" : "pointer" }}
+        >
+          {avatarUrl
+            ? <img className="char-avatar-img" src={avatarUrl} alt="Charakter-Portrait" />
+            : <div className="char-avatar-placeholder">👤</div>
+          }
+          {!avatarUrl && (
+            <div className="char-avatar-overlay">
+              <span className="char-avatar-overlay-icon">📷</span>
+            </div>
+          )}
+          {avatarUrl && !uploading && (
+            <>
+              <button
+                className="char-avatar-edit-btn"
+                title="Bild ändern"
+                onClick={(e) => { e.stopPropagation(); openPicker(); }}
+              >✎</button>
+              <button
+                className="char-avatar-remove-btn"
+                title="Bild entfernen"
+                onClick={(e) => { e.stopPropagation(); onRemove(); }}
+              >×</button>
+            </>
+          )}
+        </div>
+        <div className="char-avatar-info">
+          <div style={{ fontWeight: 500, fontSize: 13 }}>
+            {uploading ? "Wird hochgeladen…" : "Charakter-Portrait"}
+          </div>
+          <div className="char-avatar-hint">
+            {avatarUrl ? "Klicken zum Vergrößern · ✎ zum Ändern" : "Klicken um ein Bild hochzuladen"}
+          </div>
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/gif,image/webp"
+          style={{ display: "none" }}
+          onChange={handleFileChange}
+        />
+      </div>
+      <AvatarLightbox
+        open={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+        avatarUrl={avatarUrl}
+        characterName={characterName}
+      />
+    </>
+  );
+}
+
 /* ---------------- Editor ---------------- */
 const CharacterEditor = React.memo(function CharacterEditor({
   characterId, profile, onChangeProfilePath, activeTab, setActiveTab,
-  lastSavedAt, allCharacters, onAddRelation, onRemoveRelation, onOpenGraph, projectId
+  lastSavedAt, allCharacters, onAddRelation, onRemoveRelation, onOpenGraph, projectId,
+  avatarUrl, onAvatarUpload, onAvatarRemove, avatarUploading, characterName,
+  galleryImages, onGalleryUpload, onGalleryRemove, galleryUploading
 }) {
   const { t } = useTranslation();
   return (
     <div className="panel" key={characterId}>
+      <CharacterAvatar
+        avatarUrl={avatarUrl}
+        onUpload={onAvatarUpload}
+        onRemove={onAvatarRemove}
+        uploading={avatarUploading}
+        characterName={characterName}
+      />
+      <CharacterGallery
+        images={galleryImages}
+        onUpload={onGalleryUpload}
+        onRemove={onGalleryRemove}
+        uploading={galleryUploading}
+      />
       <nav className="tabs tabs-inline">
         {TABS.map(ti => (
           <button
@@ -1007,6 +1230,10 @@ export default function Characters() {
   const [profile, setProfile] = useState({});
   const [activeTab, setActiveTab] = useState("basic");
   const [lastSavedAt, setLastSavedAt] = useState(null);
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [galleryImages, setGalleryImages] = useState([]);
+  const [galleryUploading, setGalleryUploading] = useState(false);
   const [showGraph, setShowGraph] = useState(false);
   const [showWorldGraph, setShowWorldGraph] = useState(false);
   const [confirmModal, setConfirmModal] = useState(null);
@@ -1055,7 +1282,7 @@ export default function Characters() {
   }, [pid, activeId, state?.newCharacterId]);
 
   useEffect(() => {
-    if (!activeId) { setProfile({}); return; }
+    if (!activeId) { setProfile({}); setAvatarUrl(""); setGalleryImages([]); return; }
     let cancel = false;
 
     async function loadOne() {
@@ -1069,6 +1296,8 @@ export default function Characters() {
         } else {
           setProfile({});
         }
+        setAvatarUrl(r.data?.avatar_url || "");
+        setGalleryImages(r.data?.gallery || []);
       } catch (e) {
         console.warn('Fehler beim Laden des Charakters:', e);
       } finally {
@@ -1139,6 +1368,62 @@ export default function Characters() {
       });
     } catch (e) { console.warn(e); }
   }, [activeId, profile]);
+
+  const handleAvatarUpload = useCallback(async (file) => {
+    if (!activeId) return;
+    const capturedId = activeId;
+    setAvatarUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("avatar", file);
+      const r = await axios.post(`/api/characters/${capturedId}/upload-avatar`, formData);
+      if (activeId === capturedId) setAvatarUrl(r.data.avatar_url || "");
+    } catch (e) {
+      alert("Bild-Upload fehlgeschlagen: " + (e.response?.data?.message || e.message));
+    } finally {
+      if (activeId === capturedId) setAvatarUploading(false);
+    }
+  }, [activeId]);
+
+  const handleAvatarRemove = useCallback(async () => {
+    if (!activeId) return;
+    try {
+      await axios.patch(`/api/characters/${activeId}`, { avatar_url: "" });
+      setAvatarUrl("");
+    } catch (e) {
+      alert("Fehler beim Entfernen des Bildes.");
+    }
+  }, [activeId]);
+
+  const handleGalleryUpload = useCallback(async (files) => {
+    if (!activeId) return;
+    const capturedId = activeId;
+    setGalleryUploading(true);
+    try {
+      await Promise.all(files.map(file => {
+        const formData = new FormData();
+        formData.append("image", file);
+        return axios.post(`/api/characters/${capturedId}/gallery`, formData);
+      }));
+      // Reload from server to get consistent final state
+      const r = await axios.get(`/api/characters/${capturedId}`);
+      if (activeId === capturedId) setGalleryImages(r.data?.gallery || []);
+    } catch (e) {
+      alert("Galerie-Upload fehlgeschlagen: " + (e.response?.data?.message || e.message));
+    } finally {
+      if (activeId === capturedId) setGalleryUploading(false);
+    }
+  }, [activeId]);
+
+  const handleGalleryRemove = useCallback(async (index) => {
+    if (!activeId) return;
+    try {
+      const r = await axios.delete(`/api/characters/${activeId}/gallery`, { data: { index } });
+      setGalleryImages(r.data?.gallery || []);
+    } catch (e) {
+      alert("Fehler beim Entfernen des Galeriebildes.");
+    }
+  }, [activeId]);
 
   // Autosave
   const saveNow = useCallback(async () => {
@@ -1279,6 +1564,15 @@ export default function Characters() {
               onRemoveRelation={onRemoveRelation}
               onOpenGraph={()=>setShowGraph(true)}
               projectId={pid}
+              avatarUrl={avatarUrl}
+              onAvatarUpload={handleAvatarUpload}
+              onAvatarRemove={handleAvatarRemove}
+              avatarUploading={avatarUploading}
+              characterName={draftFullName || t('characters.unnamed')}
+              galleryImages={galleryImages}
+              onGalleryUpload={handleGalleryUpload}
+              onGalleryRemove={handleGalleryRemove}
+              galleryUploading={galleryUploading}
             />
             <RelationsGraphModal
               open={showGraph}

@@ -126,6 +126,7 @@ class Character(db.Model):
     name = db.Column(db.String(200), nullable=False)
     summary = db.Column(db.Text, default="")
     avatar_url = db.Column(db.String(500), default="")
+    gallery_json = db.Column(db.Text, default="[]")
 
     # Neu: alle restlichen Felder als JSON (Tabs: Grunddaten, Äußeres, …)
     # Wir halten ein Textfeld, damit es auf SQLite/Postgres überall funktioniert.

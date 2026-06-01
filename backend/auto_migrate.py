@@ -20,6 +20,12 @@ def get_database_uri():
             uri = uri.replace("postgres://", "postgresql+psycopg://", 1)
         elif uri.startswith("postgresql://"):
             uri = uri.replace("postgresql://", "postgresql+psycopg://", 1)
+        # Flask resolves relative sqlite:///name.db against instance/ folder
+        elif uri.startswith("sqlite:///") and not uri.startswith("sqlite:////"):
+            db_filename = uri[len("sqlite:///"):]
+            instance_path = os.path.join(os.path.dirname(__file__), "instance", db_filename)
+            os.makedirs(os.path.dirname(instance_path), exist_ok=True)
+            uri = "sqlite:///" + instance_path.replace("\\", "/")
     if not uri:
         # Fallback to SQLite for development
         path = os.getenv("SQLITE_PATH", "/tmp/app.db")
@@ -128,6 +134,22 @@ def auto_migrate():
                 except Exception as e:
                     print(f"⚠️  Auto-migration warning: {str(e)}")
                     # Continue anyway - app will work with nullable fields
+
+            # Migrate character table - add gallery_json if missing
+            if 'character' in inspector.get_table_names():
+                char_cols = [col['name'] for col in inspector.get_columns('character')]
+                if 'gallery_json' not in char_cols:
+                    print("🔄 Auto-migration: Adding gallery_json to character table...")
+                    try:
+                        conn.execute(text("ALTER TABLE character ADD COLUMN gallery_json TEXT DEFAULT '[]';"))
+                        conn.commit()
+                        print("✅ character.gallery_json column added successfully")
+                    except (ProgrammingError, OperationalError) as e:
+                        print(f"⚠️  Could not add gallery_json column: {e}")
+                        try:
+                            conn.rollback()
+                        except:
+                            pass
 
             # Migrate worldnode table if needed
             if worldnode_needs_migration:
