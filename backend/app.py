@@ -17,7 +17,7 @@ load_dotenv()
 
 try:
     from backend.extensions import db
-    from backend.models import (Project, Chapter, Scene, Character, WorldNode, User, Role, Map,
+    from backend.models import (Project, Chapter, Scene, Character, WorldNode, User, Role,
                                   SceneNote, SceneTask, ChapterNote, ChapterTask, CharacterNote, CharacterTask,
                                   WorldNodeNote, WorldNodeTask)
     from backend.word_parser import parse_word_document
@@ -26,7 +26,7 @@ try:
     from backend.auto_migrate import auto_migrate
 except ImportError:
     from extensions import db
-    from models import (Project, Chapter, Scene, Character, WorldNode, User, Role, Map,
+    from models import (Project, Chapter, Scene, Character, WorldNode, User, Role,
                         SceneNote, SceneTask, ChapterNote, ChapterTask, CharacterNote, CharacterTask,
                         WorldNodeNote, WorldNodeTask)
     from word_parser import parse_word_document
@@ -129,7 +129,6 @@ def create_app():
     admin.add_view(ModelView(Scene, db.session))
     admin.add_view(ModelView(Character, db.session))
     admin.add_view(ModelView(WorldNode, db.session))
-    admin.add_view(ModelView(Map, db.session))
 
     # Flask-Security-Too Setup
     user_datastore = SQLAlchemyUserDatastore(db, User, Role)
@@ -1724,98 +1723,6 @@ Sent from WriteHaven Feedback Form
         task = WorldNodeTask.query.filter_by(id=tid, worldnode_id=wid).first()
         if not task: return not_found()
         db.session.delete(task)
-        db.session.commit()
-        return ok({"ok": True})
-
-    # ---------- Maps ----------
-    @app.get("/api/projects/<int:pid>/map")
-    @token_auth_required
-    def get_project_map(pid):
-        """Get the map for a project (or null if not exists)"""
-        if not verify_project_ownership(pid, get_current_user().id):
-            return forbidden()
-
-        map_obj = Map.query.filter_by(project_id=pid).first()
-        if not map_obj:
-            return ok(None)
-
-        return ok({
-            "id": map_obj.id,
-            "project_id": map_obj.project_id,
-            "seed": map_obj.seed,
-            "width": map_obj.width,
-            "height": map_obj.height,
-            "num_cells": map_obj.num_cells,
-            "data": _loads(map_obj.data),
-            "created_at": map_obj.created_at.isoformat() if map_obj.created_at else None,
-            "updated_at": map_obj.updated_at.isoformat() if map_obj.updated_at else None
-        })
-
-    @app.post("/api/projects/<int:pid>/map")
-    @token_auth_required
-    def create_or_update_project_map(pid):
-        """Create or update the map for a project"""
-        if not verify_project_ownership(pid, get_current_user().id):
-            return forbidden()
-
-        data = request.get_json() or {}
-        seed = data.get("seed", "")
-        width = data.get("width", 800)
-        height = data.get("height", 600)
-        num_cells = data.get("num_cells", 500)
-        map_data = data.get("data", {})
-
-        if not seed:
-            return bad_request("Seed is required")
-
-        # Check if map exists
-        map_obj = Map.query.filter_by(project_id=pid).first()
-
-        if map_obj:
-            # Update existing
-            map_obj.seed = seed
-            map_obj.width = width
-            map_obj.height = height
-            map_obj.num_cells = num_cells
-            map_obj.data = _dumps(map_data)
-        else:
-            # Create new
-            map_obj = Map(
-                project_id=pid,
-                seed=seed,
-                width=width,
-                height=height,
-                num_cells=num_cells,
-                data=_dumps(map_data)
-            )
-            db.session.add(map_obj)
-
-        db.session.commit()
-
-        return ok({
-            "id": map_obj.id,
-            "project_id": map_obj.project_id,
-            "seed": map_obj.seed,
-            "width": map_obj.width,
-            "height": map_obj.height,
-            "num_cells": map_obj.num_cells,
-            "data": _loads(map_obj.data),
-            "created_at": map_obj.created_at.isoformat() if map_obj.created_at else None,
-            "updated_at": map_obj.updated_at.isoformat() if map_obj.updated_at else None
-        })
-
-    @app.delete("/api/projects/<int:pid>/map")
-    @token_auth_required
-    def delete_project_map(pid):
-        """Delete the map for a project"""
-        if not verify_project_ownership(pid, get_current_user().id):
-            return forbidden()
-
-        map_obj = Map.query.filter_by(project_id=pid).first()
-        if not map_obj:
-            return not_found()
-
-        db.session.delete(map_obj)
         db.session.commit()
         return ok({"ok": True})
 

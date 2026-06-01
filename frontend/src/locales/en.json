@@ -155,7 +155,6 @@
     "writing": "Writing",
     "characters": "Characters",
     "world": "World",
-    "map": "Map",
     "export": "Export",
     "projectSettings": "Project Settings"
   },
@@ -645,59 +644,6 @@
       "plot": "Plot elements"
     }
   },
-  "map": {
-    "title": "Map",
-    "generateNew": "Generate New World",
-    "seedLabel": "Seed",
-    "seedPlaceholder": "Any text or number...",
-    "seedHint": "Same seed generates the same map",
-    "generate": "Generate",
-    "generating": "Generating map...",
-    "generateRandom": "Generate random map",
-    "export": "Export",
-    "exportSvg": "Export as SVG",
-    "exportJson": "Export as JSON",
-    "save": "Save",
-    "saving": "Saving...",
-    "saved": "Saved!",
-    "lastSaved": "Last saved: {{time}}",
-    "noMap": "No map generated yet.",
-    "generateFirst": "Generate a world first.",
-    "loading": "Loading map...",
-    "worldName": "World Name",
-    "worldNamePlaceholder": "Enter world name...",
-    "biomeLegend": "Biomes",
-    "regionDetails": "Region Details",
-    "regionName": "Region Name",
-    "regionNamePlaceholder": "Enter region name",
-    "regionColor": "Region Color",
-    "regionDescription": "Description",
-    "regionDescriptionPlaceholder": "Add description...",
-    "regionStats": "Statistics",
-    "placesInRegion": "Places in this Region",
-    "noPlacesLinked": "No places linked yet. Go to World section to link places.",
-    "biomes": {
-      "ocean": "Ocean",
-      "lake": "Lake",
-      "water": "Water",
-      "beach": "Beach",
-      "coast": "Coast",
-      "plains": "Plains",
-      "desert": "Desert",
-      "grassland": "Grassland",
-      "forest": "Forest",
-      "taiga": "Taiga",
-      "tundra": "Tundra",
-      "snow": "Snow",
-      "mountain": "Mountain"
-    },
-    "errors": {
-      "loadFailed": "Failed to load map.",
-      "saveFailed": "Failed to save map.",
-      "generateFailed": "Map generation failed.",
-      "exportFailed": "Export failed."
-    }
-  },
   "export": {
     "loading": "Loading book data...",
     "noData": "No book data found.",
@@ -809,10 +755,6 @@
       "world": {
         "title": "World Building",
         "description": "Create rich worlds with places, cultures, and complex relationships. Keep track of every detail that makes your world unique."
-      },
-      "map": {
-        "title": "Map",
-        "description": "Generate fantasy maps with biomes, regions, and landmarks. Visualize your world and link places directly to your story elements."
       },
       "export": {
         "title": "Export",

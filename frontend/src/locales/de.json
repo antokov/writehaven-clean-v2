@@ -162,7 +162,6 @@
     "writing": "Schreiben",
     "characters": "Charaktere",
     "world": "Welt",
-    "map": "Karte",
     "export": "Export",
     "projectSettings": "Projekteinstellungen"
   },
@@ -651,59 +650,6 @@
       "plot": "Plot-Elemente"
     }
   },
-  "map": {
-    "title": "Karte",
-    "generateNew": "Neue Welt generieren",
-    "generateRandom": "Zufällige Karte generieren",
-    "seedLabel": "Seed",
-    "seedPlaceholder": "Beliebiger Text oder Zahl...",
-    "seedHint": "Gleicher Seed erzeugt die gleiche Karte",
-    "generate": "Generieren",
-    "generating": "Generiere Karte...",
-    "export": "Export",
-    "exportSvg": "Als SVG exportieren",
-    "exportJson": "Als JSON exportieren",
-    "save": "Speichern",
-    "saving": "Speichere...",
-    "saved": "Gespeichert!",
-    "lastSaved": "Zuletzt gespeichert: {{time}}",
-    "noMap": "Noch keine Karte generiert.",
-    "generateFirst": "Generiere zuerst eine Welt.",
-    "loading": "Lade Karte...",
-    "worldName": "Weltname",
-    "worldNamePlaceholder": "Weltname eingeben...",
-    "biomeLegend": "Biome",
-    "regionDetails": "Regionen-Details",
-    "regionName": "Regionsname",
-    "regionNamePlaceholder": "Regionsname eingeben",
-    "regionColor": "Regionsfarbe",
-    "regionDescription": "Beschreibung",
-    "regionDescriptionPlaceholder": "Beschreibung hinzufügen...",
-    "regionStats": "Statistiken",
-    "placesInRegion": "Orte in dieser Region",
-    "noPlacesLinked": "Noch keine Orte verknüpft. Gehe zum Welt-Bereich, um Orte zu verknüpfen.",
-    "biomes": {
-      "ocean": "Ozean",
-      "lake": "See",
-      "water": "Wasser",
-      "beach": "Strand",
-      "coast": "Küste",
-      "plains": "Ebene",
-      "desert": "Wüste",
-      "grassland": "Grasland",
-      "forest": "Wald",
-      "taiga": "Taiga",
-      "tundra": "Tundra",
-      "snow": "Schnee",
-      "mountain": "Gebirge"
-    },
-    "errors": {
-      "loadFailed": "Karte konnte nicht geladen werden.",
-      "saveFailed": "Karte konnte nicht gespeichert werden.",
-      "generateFailed": "Kartengenerierung fehlgeschlagen.",
-      "exportFailed": "Export fehlgeschlagen."
-    }
-  },
   "export": {
     "loading": "Lade Buchdaten...",
     "noData": "Keine Buchdaten gefunden.",
@@ -815,10 +761,6 @@
       "world": {
         "title": "Weltenbau",
         "description": "Erschaffe reichhaltige Welten mit Orten, Kulturen und komplexen Beziehungen. Behalte den Überblick über jedes Detail, das deine Welt einzigartig macht."
-      },
-      "map": {
-        "title": "Karte",
-        "description": "Generiere Fantasy-Karten mit Biomen, Regionen und Landmarken. Visualisiere deine Welt und verknüpfe Orte direkt mit deinen Story-Elementen."
       },
       "export": {
         "title": "Export",

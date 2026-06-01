@@ -148,29 +148,6 @@ class WorldNode(db.Model):
     region_id = db.Column(db.Integer, nullable=True)
 
 
-class Map(db.Model):
-    """Fantasy world map for a project"""
-    __tablename__ = "map"
-    __table_args__ = {'extend_existing': True}
-
-    id = db.Column(db.Integer, primary_key=True)
-    project_id = db.Column(
-        db.Integer, db.ForeignKey("project.id"), nullable=False, index=True, unique=True
-    )
-    seed = db.Column(db.String(200), nullable=False)
-    width = db.Column(db.Integer, nullable=False, default=800)
-    height = db.Column(db.Integer, nullable=False, default=600)
-    num_cells = db.Column(db.Integer, nullable=False, default=500)
-    data = db.Column(db.Text, nullable=False, default="{}")  # JSON map data
-    created_at = db.Column(db.DateTime, server_default=func.now())
-    updated_at = db.Column(
-        db.DateTime, server_default=func.now(), onupdate=func.now()
-    )
-
-    # Relationship
-    project = db.relationship("Project", backref="map")
-
-
 class SceneNote(db.Model):
     """Notes for scenes"""
     __tablename__ = "scene_note"

@@ -21,15 +21,14 @@ function smartQuotes(text = "", locale = "en") {
 // paragraphs to HTML <p>, first paragraph optional drop cap
 function paragraphsHTML(text, firstIsDropcap = false, locale = "en") {
   const parts = (text || "")
-    .split(/\n\s*\n/)
+    .split(/\n+/)
     .map((s) => s.trim())
     .filter(Boolean);
 
   return parts
     .map((p, i) => {
       const cls = firstIsDropcap && i === 0 ? ' class="dropcap"' : "";
-      const withQuotes = smartQuotes(p, locale).replace(/\n+/g, " ");
-      return `<p${cls}>${escapeHtml(withQuotes)}</p>`;
+      return `<p${cls}>${escapeHtml(smartQuotes(p, locale))}</p>`;
     })
     .join("\n");
 }

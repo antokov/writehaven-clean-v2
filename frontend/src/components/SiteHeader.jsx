@@ -10,7 +10,6 @@ import {
   Edit3,
   Users,
   Globe2,
-  Map as MapIcon,
   Share,
   Sliders
 } from 'lucide-react';
@@ -73,10 +72,6 @@ export default function SiteHeader() {
             <NavLink to={`${base}/world`} className="header-tab">
               <Globe2 size={16} />
               <span>{t('navigation.world')}</span>
-            </NavLink>
-            <NavLink to={`${base}/map`} className="header-tab">
-              <MapIcon size={16} />
-              <span>{t('navigation.map')}</span>
             </NavLink>
             <NavLink to={`${base}/export`} className="header-tab">
               <Share size={16} />
