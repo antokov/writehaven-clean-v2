@@ -3,7 +3,7 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  border-bottom: 1px solid var(--border, #e7ecf2);
+  border-bottom: 1px solid var(--line, #e6eaf2);
   margin-bottom: 12px;
   height: 48px;
 }
@@ -168,7 +168,7 @@
   align-items: center;
   gap: 16px;
   padding: 16px 20px 8px;
-  border-bottom: 1px solid var(--border, #e7ecf2);
+  border-bottom: 1px solid var(--line, #e6eaf2);
 }
 
 .char-avatar-wrap {
@@ -179,7 +179,7 @@
   flex-shrink: 0;
   cursor: pointer;
   overflow: hidden;
-  border: 2px solid var(--border, #e7ecf2);
+  border: 2px solid var(--line, #e6eaf2);
   background: #f1f5f9;
   transition: border-color 0.2s;
 }
@@ -378,7 +378,7 @@
   flex-wrap: wrap;
   gap: 8px;
   padding: 12px 20px 14px;
-  border-bottom: 1px solid var(--border, #e7ecf2);
+  border-bottom: 1px solid var(--line, #e6eaf2);
   align-items: flex-start;
 }
 
@@ -390,7 +390,7 @@
   overflow: hidden;
   flex-shrink: 0;
   cursor: zoom-in;
-  border: 1px solid var(--border, #e7ecf2);
+  border: 1px solid var(--line, #e6eaf2);
   background: #f1f5f9;
 }
 
@@ -437,7 +437,7 @@
   width: 72px;
   height: 72px;
   border-radius: 6px;
-  border: 2px dashed var(--border, #cbd5e1);
+  border: 2px dashed var(--line, #e6eaf2);
   background: transparent;
   cursor: pointer;
   display: flex;

@@ -105,6 +105,7 @@ class Scene(db.Model):
     content = db.Column(db.Text, default="")
     status = db.Column(db.String(50), nullable=False, default="Idea")
     order_index = db.Column(db.Integer, nullable=False, default=0)
+    context_manifest = db.Column(db.Text, default="{}")
     created_at = db.Column(db.DateTime, server_default=func.now())
     updated_at = db.Column(
         db.DateTime, server_default=func.now(), onupdate=func.now()

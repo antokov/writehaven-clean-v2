@@ -1,0 +1,128 @@
+.smp-panel {
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--line, #e6eaf2);
+}
+
+.smp-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted, #64748b);
+  margin-bottom: 8px;
+}
+
+.smp-section {
+  margin-bottom: 8px;
+}
+
+.smp-section-label {
+  font-size: 11px;
+  color: var(--muted, #64748b);
+  font-weight: 600;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.smp-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.smp-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+  padding: 2px 6px 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.smp-tag--loc {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fde68a;
+}
+
+.smp-tag-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  color: inherit;
+  opacity: 0.6;
+  padding: 0;
+  flex-shrink: 0;
+}
+.smp-tag-remove:hover { opacity: 1; }
+
+.smp-add-wrap {
+  position: relative;
+}
+
+.smp-add-btn {
+  width: 22px;
+  height: 22px;
+  background: none;
+  border: 1px dashed var(--line, #e6eaf2);
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--muted, #64748b);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.12s, color 0.12s;
+}
+.smp-add-btn:hover {
+  border-color: var(--brand, #22c55e);
+  color: var(--brand, #22c55e);
+}
+
+.smp-dropdown {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 4px);
+  min-width: 160px;
+  max-width: 200px;
+  max-height: 160px;
+  overflow-y: auto;
+  background: var(--panel-bg, #fff);
+  border: 1px solid var(--line, #e6eaf2);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 100;
+}
+
+.smp-drop-item {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+.smp-drop-item:hover { background: var(--hover-bg, #f1f5f9); }
+
+.smp-drop-empty {
+  display: block;
+  padding: 8px 10px;
+  font-size: 11px;
+  color: var(--muted, #64748b);
+  font-style: italic;
+}

@@ -7,6 +7,8 @@ import ConfirmModal from '../components/ConfirmModal';
 import TextContextMenu from '../components/TextContextMenu';
 import NotesPanel from '../components/NotesPanel';
 import TasksPanel from '../components/TasksPanel';
+import SchreibgeistPanel from '../components/SchreibgeistPanel';
+import SceneManifestPanel from '../components/SceneManifestPanel';
 import SceneStatusDropdown, { STATUS_OPTIONS } from '../components/SceneStatusDropdown';
 import EpigramHighlight from '../components/EpigramHighlight';
 import { useTranslation } from 'react-i18next';
@@ -53,8 +55,10 @@ export default function ProjectView() {
     const saved = localStorage.getItem('toolsPanel.open');
     return saved ? JSON.parse(saved) : true;
   });
+  const [toolsTab, setToolsTab] = useState('tools'); // 'tools' | 'schreibgeist'
   const [notesCount, setNotesCount] = useState(0);
   const [tasksCount, setTasksCount] = useState(0);
+  const [sceneManifest, setSceneManifest] = useState({ character_ids: [], location_ids: [] });
 
   // Save tools panel state to localStorage whenever it changes
   useEffect(() => {
@@ -291,6 +295,7 @@ export default function ProjectView() {
       setSceneTitle(s.title || '');
       setSceneContent(s.content || '');
       setSceneStatus(s.status || 'Idea');
+      setSceneManifest(s.context_manifest || { character_ids: [], location_ids: [] });
       snapshotRef.current = { id: s.id, title: s.title || '', content: s.content || '', status: s.status || 'Idea' };
       patchSceneInTree(chapterId, s.id, { title: s.title || '', status: s.status || 'Idea' });
       const txt = (s.content || '').replace(/\s+/g, ' ').trim();
@@ -658,7 +663,20 @@ export default function ProjectView() {
       {/* Right sidebar - Tools panel */}
       <aside className={`tools-panel ${toolsPanelOpen ? 'open' : 'closed'}`}>
         <div className="tools-header" style={{ display: toolsPanelOpen ? 'flex' : 'none' }}>
-          <span className="tools-title">{t('writing.toolsTitle')}</span>
+          <div className="tools-tabs">
+            <button
+              className={`tools-tab ${toolsTab === 'tools' ? 'active' : ''}`}
+              onClick={() => setToolsTab('tools')}
+            >
+              {t('writing.toolsTitle')}
+            </button>
+            <button
+              className={`tools-tab ${toolsTab === 'schreibgeist' ? 'active' : ''}`}
+              onClick={() => setToolsTab('schreibgeist')}
+            >
+              Schreibgeist
+            </button>
+          </div>
           <button
             className="icon-btn tools-toggle"
             onClick={() => setToolsPanelOpen(!toolsPanelOpen)}
@@ -668,9 +686,25 @@ export default function ProjectView() {
           </button>
         </div>
 
-        <div className="tools-content" style={{ display: toolsPanelOpen ? 'flex' : 'none' }}>
+        {toolsTab === 'schreibgeist' && toolsPanelOpen && (
+          <SchreibgeistPanel
+            projectId={pid}
+            currentScene={activeSceneId ? { id: activeSceneId, title: sceneTitle, content: sceneContent } : null}
+          />
+        )}
+
+        <div className="tools-content" style={{ display: toolsPanelOpen && toolsTab === 'tools' ? 'flex' : 'none' }}>
           {activeSceneId && (
             <>
+              <SceneManifestPanel
+                sceneId={activeSceneId}
+                manifest={sceneManifest}
+                projectId={pid}
+                onSave={async (newManifest) => {
+                  setSceneManifest(newManifest);
+                  await axios.put(`/api/scenes/${activeSceneId}`, { context_manifest: newManifest });
+                }}
+              />
               <NotesPanel
                 contextType="scene"
                 contextId={activeSceneId}

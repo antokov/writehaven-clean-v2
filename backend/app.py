@@ -275,9 +275,7 @@ def create_app():
                 if not user.active:
                     return ok({"error": "Account deactivated"}, 401)
 
-                # Setze current_user
                 g.current_user = user
-                return fn(*args, **kwargs)
 
             except pyjwt.ExpiredSignatureError:
                 return ok({"error": "Token expired"}, 401)
@@ -286,6 +284,8 @@ def create_app():
             except Exception as e:
                 print(f"Token error: {e}")
                 return ok({"error": "Token ungültig"}, 401)
+
+            return fn(*args, **kwargs)
 
         return decorated_view
 
@@ -1075,7 +1075,7 @@ Sent from WriteHaven Feedback Form
     @token_auth_required
     def get_scene(sid):
         row = db.session.execute(text("""
-            SELECT id, chapter_id, title, content, status, order_index
+            SELECT id, chapter_id, title, content, status, order_index, context_manifest
             FROM scene
             WHERE id = :id
         """), {"id": sid}).mappings().first()
@@ -1088,7 +1088,8 @@ Sent from WriteHaven Feedback Form
             "title": row["title"],
             "order_index": row["order_index"],
             "content": row["content"],
-            "status": row["status"]
+            "status": row["status"],
+            "context_manifest": _loads(row["context_manifest"] or "{}")
         })
 
     @app.put("/api/scenes/<int:sid>")
@@ -1114,6 +1115,9 @@ Sent from WriteHaven Feedback Form
         if (st := data.get("status")) is not None:
             updates.append("status = :status")
             params["status"] = st
+        if "context_manifest" in data:
+            updates.append("context_manifest = :context_manifest")
+            params["context_manifest"] = json.dumps(data["context_manifest"] or {})
 
         if not updates:
             return ok({
@@ -1122,14 +1126,15 @@ Sent from WriteHaven Feedback Form
                 "order_index": existing["order_index"],
                 "chapter_id": existing["chapter_id"],
                 "content": existing["content"],
-                "status": existing["status"]
+                "status": existing["status"],
+                "context_manifest": _loads(existing.get("context_manifest") or "{}")
             })
 
         update_sql = text(f"""
             UPDATE scene
             SET {', '.join(updates)}, updated_at = CURRENT_TIMESTAMP
             WHERE id = :id
-            RETURNING id, chapter_id, title, content, status, order_index
+            RETURNING id, chapter_id, title, content, status, order_index, context_manifest
         """)
         row = db.session.execute(update_sql, params).mappings().first()
         db.session.commit()
@@ -1139,7 +1144,8 @@ Sent from WriteHaven Feedback Form
             "order_index": row["order_index"],
             "chapter_id": row["chapter_id"],
             "content": row["content"],
-            "status": row["status"]
+            "status": row["status"],
+            "context_manifest": _loads(row["context_manifest"] or "{}")
         })
 
     @app.delete("/api/scenes/<int:sid>")
@@ -2091,6 +2097,151 @@ Sent from WriteHaven Feedback Form
     def handle_integrity(e):
         db.session.rollback()
         return bad_request("Database integrity error.")
+
+    # ---------- Schreibgeist (Claude AI) ----------
+    @app.post("/api/projects/<int:pid>/schreibgeist")
+    @token_auth_required
+    def schreibgeist_chat(pid):
+        p = verify_project_ownership(pid, get_current_user().id)
+        if not p: return not_found()
+
+        api_key = os.getenv("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            return ok({"error": "api_key_missing"}, 503)
+
+        data = request.get_json() or {}
+        raw_messages = data.get("messages", [])
+        if not raw_messages:
+            return bad_request("no_messages")
+
+        # Build base book context (always included)
+        all_chapters = Chapter.query.filter_by(project_id=pid).order_by(Chapter.order_index.asc()).all()
+        chapter_block = "\n".join(
+            [f"- Kapitel {i+1}: {ch.title or '(ohne Titel)'}" for i, ch in enumerate(all_chapters)]
+        ) or "Noch keine Kapitel angelegt."
+
+        all_characters = Character.query.filter_by(project_id=pid).all()
+        character_block = ", ".join([c.name for c in all_characters if c.name]) or "Noch keine Charaktere angelegt."
+
+        user = get_current_user()
+        system_prompt = f"""Du bist Schreibgeist, ein kreativer Schreibassistent für {user.name or 'den Autor'}.
+
+Du arbeitest am Projekt: "{p.title}"
+
+Buchstruktur:
+{chapter_block}
+
+Charaktere:
+{character_block}
+
+Deine Aufgabe: Beim kreativen Schreiben helfen – Ideen entwickeln, Feedback geben, Formulierungen vorschlagen.
+Antworte auf Deutsch. Sei präzise und inspirierend. Halte Antworten unter 300 Wörtern."""
+
+        # Build entity context (multi-select characters + locations + current scene)
+        entity_ctx    = data.get("entity_context", {})
+        ec_char_ids   = set(entity_ctx.get("character_ids", []))
+        ec_loc_ids    = set(entity_ctx.get("location_ids",  []))
+        ec_scene_id   = entity_ctx.get("scene_id")
+        context_parts = []
+
+        # Current scene context
+        if ec_scene_id:
+            scene_row = db.session.execute(text("""
+                SELECT s.title, s.content
+                FROM scene s
+                JOIN chapter c ON s.chapter_id = c.id
+                WHERE s.id = :sid AND c.project_id = :pid
+            """), {"sid": ec_scene_id, "pid": pid}).mappings().first()
+            if scene_row:
+                scene_block = f"## Aktuelle Szene: {scene_row['title'] or '(ohne Titel)'}"
+                if scene_row["content"]:
+                    content_excerpt = scene_row["content"][:2000]
+                    if len(scene_row["content"]) > 2000:
+                        content_excerpt += "\n[… Inhalt gekürzt]"
+                    scene_block += f"\n\n{content_excerpt}"
+                context_parts.append(scene_block)
+
+        if ec_char_ids or ec_loc_ids:
+            # Character profiles
+            for char in [c for c in all_characters if c.id in ec_char_ids]:
+                prof = _loads(char.profile_json or "{}")
+                parts = [f"## Charakter: {char.name}"]
+                if char.summary:
+                    parts.append(char.summary)
+                age = prof.get("basic", {}).get("age", "")
+                if age:
+                    parts.append(f"Alter: {age}")
+                backstory = prof.get("relations", {}).get("family_background", "")
+                if backstory:
+                    parts.append(f"Hintergrund: {backstory[:400]}")
+                context_parts.append("\n".join(parts))
+
+            # Location descriptions
+            if ec_loc_ids:
+                for loc in WorldNode.query.filter(
+                    WorldNode.id.in_(ec_loc_ids), WorldNode.project_id == pid
+                ).all():
+                    parts = [f"## Ort: {loc.title} ({loc.kind})"]
+                    if loc.summary:
+                        parts.append(loc.summary[:600])
+                    context_parts.append("\n".join(parts))
+
+            # Deduplicated union of tagged scenes
+            all_project_scenes = db.session.execute(text("""
+                SELECT s.id, s.title, s.content, s.context_manifest
+                FROM scene s
+                JOIN chapter c ON s.chapter_id = c.id
+                WHERE c.project_id = :pid
+            """), {"pid": pid}).mappings().all()
+
+            seen_ids = set()
+            tagged_scenes = []
+            for sc in all_project_scenes:
+                m = _loads(sc["context_manifest"] or "{}")
+                if (ec_char_ids & set(m.get("character_ids", []))) or \
+                   (ec_loc_ids  & set(m.get("location_ids",  []))):
+                    if sc["id"] not in seen_ids:
+                        seen_ids.add(sc["id"])
+                        tagged_scenes.append(sc)
+
+            if tagged_scenes:
+                context_parts.append("### Verknüpfte Szenen:")
+                for sc in tagged_scenes:
+                    block = f"#### Szene: {sc['title'] or '(ohne Titel)'}"
+                    if sc["content"]:
+                        block += f"\n{sc['content']}"
+                    context_parts.append(block)
+            else:
+                context_parts.append("(Keine Szenen mit den ausgewählten Elementen getaggt)")
+
+        if context_parts:
+            system_prompt += "\n\n---\nAusgewählter Kontext:\n\n" + "\n\n".join(context_parts)
+
+        # Convert messages: 'ai' → 'assistant', keep last 20
+        claude_messages = []
+        for m in raw_messages[-20:]:
+            role = "assistant" if m.get("role") == "ai" else "user"
+            content = str(m.get("content") or m.get("text") or "")
+            if content:
+                claude_messages.append({"role": role, "content": content})
+
+        if not claude_messages:
+            return bad_request("no_messages")
+
+        try:
+            import anthropic
+            client = anthropic.Anthropic(api_key=api_key)
+            response = client.messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=1024,
+                system=system_prompt,
+                messages=claude_messages,
+            )
+            reply = response.content[0].text if response.content else ""
+            return ok({"message": reply})
+        except Exception as e:
+            error_str = str(e)
+            return ok({"error": f"api_error: {error_str[:200]}"}, 503)
 
     return app
 

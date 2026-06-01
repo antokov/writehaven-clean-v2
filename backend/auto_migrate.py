@@ -135,6 +135,22 @@ def auto_migrate():
                     print(f"⚠️  Auto-migration warning: {str(e)}")
                     # Continue anyway - app will work with nullable fields
 
+            # Migrate scene table - add context_manifest if missing
+            if 'scene' in inspector.get_table_names():
+                scene_cols = [col['name'] for col in inspector.get_columns('scene')]
+                if 'context_manifest' not in scene_cols:
+                    print("🔄 Auto-migration: Adding context_manifest to scene table...")
+                    try:
+                        conn.execute(text("ALTER TABLE scene ADD COLUMN context_manifest TEXT DEFAULT '{}';"))
+                        conn.commit()
+                        print("✅ scene.context_manifest column added successfully")
+                    except (ProgrammingError, OperationalError) as e:
+                        print(f"⚠️  Could not add context_manifest column: {e}")
+                        try:
+                            conn.rollback()
+                        except:
+                            pass
+
             # Migrate character table - add gallery_json if missing
             if 'character' in inspector.get_table_names():
                 char_cols = [col['name'] for col in inspector.get_columns('character')]
