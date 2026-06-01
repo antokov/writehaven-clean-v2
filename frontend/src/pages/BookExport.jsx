@@ -12,10 +12,12 @@ const escapeHtml = (s = "") =>
 // locale-aware smart quotes: "..." -> „…“ (de) / “…” (en et al.)
 function smartQuotes(text = "", locale = "en") {
   const isDe = locale.toLowerCase().startsWith("de");
-  const OPEN = isDe ? "„" : "“";
-  const CLOSE = isDe ? "“" : "”";
-  let open = true;
-  return text.replace(/"/g, () => (open = !open) ? CLOSE : OPEN);
+  const OPEN  = isDe ? "\u201E" : "\u201C";
+  const CLOSE = "\u201D";
+  return text.replace(/"/g, (_, offset) => {
+    const prev = offset > 0 ? text[offset - 1] : "";
+    return /\S/.test(prev) && !/[\(\[\{]/.test(prev) ? CLOSE : OPEN;
+  });
 }
 
 // paragraphs to HTML <p>, first paragraph optional drop cap
