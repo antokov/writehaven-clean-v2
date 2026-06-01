@@ -1945,11 +1945,18 @@ Sent from WriteHaven Feedback Form
                 chapter_title = chapter_title_elem.get_text().strip() if chapter_title_elem else ""
 
                 paragraphs = []
+                scene_break_next = False
                 for p_tag in section.find_all('p'):
+                    classes = p_tag.get('class', [])
+                    if 'scene-sep' in classes:
+                        scene_break_next = True
+                        continue
                     text = p_tag.get_text().strip()
-                    if text:
-                        is_first = 'dropcap' in p_tag.get('class', [])
-                        paragraphs.append({'text': text, 'first': is_first})
+                    if not text:
+                        continue
+                    is_first = 'dropcap' in classes or scene_break_next
+                    paragraphs.append({'text': text, 'first': is_first, 'scene_break': scene_break_next})
+                    scene_break_next = False
 
                 if chapter_title or paragraphs:
                     chapters.append({'title': chapter_title, 'paragraphs': paragraphs})
@@ -2074,8 +2081,10 @@ Sent from WriteHaven Feedback Form
                     story.append(Paragraph(chapter['title'], chapter_style))
 
                 for p_idx, para in enumerate(chapter['paragraphs']):
+                    if para.get('scene_break'):
+                        story.append(Spacer(1, 11 * 1.42))
                     text = para['text'].replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-                    style = body_first_style if p_idx == 0 else body_style
+                    style = body_first_style if para['first'] else body_style
                     story.append(Paragraph(text, style))
 
             doc.build(story, canvasmaker=NumberedCanvas)

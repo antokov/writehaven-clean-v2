@@ -111,12 +111,13 @@ export default function BookExport() {
         const scenes = ch.scenes || [];
         const scenesHTML = scenes
           .map((sc, idx) => {
+            const sep = idx > 0 ? '<p class="scene-sep"></p>\n' : '';
             const content = sc.content || "";
             const epigrams = parseEpigrams(content);
 
             // If no epigrams, just render as paragraphs
             if (epigrams.length === 0) {
-              return paragraphsHTML(content, idx === 0, locale);
+              return sep + paragraphsHTML(content, idx === 0, locale);
             }
 
             // Split content into epigram and text parts
@@ -142,7 +143,7 @@ export default function BookExport() {
             }
 
             // Render each part
-            return parts.map((part, i) => {
+            return sep + parts.map((part, i) => {
               if (part.type === 'epigram') {
                 const { text, source } = part.data;
                 const sourceHTML = source
@@ -214,6 +215,8 @@ export default function BookExport() {
   }
   .book p{text-align:justify;margin:0;text-indent:1.2em;widows:2;orphans:2}
   .book h1 + p{ text-indent:0 }
+  .book p.scene-sep{height:1.42em;text-indent:0}
+  .book p.scene-sep + p{text-indent:0}
   .dropcap:first-letter{ float:left;font-size:3.2em;line-height:0.8;padding-right:.1em }
 
   /* Epigram Styles */

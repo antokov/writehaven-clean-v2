@@ -45,6 +45,7 @@
 - [Schreibgeist Live AI (2026-06-01)]: Real Claude API (claude-sonnet-4-6) connected; book context (title, chapters, characters) in system prompt; error handling for missing key.
 - [UI/UX Consistency Pass (2026-06-01)]: Fixed 9 CSS inconsistencies: chat bubble radius, input/btn radius, tab animation pattern, CSS variable aliases, missing btn classes.
 - [Schreibgeist Chat Panel (2026-06-01)]: Frontend-only prototype; tabs "Tools"/"Schreibgeist" in ProjectView right sidebar; chat UI with user/AI bubbles, typing indicator, mock responses; no backend.
+- [Export Szenentrenner (2026-06-01)]: `<p class="scene-sep">` zwischen Szenen; CSS height:1.42em + scene-sep+p no-indent; Backend Spacer(15.62pt) + scene_break_next Flag für body_first_style.
 - [Export Input Handling + Tests (2026-06-01)]: `escapeHtml`/`smartQuotes`/`paragraphsHTML` extrahiert nach `exportUtils.js`; 16 Vitest-Tests (EC-01–EC-08); FS-01 resolved; `vite.config.js` mit `test.environment: node`.
 - [Export Absatzabstand entfernt (2026-06-01)]: 2 chirurgische Änderungen; `spaceAfter=0` in ReportLab `body_style`; `margin:0` in `.book p` CSS; Einzug und Kapitel-Stile unberührt.
 - [Fix smartQuotes contextual detection (2026-06-01)]: Replaced blind toggle with prev-char heuristic; `"` after non-whitespace/non-bracket → CLOSE. Fixes single trailing `"` being wrongly rendered as `„`.
