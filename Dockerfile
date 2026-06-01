@@ -23,6 +23,13 @@ COPY backend/requirements.txt ./backend/requirements.txt
 RUN python -m pip install --upgrade pip setuptools wheel \
  && pip install -r backend/requirements.txt
 
+# passlib verwendet pkg_resources, das in neueren Images fehlt
+RUN python3 -c "\
+import pathlib; \
+f=pathlib.Path('/usr/local/lib/python3.11/site-packages/passlib/pwd.py'); \
+t=f.read_text(); \
+f.write_text(t.replace('import pkg_resources', 'try:\n    import pkg_resources\nexcept ImportError:\n    import importlib.metadata as pkg_resources'))"
+
 # App-Code + Static aus Stage 1
 COPY backend ./backend
 # WICHTIG: nach backend/static kopieren (Flask static_folder="static" relativ zum Paket)
