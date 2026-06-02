@@ -3,7 +3,7 @@ services:
     build: .
     # Alternativ: vorgefertigtes Image nutzen (nach `docker build -t writehaven .`)
     # image: writehaven:latest
-    env_file: .env.nas
+    env_file: .env
     ports:
       - "8080:8080"
     extra_hosts:
