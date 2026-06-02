@@ -1,65 +1,61 @@
-# Architect Decision: Markdown-Rendering in Schreibgeist-Antworten
+# Architect Decision: NAS PostgreSQL Deployment
 
-## Library Decision
+## Scope
 
-**Wahl: `react-markdown`**
+Ausschließlich Deployment-Konfiguration — kein Anwendungscode wird geändert. Das Backend unterstützt PostgreSQL bereits vollständig via `DATABASE_URL`. Aufgabe ist das Erstellen von Deployment-Templates für das NAS.
 
-Gründe:
-- XSS-sicher by default (kein dangerouslySetInnerHTML nötig)
-- Handles alle benötigten Elemente (h1-h3, bold, italic, ul, ol, code) korrekt
-- React-idiomatisch: gibt JSX-Elemente zurück, die sich mit CSS stylen lassen
-- Stable und maintained
+## Codebase Assessment
 
-Installation: `npm install react-markdown`
+| Was | Status |
+|-----|--------|
+| `auto_migrate.py` — PostgreSQL-Support | ✅ vorhanden, normalisiert URI, nutzt `psycopg` v3 |
+| `app.py` — `DATABASE_URL`-Auswertung | ✅ vorhanden, delegiert an `auto_migrate.get_database_uri()` |
+| `requirements.txt` — `psycopg[binary]` | ✅ vorhanden |
+| `Dockerfile` — multi-stage, PostgreSQL-fähig | ✅ vorhanden |
+| Lokales `.env` — SQLite | ✅ vorhanden, nicht anfassen |
+| `docker-compose.nas.yml` | ❌ fehlt — muss erstellt werden |
+| `.env.nas.example` | ❌ fehlt — muss erstellt werden |
 
 ## Files to Modify
 
-| File | Changes |
-|------|---------|
-| `frontend/package.json` | `react-markdown` als Dependency hinzufügen (via npm install) |
-| `frontend/src/components/SchreibgeistPanel.jsx` | Import `ReactMarkdown`; AI-Bubble auf `<ReactMarkdown>` umstellen |
-| `frontend/src/styles/schreibgeist.css` | Neue `.sg-bubble--ai` Markdown-Styles: h2, h3, strong, em, ul, ol, li, p, code |
+Keine bestehenden Dateien werden geändert.
 
-## Implementation Pattern
+## New Files to Create
 
-```jsx
-// In SchreibgeistPanel.jsx
-import ReactMarkdown from 'react-markdown';
+| Datei | Zweck |
+|-------|-------|
+| `docker-compose.nas.yml` | Docker Compose für NAS-Deployment mit PostgreSQL-Connection und Upload-Volume |
+| `.env.nas.example` | NAS-spezifische Umgebungsvariablen-Vorlage |
 
-// In der AI-Bubble:
-{msg.role === 'ai'
-  ? <ReactMarkdown className="sg-bubble sg-bubble--md">{msg.text}</ReactMarkdown>
-  : <div className="sg-bubble">{msg.text}</div>
-}
-```
+## Patterns Dev Must Follow
 
-## CSS Pattern
+**docker-compose.nas.yml:**
+- Service-Name: `writehaven`
+- Image: aus lokalem Dockerfile gebaut (`build: .`) ODER vorgefertigtes Image-Tag
+- `env_file: .env.nas` (Nutzer benennt `.env.nas.example` → `.env.nas` um)
+- `extra_hosts: ["host.docker.internal:host-gateway"]` — damit der Container NAS-PostgreSQL erreicht
+- Volume für Uploads: `./uploads:/app/backend/static/uploads`
+- Port: `8080:8080`
+- `restart: unless-stopped`
 
-Alle Markdown-Elemente im `.sg-bubble--md` Scope stylen, damit sie nicht aus dem Chat-Design fallen:
-
-```css
-.sg-bubble--md { ... }
-.sg-bubble--md h2 { font-size: 14px; font-weight: 700; margin: 8px 0 4px; }
-.sg-bubble--md h3 { font-size: 13px; font-weight: 700; margin: 6px 0 3px; }
-.sg-bubble--md p  { margin: 0 0 6px; }
-.sg-bubble--md p:last-child { margin-bottom: 0; }
-.sg-bubble--md ul, .sg-bubble--md ol { margin: 4px 0 6px 16px; padding: 0; }
-.sg-bubble--md li { margin: 2px 0; }
-.sg-bubble--md strong { font-weight: 700; }
-.sg-bubble--md em    { font-style: italic; }
-.sg-bubble--md code  { font-family: monospace; font-size: 12px; background: rgba(0,0,0,0.06); padding: 1px 4px; border-radius: 2px; }
-```
+**`.env.nas.example`:**
+- `DATABASE_URL=postgresql+psycopg://writehaven:PASSWORT@host.docker.internal:5432/writehaven`
+- Alle anderen Variablen aus `.env.example` übernehmen, NAS-spezifisch anpassen
+- `ALLOWED_ORIGINS` auf NAS-URL setzen
+- `FRONTEND_URL` auf NAS-URL setzen
+- Kommentare auf Deutsch, mit PostgreSQL-Setup-Anweisungen (`psql`-Befehle)
 
 ## Constraints (DO NOT)
 
-- DO NOT `dangerouslySetInnerHTML` verwenden
-- DO NOT `marked` oder andere HTML-String-Libraries verwenden
-- DO NOT User-Nachrichten mit Markdown rendern
-- DO NOT globale h2/h3/p Styles überschreiben — alles im `.sg-bubble--md` Scope
-- DO NOT `remark-gfm` oder andere Plugins hinzufügen (nicht nötig)
+- DO NOT `.env` (lokale Dev-Konfiguration) anfassen
+- DO NOT `auto_migrate.py`, `app.py`, `requirements.txt` oder `Dockerfile` ändern
+- DO NOT Alembic oder andere Migrations-Tools einführen
+- DO NOT einen separaten PostgreSQL-Container im docker-compose definieren (NAS-Postgres läuft nativ)
+- DO NOT `network_mode: host` setzen (schlechte Praxis — `extra_hosts` reicht)
 
-## Reference Files
+## Reference Files Dev Needs
 
-1. `frontend/src/components/SchreibgeistPanel.jsx` — Bubble-Rendering (Zeile ~200-215)
-2. `frontend/src/styles/schreibgeist.css` — `.sg-bubble` Styles
-3. `frontend/package.json` — für npm install
+1. `backend/.env.example` — Vorlage für alle Variablen
+2. `backend/.env` — aktuelle lokale Konfiguration (nur lesen, nicht ändern)
+3. `backend/auto_migrate.py` — zeigt wie URI normalisiert wird
+4. `Dockerfile` — zeigt Build-Context und App-Pfade im Container

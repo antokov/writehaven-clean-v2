@@ -1,32 +1,35 @@
-# Implementation Report: Markdown-Rendering in Schreibgeist-Antworten
+# Implementation Report: NAS PostgreSQL Deployment
 
 ## Approach
 
-`react-markdown` installiert und in SchreibgeistPanel.jsx eingebunden. AI-Bubbles verwenden ReactMarkdown-Komponente, User-Bubbles bleiben Plain Text. CSS-Scope `.sg-bubble--md` verhindert Kollision mit globalem Layout.
+Rein konfigurationsbasiert — kein Anwendungscode geändert. Zwei neue Dateien erstellt, die ein schlüsselfertiges NAS-Deployment ermöglichen.
 
 ## Files Changed
 
-| File | Art |
-|------|-----|
-| `frontend/package.json` | react-markdown ^9 hinzugefügt |
-| `frontend/src/components/SchreibgeistPanel.jsx` | ReactMarkdown import + konditionelles Rendering |
-| `frontend/src/styles/schreibgeist.css` | `.sg-bubble--md` Styles für h1-h3, p, ul, ol, li, strong, em, code, pre |
+| Datei | Art | Änderung |
+|-------|-----|----------|
+| `docker-compose.nas.yml` | NEU | Docker Compose für NAS: Build, Port 8080, `extra_hosts` für host.docker.internal, Upload-Volume, `restart: unless-stopped` |
+| `.env.nas.example` | NEU | NAS-Env-Template: PostgreSQL-`DATABASE_URL`, alle benötigten Variablen mit deutschen Kommentaren und psql-Setup-Anleitung |
 
 ## Edge Cases Handled
 
-- EC-01: Kein Markdown → normaler Fließtext (p-Tag) — kein Fehler
-- EC-02: Langer Text → `word-break: break-word` bleibt auf `.sg-bubble`
-- EC-03: Verschachtelte Listen → Browser-Standard-Einrückung (margin-left: 18px)
-- EC-04: Fettdruck + Heading → beide gerendert, h1/h2:first-child ohne top-margin
-- EC-05: Leerstring → ReactMarkdown rendert nichts, keine Exception
+| EC | Lösung |
+|----|--------|
+| EC-01 — `host.docker.internal` nicht auflösbar | `extra_hosts: host-gateway` in docker-compose.nas.yml |
+| EC-02 — pg_hba.conf Hinweis | In `.env.nas.example` als Kommentar dokumentiert |
+| EC-03 — Leere DB bei erstem Start | `db.create_all()` läuft beim App-Start automatisch — kein Handlungsbedarf |
+| EC-04 — Uploads persistent | Volume `./uploads:/app/backend/static/uploads` in docker-compose.nas.yml |
+| EC-05 — URI-Normalisierung | Bereits in `auto_migrate.py` gelöst — kein neuer Code nötig |
 
 ## Assumptions
 
-- `white-space: pre-wrap` für .sg-bubble--md auf `normal` zurückgesetzt, damit Markdown-Absätze nicht doppelt umgebrochen werden
+- Nutzer benennt `.env.nas.example` → `.env.nas` um und trägt echte Werte ein
+- NAS hat Docker + `docker compose` (v2) installiert
+- PostgreSQL läuft nativ auf dem NAS-Host und ist für Docker-Netzwerk erreichbar
 
 ## Tech Debt
 
-Keine neuen.
+Keine neuen eingeführt.
 
 ## Open Items
 

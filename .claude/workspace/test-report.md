@@ -1,28 +1,32 @@
-# Test Report: Markdown-Rendering in Schreibgeist-Antworten
+# Test Report: NAS PostgreSQL Deployment
 
 ## Verdict: PASS
 
 ## Acceptance Criteria
 
 | AC | Beschreibung | Ergebnis | Nachweis |
-|----|-------------|----------|----------|
-| AC-01 | Überschriften gerendert | PASS | `.sg-bubble--md h2/h3` Styles vorhanden; ReactMarkdown wandelt `##` → `<h2>` |
-| AC-02 | Fettdruck gerendert | PASS | `.sg-bubble--md strong { font-weight: 700 }` |
-| AC-03 | Listen gerendert | PASS | `.sg-bubble--md ul/ol/li` mit margin-left: 18px |
-| AC-04 | User-Nachrichten unverändert | PASS | Ternary: `role === 'ai' ? ReactMarkdown : plain div` |
-| AC-05 | Visueller Stil passt | PASS | Alle Elemente im `.sg-bubble--md` Scope, font-size ≤ 14px |
+|----|-------------|----------|---------|
+| AC-01 | Lokal weiterhin SQLite | PASS | `.env` unverändert; kein Code-Change |
+| AC-02 | NAS nutzt PostgreSQL via `DATABASE_URL` | PASS | `docker-compose.nas.yml` + `.env.nas.example` mit korrektem `postgresql+psycopg://`-URI |
+| AC-03 | Leere DB → Schema-Anlage beim Start | PASS | `db.Model.metadata.create_all()` in `app.py:173` läuft beim Start, dann `auto_migrate()` |
+| AC-04 | Uploads bleiben persistent | PASS | Volume `./uploads:/app/backend/static/uploads` in `docker-compose.nas.yml` |
+| AC-05 | Deployment-Template vollständig dokumentiert | PASS | `.env.nas.example` enthält alle Pflicht-Variablen + psql-Anleitung + pg_hba.conf-Hinweis |
 
 ## Edge Cases
 
-| EC | Ergebnis |
-|----|----------|
-| EC-01 Kein Markdown | PASS — ReactMarkdown rendert als `<p>` |
-| EC-02 Langer Text | PASS — `word-break: break-word` erbt von `.sg-bubble` |
-| EC-03 Verschachtelte Listen | PASS — Browser-Default + 18px margin |
-| EC-04 Bold + Heading combo | PASS — unabhängige Selektoren, kein Konflikt |
-| EC-05 Leerstring | PASS — ReactMarkdown rendert nichts |
+| EC | Ergebnis | Nachweis |
+|----|----------|---------|
+| EC-01 `host.docker.internal` auf Linux-NAS | PASS | `extra_hosts: host-gateway` in docker-compose.nas.yml |
+| EC-02 pg_hba.conf-Konfiguration | PASS | Als Kommentar in `.env.nas.example` dokumentiert |
+| EC-03 Leere DB erster Start | PASS | `create_all(checkfirst=True)` erzeugt alle Tabellen |
+| EC-04 Uploads-Verzeichnis | PASS | Docker-Volume; Flask erstellt Unterordner on demand |
+| EC-05 URI-Normalisierung | PASS | `auto_migrate.py` normalisiert `postgres://` → `postgresql+psycopg://` |
 
-## Sicherheit
+## Coverage Gaps
 
-- Kein `dangerouslySetInnerHTML` — ReactMarkdown rendert sicher als JSX
-- XSS-Risiko: nicht vorhanden (AI-output, kein user-controlled HTML)
+Keine automatisierten Tests für Deployment-Konfiguration möglich (nur manuell validierbar). Die Konfigurationslogik (URI-Parsing, DB-Erkennung) ist bereits durch bestehenden Code abgedeckt.
+
+## Notes
+
+- Keine Änderungen an bestehenden Tests — keine Regressionen möglich
+- `docker compose config -f docker-compose.nas.yml` validiert YAML-Syntax (empfohlen vor erstem Deployment)

@@ -167,6 +167,7 @@ test-results/
 .env
 .env.*
 !.env.example
+!.env.nas.example
 *.pem
 *.key
 *.cert

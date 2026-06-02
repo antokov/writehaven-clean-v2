@@ -29,6 +29,7 @@
 ## 🔵 Open Questions
 <!-- Unresolved assumptions from BA analysis -->
 <!-- Format: - [ ] OQ-XX: question (raised in: feature name) -->
+- [ ] OQ-01: Welche Docker-Netzwerkkonfiguration nutzt das NAS? Falls `host-gateway` nicht funktioniert, muss NAS-IP direkt in `DATABASE_URL` eingetragen werden. (raised in: NAS PostgreSQL Deployment)
 
 ## 🏛️ Architecture Log
 <!-- One-line per feature: key structural decision made -->
@@ -50,6 +51,7 @@
 - [Export Absatzabstand entfernt (2026-06-01)]: 2 chirurgische Änderungen; `spaceAfter=0` in ReportLab `body_style`; `margin:0` in `.book p` CSS; Einzug und Kapitel-Stile unberührt.
 - [Fix smartQuotes contextual detection (2026-06-01)]: Replaced blind toggle with prev-char heuristic; `"` after non-whitespace/non-bracket → CLOSE. Fixes single trailing `"` being wrongly rendered as `„`.
 - [Character Gallery (2026-06-01)]: New `gallery_json` TEXT column on `character`; migration in `auto_migrate.py`; `POST/DELETE /api/characters/<cid>/gallery`; `CharacterGallery` + `GalleryLightbox` components; images stored in `static/uploads/gallery/<cid>/`.
+- [NAS PostgreSQL Deployment (2026-06-02)]: Rein konfigurationsbasiert; `docker-compose.nas.yml` + `.env.nas.example` als NAS-Templates; `extra_hosts: host-gateway` für container→host-PostgreSQL-Verbindung; bestehender Code (auto_migrate, psycopg, create_all) bereits vollständig PostgreSQL-fähig.
 - [Character Avatar Lightbox (2026-06-01)]: Click on avatar opens `AvatarLightbox` portal (90vw/85vh, Escape to close); separate edit-icon button triggers file picker; character name shown as caption.
 
 ## ✅ Done

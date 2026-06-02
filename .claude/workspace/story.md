@@ -1,48 +1,46 @@
-# User Story: Markdown-Rendering in Schreibgeist-Antworten
+# User Story
 
-**Story Type:** Bug Fix / UX Enhancement
+**Als** Entwickler und Betreiber der WriteHaven-Instanz auf meinem NAS,
+**möchte ich**, dass die App im NAS-Deployment PostgreSQL nutzt (statt SQLite),
+**damit** die Daten persistent, wartbar und produktionsreif auf dem NAS gespeichert werden, während lokal weiterhin SQLite verwendet wird.
 
----
-
-## User Story
-
-Als Autor möchte ich, dass Schreibgeists Antworten ansprechend formatiert dargestellt werden (Überschriften, Fettdruck, Listen), damit ich die Antworten schnell erfassen und gut lesen kann.
+**Story Type:** Enabler
 
 ---
 
 ## Acceptance Criteria
 
-**AC-01** – Überschriften gerendert  
-Given: Schreibgeist antwortet mit `## Titel` oder `### Abschnitt`  
-When: Die Antwort im Chat angezeigt wird  
-Then: Der Text erscheint als formatierte Überschrift (größer, fett) — nicht mit Sternchen/Rauten
+**AC-01**
+Given: Die App läuft lokal im Dev-Modus
+When: `python app.py` gestartet wird (mit `.env` → `DATABASE_URL=sqlite:///app.db`)
+Then: Verbindung zu SQLite — kein Postgres nötig, kein Fehler
 
-**AC-02** – Fettdruck gerendert  
-Given: Schreibgeist antwortet mit `**wichtig**`  
-When: Die Antwort angezeigt wird  
-Then: Der Text erscheint fett — nicht als `**wichtig**`
+**AC-02**
+Given: Die App läuft als Docker-Container auf dem NAS
+When: Der Container mit `DATABASE_URL=postgresql+psycopg://user:pass@host:5432/db` gestartet wird
+Then: Verbindung zur PostgreSQL-Instanz auf dem NAS — alle Features funktionieren
 
-**AC-03** – Listen gerendert  
-Given: Schreibgeist antwortet mit `- Punkt 1\n- Punkt 2`  
-When: Die Antwort angezeigt wird  
-Then: Eine echte visuelle Liste erscheint mit Aufzählungszeichen
+**AC-03**
+Given: PostgreSQL auf dem NAS ist frisch verbunden (leere DB)
+When: Der Container startet
+Then: `auto_migrate.py` legt alle Tabellen an (initiale Migration via Flask-SQLAlchemy `create_all`)
 
-**AC-04** – Nutzer-Nachrichten unverändert  
-Given: Der Nutzer tippt eine Nachricht  
-When: Sie im Chat angezeigt wird  
-Then: Sie erscheint unverändert als Plain Text (kein Markdown-Rendering für User-Bubbles)
+**AC-04**
+Given: NAS-Deployment mit Volumes
+When: Der Container neu gestartet oder ersetzt wird
+Then: Upload-Dateien (Avatars, Gallery) und die PostgreSQL-Daten bleiben erhalten (persistente Volumes)
 
-**AC-05** – Visueller Stil passt zum bestehenden Design  
-Given: Eine Schreibgeist-Antwort mit Markdown wird gerendert  
-When: Der Nutzer die Antwort sieht  
-Then: Schriftgröße, Farben und Abstände passen zum restlichen Chat-Design
+**AC-05**
+Given: NAS-Deployment-Template (docker-compose.nas.yml + .env.nas.example)
+When: Entwickler die Deployment-Dateien nutzen
+Then: Alle erforderlichen Environment-Variablen sind dokumentiert und sinnvoll vorbefüllt
 
 ---
 
 ## Out of Scope
 
-- Code-Blöcke mit Syntax-Highlighting
-- Tabellen-Rendering
-- Bilder oder Links
-- Rendering in Nutzer-Nachrichten
-- Änderungen am Backend-System-Prompt
+- Keine automatische Datenmigration von SQLite → PostgreSQL (kein Datentransfer-Tool)
+- Kein Alembic / kein Schema-Versioning (bleibt auto_migrate.py)
+- Keine Änderung an der lokalen Dev-Konfiguration
+- Kein SSL/TLS für die Postgres-Verbindung (NAS-intern, LAN)
+- Kein Kubernetes / kein Cloud-Deployment

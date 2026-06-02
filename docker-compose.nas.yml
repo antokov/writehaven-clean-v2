@@ -1,0 +1,16 @@
+services:
+  writehaven:
+    build: .
+    # Alternativ: vorgefertigtes Image nutzen (nach `docker build -t writehaven .`)
+    # image: writehaven:latest
+    env_file: .env.nas
+    ports:
+      - "8080:8080"
+    extra_hosts:
+      # Erlaubt dem Container, den NAS-Host (und dessen PostgreSQL) zu erreichen.
+      # Funktioniert auf Linux-basierten NAS-Systemen (Synology DSM 7, QNAP, etc.)
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # Upload-Dateien (Avatars, Galerie) bleiben beim Container-Neustart erhalten
+      - ./uploads:/app/backend/static/uploads
+    restart: unless-stopped
