@@ -146,7 +146,7 @@ function ContextPanel({ projectId, currentScene, selectedCharIds, selectedLocIds
 }
 
 /* ---- Main Panel ---- */
-export default function SchreibgeistPanel({ projectId, currentScene }) {
+export default function SchreibgeistPanel({ projectId, currentScene, onApplyToScene }) {
   const [messages, setMessages] = useState([aiMsg(WELCOME)]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -154,6 +154,7 @@ export default function SchreibgeistPanel({ projectId, currentScene }) {
   const [selectedCharIds, setSelectedCharIds] = useState(new Set());
   const [selectedLocIds,  setSelectedLocIds]  = useState(new Set());
   const [sceneSelected,   setSceneSelected]   = useState(false);
+  const [model,           setModel]           = useState('sonnet');
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -189,6 +190,7 @@ export default function SchreibgeistPanel({ projectId, currentScene }) {
           location_ids:  [...selectedLocIds],
           scene_id: sceneSelected && currentScene ? currentScene.id : null,
         },
+        model,
       };
 
       const r = await axios.post(`/api/projects/${projectId}/schreibgeist`, payload);
@@ -199,7 +201,8 @@ export default function SchreibgeistPanel({ projectId, currentScene }) {
             : `Fehler: ${r.data.error}`
         )]);
       } else {
-        setMessages(p => [...p, aiMsg(r.data.message || '(Keine Antwort)')]);
+        const sceneContent = r.data?.scene_content || null;
+        setMessages(p => [...p, { ...aiMsg(r.data.message || '(Keine Antwort)'), sceneContent }]);
       }
     } catch (e) {
       setMessages(p => [...p, aiMsg(
@@ -230,6 +233,18 @@ export default function SchreibgeistPanel({ projectId, currentScene }) {
                 ? <div className="sg-bubble sg-bubble--md"><ReactMarkdown>{msg.text}</ReactMarkdown></div>
                 : <div className="sg-bubble">{msg.text}</div>
               }
+              {msg.role === 'ai' && msg.sceneContent && currentScene && onApplyToScene && (
+                <button
+                  className="sg-apply-btn"
+                  onClick={() => {
+                    if (window.confirm(`Szene "${currentScene.title || '(ohne Titel)'}" ersetzen?`)) {
+                      onApplyToScene(msg.sceneContent);
+                    }
+                  }}
+                >
+                  ↓ In Szene übertragen
+                </button>
+              )}
               <div className="sg-time">{formatTime(msg.time)}</div>
             </div>
           </div>
@@ -264,6 +279,11 @@ export default function SchreibgeistPanel({ projectId, currentScene }) {
             onToggleScene={setSceneSelected}
           />
         )}
+      </div>
+
+      <div className="sg-model-row">
+        <button className={`sg-model-btn${model === 'haiku'  ? ' sg-model-btn--active' : ''}`} onClick={() => setModel('haiku')}>Haiku</button>
+        <button className={`sg-model-btn${model === 'sonnet' ? ' sg-model-btn--active' : ''}`} onClick={() => setModel('sonnet')}>Sonnet</button>
       </div>
 
       <div className="sg-input-area">

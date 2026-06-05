@@ -485,10 +485,10 @@ export default function BookExport() {
         </div>
 
         <div className="export-actions">
-          <button className="btn btn-export" onClick={savePDF}>
+          <button className="btn primary" onClick={savePDF} style={{ width: "100%" }}>
             💾 {t("export.savePdf", "Save as PDF")}
           </button>
-          <button className="btn btn-export" onClick={handleExportHTML} style={{ marginTop: "0.75rem" }}>
+          <button className="btn" onClick={handleExportHTML} style={{ width: "100%" }}>
             📥 {t("export.downloadHtml", "Download HTML")}
           </button>
         </div>

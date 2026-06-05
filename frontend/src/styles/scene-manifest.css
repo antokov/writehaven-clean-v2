@@ -10,6 +10,27 @@
   letter-spacing: 0.5px;
   color: var(--muted, #64748b);
   margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.smp-autoload-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--muted, #64748b);
+  padding: 0 2px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+.smp-autoload-btn:hover { color: var(--brand, #22c55e); }
+
+.smp-autoload-msg {
+  font-size: 11px;
+  color: var(--brand, #22c55e);
+  font-weight: 600;
 }
 
 .smp-section {

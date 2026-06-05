@@ -2,18 +2,44 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import '../styles/scene-manifest.css';
 
-export default function SceneManifestPanel({ sceneId, manifest, projectId, onSave }) {
+function findMatches(sceneContent, characters, locations, charIds, locIds) {
+  const text = (sceneContent || '').toLowerCase();
+  if (!text) return { newCharIds: [], newLocIds: [] };
+
+  const newCharIds = [];
+  const newLocIds  = [];
+
+  characters.forEach(c => {
+    if (!c.name || charIds.includes(c.id)) return;
+    const terms = [c.name, ...c.name.split(' ').filter(w => w.length >= 3)];
+    if (terms.some(t => text.includes(t.toLowerCase()))) newCharIds.push(c.id);
+  });
+
+  locations.forEach(l => {
+    if (!l.title || locIds.includes(l.id)) return;
+    const terms = [l.title, ...l.title.split(' ').filter(w => w.length >= 3)];
+    if (terms.some(t => text.includes(t.toLowerCase()))) newLocIds.push(l.id);
+  });
+
+  return { newCharIds, newLocIds };
+}
+
+export default function SceneManifestPanel({ sceneId, manifest, projectId, sceneContent, onSave }) {
   const [characters, setCharacters] = useState([]);
   const [locations, setLocations] = useState([]);
   const [showCharDrop, setShowCharDrop] = useState(false);
   const [showLocDrop, setShowLocDrop]   = useState(false);
-  const saveTimer = useRef(null);
+  const [autoloadMsg, setAutoloadMsg]   = useState(null);
+  const saveTimer     = useRef(null);
+  const autoloadTimer = useRef(null);
 
   useEffect(() => {
     if (!projectId) return;
     axios.get(`/api/projects/${projectId}/characters`).then(r => setCharacters(r.data || [])).catch(() => {});
     axios.get(`/api/projects/${projectId}/world`).then(r => setLocations(r.data || [])).catch(() => {});
   }, [projectId]);
+
+  useEffect(() => () => clearTimeout(autoloadTimer.current), []);
 
   const charIds = manifest?.character_ids || [];
   const locIds  = manifest?.location_ids  || [];
@@ -37,6 +63,21 @@ export default function SceneManifestPanel({ sceneId, manifest, projectId, onSav
   };
   const removeLoc = (id) => save({ character_ids: charIds, location_ids: locIds.filter(x => x !== id) });
 
+  const handleAutoload = useCallback(() => {
+    const { newCharIds, newLocIds } = findMatches(sceneContent, characters, locations, charIds, locIds);
+    const total = newCharIds.length + newLocIds.length;
+
+    clearTimeout(autoloadTimer.current);
+    setAutoloadMsg(total === 0 ? '–' : `+${total}`);
+    autoloadTimer.current = setTimeout(() => setAutoloadMsg(null), 3000);
+
+    if (total === 0) return;
+    save({
+      character_ids: [...charIds, ...newCharIds],
+      location_ids:  [...locIds,  ...newLocIds],
+    });
+  }, [sceneContent, characters, locations, charIds, locIds, save]);
+
   const taggedChars = characters.filter(c => charIds.includes(c.id));
   const taggedLocs  = locations.filter(l => locIds.includes(l.id));
   const availChars  = characters.filter(c => !charIds.includes(c.id));
@@ -46,7 +87,15 @@ export default function SceneManifestPanel({ sceneId, manifest, projectId, onSav
 
   return (
     <div className="smp-panel">
-      <div className="smp-title">📍 In dieser Szene</div>
+      <div className="smp-title">
+        📍 In dieser Szene
+        <button
+          className="smp-autoload-btn"
+          onClick={handleAutoload}
+          title="Namen im Szenentext suchen und automatisch verknüpfen"
+        >⟳</button>
+        {autoloadMsg && <span className="smp-autoload-msg">{autoloadMsg}</span>}
+      </div>
 
       {/* Characters */}
       <div className="smp-section">

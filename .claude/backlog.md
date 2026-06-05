@@ -6,9 +6,20 @@
 - [ ] TD-01: `map` table remains in the database as an orphaned artefact.
 - [ ] TD-02: Gallery and avatar image files are never deleted from `static/uploads/` when replaced or character is deleted (see FS-03). Drop it with a manual SQL migration when convenient. (introduced in: Remove Map Feature)
 
+## 🟢 Architecture Log
+
+- **2026-06-05** — Export-UI vereinheitlicht: `bookexport.css` komplett auf CSS-Variablen umgestellt. Alle Hardcoded-Farben und `border-radius`-Werte entfernt. Buttons auf globales `.btn`-System migriert. Nicht verwendete Legacy-Klassen (`.book-page`, `.book-controls`, etc.) entfernt.
+- **2026-06-05** — KI-Kapitelname-Vorschläge: Endpoint `POST /api/chapters/<cid>/suggest-title` (Haiku, max 256 Tokens), 3–5 Vorschläge als JSON-Array, klickbare Chips in ChapterOverview, race-guard, Buchsprache via LANG_MAP.
+- **2026-06-05** — Autoload „In dieser Szene": ⟳-Button in SceneManifestPanel, pure Frontend-Textsuche (case-insensitive, Namensteil-Split ≥3 Zeichen), kein Backend-Call. `sceneContent` als Prop aus ProjectView.
+- **2026-06-05** — Charakter-Extraktion Buchsprache: `LANG_MAP` + Prompt-Ergänzung "Schreibe alle Feldwerte auf {book_language}" im extract-Endpoint. Fallback: Deutsch.
+- **2026-06-05** — Charakter-Extraktion: Neuer Endpoint `POST /api/projects/<pid>/characters/<cid>/extract-from-text` (Haiku, max 50×300 Zeichen). Frontend: `applyExtracted` Merge-Funktion + Button in CharacterEditor-TabNav. Kein DB-Schema-Change.
+
 ## 🟡 Follow-up Stories
 <!-- Items deferred by Dev or identified by Tester -->
 <!-- Format: - [ ] FS-XX: description -->
+- [x] FS-13: Schreibgeist — log `cache_read_input_tokens` per request — DONE (console log mit model, in, out, cache_write, cache_read).
+- [ ] FS-15: Schreibgeist — Streaming für Szenen >3000 Wörter (Output-Tokens > 4096).
+- [ ] FS-14: Schreibgeist — switch model to `claude-opus-4-8` (separate from caching change).
 - [x] FS-01: Add Vitest unit tests for `paragraphsHTML` — DONE (16 tests in exportUtils.test.js)
 - [x] FS-04: Connect Schreibgeist to real Claude/AI backend — DONE.
 - [x] FS-07: Schreibgeist — selective context (chapters, scenes, characters) — DONE.
@@ -19,6 +30,9 @@
 - [ ] FS-09: Persist Schreibgeist chat history per project in DB.
 - [ ] FS-05: Add Schreibgeist tab to Characters and World sidebars (scope was limited to ProjectView).
 - [ ] FS-06: Persist Schreibgeist chat context per project (currently session-only). in BookExport.jsx covering all EC inputs (single-newline, double-newline, empty, mixed, leading/trailing newlines).
+- [ ] FS-16: Unit-Tests für `applyExtracted` in Characters.jsx (Vitest) — alle EC-Szenarien abdecken.
+- [ ] FS-17: „Erzwingen"-Modus für Extraktion — Option zum Überschreiben bestehender Felder (aktuell: existing wins).
+- [ ] FS-18: Beziehungs-Extraktion aus Text — Charakter-zu-Charakter-Beziehungen automatisch erkennen (eigene Story, deutlich komplexer).
 - [ ] FS-02: Add Vitest/Playwright tests for character avatar upload flow (mock axios, test error handling, test EC-05 mid-switch guard).
 - [ ] FS-03: Add a cleanup job / admin script to delete orphaned avatar files from `static/uploads/avatars/` when a character is deleted or its avatar replaced.
 
@@ -52,6 +66,12 @@
 - [Fix smartQuotes contextual detection (2026-06-01)]: Replaced blind toggle with prev-char heuristic; `"` after non-whitespace/non-bracket → CLOSE. Fixes single trailing `"` being wrongly rendered as `„`.
 - [Character Gallery (2026-06-01)]: New `gallery_json` TEXT column on `character`; migration in `auto_migrate.py`; `POST/DELETE /api/characters/<cid>/gallery`; `CharacterGallery` + `GalleryLightbox` components; images stored in `static/uploads/gallery/<cid>/`.
 - [NAS PostgreSQL Deployment (2026-06-02)]: Rein konfigurationsbasiert; `docker-compose.nas.yml` + `.env.nas.example` als NAS-Templates; `extra_hosts: host-gateway` für container→host-PostgreSQL-Verbindung; bestehender Code (auto_migrate, psycopg, create_all) bereits vollständig PostgreSQL-fähig.
+- [Schreibgeist Prompt Caching (2026-06-03)]: `system` in `schreibgeist_chat` von string auf list umgebaut; stabiler Block (Rolle + Buchstruktur) mit `cache_control: ephemeral`; dynamischer Entity-Kontext-Block ohne Cache; 3 Zeilen geändert in app.py.
+- [Schreibgeist Output-Limit (2026-06-03)]: `max_tokens` 1024→4096; "300 Wörter"-Instruction durch adaptive Längen-Instruction ersetzt; 2 Zeilen in app.py.
+- [Schreibgeist → Szene übertragen (2026-06-03)]: Claude umschließt Szenentext mit `<scene>`-Tags; Backend parst + entfernt Tags; Frontend zeigt "In Szene übertragen"-Button wenn `scene_content` vorhanden + aktive Szene offen; `onApplyToScene` Callback via ProjectView → `setSceneContent`.
+- [Schreibgeist Caching Fix (2026-06-03)]: `cache_control` von hardcodiertem base_system-Block auf dynamisches `system_blocks[-1]` verschoben; Cache deckt jetzt base_system + entity_context (den tatsächlich großen Teil).
+- [Schreibgeist Modell-Auswahl (2026-06-03)]: Toggle "Haiku/Sonnet" zwischen Kontext-Panel und Input; `MODEL_MAP` im Backend mit Whitelist-Fallback; `model`-State im Frontend per Nachricht gesendet.
+- [Schreibgeist Input-Truncation Fix (2026-06-03)]: Szeneninhalt-Limit (2000 Zeichen) und `[… Inhalt gekürzt]`-Marker entfernt; vollständiger Szenentext wird jetzt an Claude übergeben; 3 Zeilen → 1 Zeile in app.py.
 - [Character Avatar Lightbox (2026-06-01)]: Click on avatar opens `AvatarLightbox` portal (90vw/85vh, Escape to close); separate edit-icon button triggers file picker; character name shown as caption.
 
 ## ✅ Done

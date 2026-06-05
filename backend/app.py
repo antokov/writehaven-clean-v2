@@ -1,5 +1,6 @@
 # backend/app.py
 import os
+import re
 import json
 import jwt as pyjwt
 from datetime import datetime, timedelta
@@ -2123,6 +2124,12 @@ Sent from WriteHaven Feedback Form
         if not raw_messages:
             return bad_request("no_messages")
 
+        MODEL_MAP = {
+            "haiku":  "claude-haiku-4-5-20251001",
+            "sonnet": "claude-sonnet-4-6",
+        }
+        selected_model = MODEL_MAP.get(data.get("model", "sonnet"), "claude-sonnet-4-6")
+
         # Build base book context (always included)
         all_chapters = Chapter.query.filter_by(project_id=pid).order_by(Chapter.order_index.asc()).all()
         chapter_block = "\n".join(
@@ -2133,7 +2140,7 @@ Sent from WriteHaven Feedback Form
         character_block = ", ".join([c.name for c in all_characters if c.name]) or "Noch keine Charaktere angelegt."
 
         user = get_current_user()
-        system_prompt = f"""Du bist Schreibgeist, ein kreativer Schreibassistent für {user.name or 'den Autor'}.
+        base_system = f"""Du bist Schreibgeist, ein kreativer Schreibassistent für {user.name or 'den Autor'}.
 
 Du arbeitest am Projekt: "{p.title}"
 
@@ -2144,7 +2151,8 @@ Charaktere:
 {character_block}
 
 Deine Aufgabe: Beim kreativen Schreiben helfen – Ideen entwickeln, Feedback geben, Formulierungen vorschlagen.
-Antworte auf Deutsch. Sei präzise und inspirierend. Halte Antworten unter 300 Wörtern."""
+Antworte auf Deutsch. Passe die Länge deiner Antwort der Aufgabe an: kurze Fragen knapp beantworten, vollständige Texte vollständig ausschreiben.
+Wenn du Szenentext vorschlägst oder überarbeitest, umschließe den vollständigen Text mit <scene> und </scene>."""
 
         # Build entity context (multi-select characters + locations + current scene)
         entity_ctx    = data.get("entity_context", {})
@@ -2164,10 +2172,7 @@ Antworte auf Deutsch. Sei präzise und inspirierend. Halte Antworten unter 300 W
             if scene_row:
                 scene_block = f"## Aktuelle Szene: {scene_row['title'] or '(ohne Titel)'}"
                 if scene_row["content"]:
-                    content_excerpt = scene_row["content"][:2000]
-                    if len(scene_row["content"]) > 2000:
-                        content_excerpt += "\n[… Inhalt gekürzt]"
-                    scene_block += f"\n\n{content_excerpt}"
+                    scene_block += f"\n\n{scene_row['content']}"
                 context_parts.append(scene_block)
 
         if ec_char_ids or ec_loc_ids:
@@ -2223,8 +2228,13 @@ Antworte auf Deutsch. Sei präzise und inspirierend. Halte Antworten unter 300 W
             else:
                 context_parts.append("(Keine Szenen mit den ausgewählten Elementen getaggt)")
 
+        system_blocks = [{"type": "text", "text": base_system}]
         if context_parts:
-            system_prompt += "\n\n---\nAusgewählter Kontext:\n\n" + "\n\n".join(context_parts)
+            system_blocks.append({
+                "type": "text",
+                "text": "\n\n---\nAusgewählter Kontext:\n\n" + "\n\n".join(context_parts),
+            })
+        system_blocks[-1]["cache_control"] = {"type": "ephemeral"}
 
         # Convert messages: 'ai' → 'assistant', keep last 20
         claude_messages = []
@@ -2241,16 +2251,175 @@ Antworte auf Deutsch. Sei präzise und inspirierend. Halte Antworten unter 300 W
             import anthropic
             client = anthropic.Anthropic(api_key=api_key)
             response = client.messages.create(
-                model="claude-sonnet-4-6",
-                max_tokens=1024,
-                system=system_prompt,
+                model=selected_model,
+                max_tokens=4096,
+                system=system_blocks,
                 messages=claude_messages,
             )
             reply = response.content[0].text if response.content else ""
-            return ok({"message": reply})
+            usage = response.usage
+            print(
+                f"[Schreibgeist] model={selected_model} "
+                f"in={usage.input_tokens} out={usage.output_tokens} "
+                f"cache_write={getattr(usage, 'cache_creation_input_tokens', 0)} "
+                f"cache_read={getattr(usage, 'cache_read_input_tokens', 0)}",
+                flush=True
+            )
+            scene_match = re.search(r'<scene>(.*?)</scene>', reply, re.DOTALL)
+            scene_content = scene_match.group(1).strip() if scene_match else None
+            if scene_content is not None:
+                display_reply = re.sub(r'<scene>.*?</scene>', scene_content, reply, flags=re.DOTALL)
+            else:
+                display_reply = reply
+            return ok({"message": display_reply, "scene_content": scene_content})
         except Exception as e:
             error_str = str(e)
             return ok({"error": f"api_error: {error_str[:200]}"}, 503)
+
+    # ---------- Charakter-Extraktion aus Text ----------
+    @app.post("/api/projects/<int:pid>/characters/<int:cid>/extract-from-text")
+    @token_auth_required
+    def extract_character_from_text(pid, cid):
+        user = get_current_user()
+        p = verify_project_ownership(pid, user.id)
+        if not p: return not_found()
+
+        char = Character.query.filter_by(id=cid, project_id=pid).first()
+        if not char: return not_found()
+
+        api_key = os.getenv("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            return ok({"error": "api_key_missing"}, 503)
+
+        char_name = char.name or "Dieser Charakter"
+        # Für die Szenen-Suche nur den Vornamen verwenden, da Charaktere im Text
+        # meist nur beim Vornamen genannt werden, char.name aber "Vorname Nachname" sein kann
+        profile_json = _loads(char.profile_json or "{}")
+        search_name = (
+            profile_json.get("basic", {}).get("first_name", "").strip()
+            or char_name.split()[0]
+        )
+
+        LANG_MAP = {
+            "de": "Deutsch", "en": "English", "fr": "Français",
+            "es": "Español", "it": "Italiano", "pt": "Português",
+        }
+        book_language = LANG_MAP.get(p.language or "", "Deutsch")
+
+        # Nur Szenen laden, in denen der Charaktername vorkommt (vollständiger Text)
+        rows = db.session.execute(text("""
+            SELECT s.title, s.content
+            FROM scene s
+            JOIN chapter c ON s.chapter_id = c.id
+            WHERE c.project_id = :pid
+              AND s.content IS NOT NULL AND s.content != ''
+              AND s.content LIKE :name_pattern
+        """), {"pid": pid, "name_pattern": f"%{search_name}%"}).mappings().all()
+
+        if not rows:
+            return ok({"extracted": {}})
+
+        scenes_text = "\n\n".join(
+            f"[Szene: {r['title'] or '(ohne Titel)'}]\n{(r['content'] or '')[:2000]}"
+            for r in rows
+        )
+
+        schema = """{
+  "basic": {"first_name": "", "last_name": "", "nickname": "", "gender": "", "age": "", "birth_date": "", "residence": "", "nationality": "", "religion": ""},
+  "appearance": {"hair_color": "", "eye_color": "", "height": "", "weight": "", "build": "", "skin_color": "", "distinguishing_features": "", "clothing_style": "", "accessories": "", "body_language": "", "general_impression": ""},
+  "personality": {"traits": "", "strengths": "", "weaknesses": "", "intelligence": "", "humor": "", "interests": "", "likes": "", "dislikes": "", "morals": "", "fears": "", "goals_motivation": "", "unresolved_problems": "", "inner_conflicts": "", "wishes_dreams": "", "patterns_in_situations": "", "traumas": "", "setbacks": "", "experiences": "", "view_on_life": "", "view_on_death": ""},
+  "relations": {"family_background": "", "childhood": "", "education": "", "occupation": "", "social_status": ""},
+  "skills": {"list": []}
+}"""
+
+        system_prompt = f"""Du bist ein Datenextraktor für Romancharaktere.
+Analysiere den folgenden Romantext und extrahiere alle Informationen über den Charakter "{char_name}".
+Antworte NUR mit einem validen JSON-Objekt. Kein Freitext, keine Erklärungen, kein Markdown.
+Schreibe alle Feldwerte auf {book_language}.
+Verwende diese Struktur (nur Felder einschließen, die du mit Sicherheit aus dem Text ableiten kannst):
+{schema}
+Leere oder unsichere Felder weglassen. Antworte ausschließlich mit dem JSON-Objekt."""
+
+        try:
+            import anthropic
+            import json as json_lib
+            client = anthropic.Anthropic(api_key=api_key)
+            response = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=2048,
+                system=system_prompt,
+                messages=[{"role": "user", "content": scenes_text}],
+            )
+            raw = response.content[0].text if response.content else "{}"
+            # JSON aus Antwort extrahieren (tolerant gegenüber Markdown-Code-Blöcken)
+            json_match = re.search(r'\{[\s\S]*\}', raw)
+            if not json_match:
+                return ok({"error": "parse_error"})
+            extracted = json_lib.loads(json_match.group(0))
+            return ok({"extracted": extracted})
+        except (ValueError, KeyError):
+            return ok({"error": "parse_error"})
+        except Exception as e:
+            return ok({"error": f"api_error: {str(e)[:200]}"}, 503)
+
+    # ---------- Kapitelname-Vorschläge ----------
+    @app.post("/api/chapters/<int:cid>/suggest-title")
+    @token_auth_required
+    def suggest_chapter_title(cid):
+        user = get_current_user()
+        chapter = Chapter.query.get(cid)
+        if not chapter: return not_found()
+        p = verify_project_ownership(chapter.project_id, user.id)
+        if not p: return not_found()
+
+        api_key = os.getenv("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            return ok({"error": "api_key_missing"}, 503)
+
+        scenes = Scene.query.filter_by(chapter_id=cid).order_by(Scene.order_index.asc()).all()
+        non_empty = [s for s in scenes if s.content and s.content.strip()]
+        if not non_empty:
+            return ok({"suggestions": []})
+
+        LANG_MAP = {
+            "de": "Deutsch", "en": "English", "fr": "Français",
+            "es": "Español", "it": "Italiano", "pt": "Português",
+        }
+        book_language = LANG_MAP.get(p.language or "", "Deutsch")
+
+        scenes_text = "\n\n".join(
+            f"[Szene: {s.title or '(ohne Titel)'}]\n{(s.content or '')[:500]}"
+            for s in non_empty
+        )
+
+        system_prompt = f"""Du bist ein Titelgenerator für Romankapitel.
+Analysiere die folgenden Szeneninhalte und schlage 3 bis 5 prägnante, atmosphärische Kapiteltitel vor.
+Antworte NUR mit einem JSON-Array von Strings. Kein Freitext, kein Markdown, keine Nummerierung.
+Beispiel: ["Titel 1", "Titel 2", "Titel 3"]
+Schreibe die Titel auf {book_language}."""
+
+        try:
+            import anthropic
+            import json as json_lib
+            client = anthropic.Anthropic(api_key=api_key)
+            response = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=256,
+                system=system_prompt,
+                messages=[{"role": "user", "content": scenes_text}],
+            )
+            raw = response.content[0].text if response.content else "[]"
+            arr_match = re.search(r'\[[\s\S]*\]', raw)
+            if not arr_match:
+                return ok({"error": "parse_error"})
+            suggestions = json_lib.loads(arr_match.group(0))
+            if not isinstance(suggestions, list):
+                return ok({"error": "parse_error"})
+            return ok({"suggestions": [str(s) for s in suggestions if s]})
+        except (ValueError, KeyError):
+            return ok({"error": "parse_error"})
+        except Exception as e:
+            return ok({"error": f"api_error: {str(e)[:200]}"}, 503)
 
     return app
 

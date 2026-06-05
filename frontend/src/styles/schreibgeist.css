@@ -217,6 +217,65 @@
   30%           { transform: translateY(-5px); }
 }
 
+/* Apply-to-scene button */
+.sg-apply-btn {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: none;
+  border: 1px solid var(--brand, #22c55e);
+  color: var(--brand, #22c55e);
+  border-radius: 0;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.sg-apply-btn:hover {
+  background: var(--brand, #22c55e);
+  color: white;
+}
+
+/* Model selector */
+.sg-model-row {
+  display: flex;
+  padding: 5px 12px;
+  border-top: 1px solid var(--line, #e6eaf2);
+  background: var(--panel-bg, #fff);
+  gap: 0;
+}
+
+.sg-model-btn {
+  flex: 1;
+  padding: 4px 0;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  border: 1px solid var(--line, #e6eaf2);
+  background: none;
+  color: var(--muted, #64748b);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  border-radius: 0;
+}
+
+.sg-model-btn + .sg-model-btn {
+  border-left: none;
+}
+
+.sg-model-btn--active {
+  background: var(--brand, #22c55e);
+  color: white;
+  border-color: var(--brand, #22c55e);
+}
+
+.sg-model-btn:not(.sg-model-btn--active):hover {
+  background: var(--hover-bg, #f1f5f9);
+  color: var(--text, #0f172a);
+}
+
 /* Input area */
 .sg-input-area {
   padding: 10px 12px;

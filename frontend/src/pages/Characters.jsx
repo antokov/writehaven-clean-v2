@@ -992,7 +992,8 @@ const CharacterEditor = React.memo(function CharacterEditor({
   characterId, profile, onChangeProfilePath, activeTab, setActiveTab,
   lastSavedAt, allCharacters, onAddRelation, onRemoveRelation, onOpenGraph, projectId,
   avatarUrl, onAvatarUpload, onAvatarRemove, avatarUploading, characterName,
-  galleryImages, onGalleryUpload, onGalleryRemove, galleryUploading
+  galleryImages, onGalleryUpload, onGalleryRemove, galleryUploading,
+  onExtractFromText, extracting, extractMsg
 }) {
   const { t } = useTranslation();
   return (
@@ -1022,8 +1023,25 @@ const CharacterEditor = React.memo(function CharacterEditor({
             {t(ti.labelKey)}
           </button>
         ))}
-        <div className="tabs-meta">
-          {lastSavedAt ? <>{t('common.saved', { time: lastSavedAt.toLocaleTimeString() })}</> : "—"}
+        <div className="tabs-meta" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <button
+            className="btn small"
+            onClick={onExtractFromText}
+            disabled={extracting}
+            title="Charakterfelder aus den Szenen des Projekts extrahieren"
+            data-testid="extract-from-text-btn"
+          >
+            {extracting ? '…' : '✦ Aus Text'}
+          </button>
+          {extractMsg && !extractMsg.error && (
+            <span className="small muted">{extractMsg.count} {extractMsg.count === 1 ? 'Feld' : 'Felder'}</span>
+          )}
+          {extractMsg?.error && (
+            <span className="small" style={{ color: 'var(--danger)' }} title={extractMsg.error}>Fehler</span>
+          )}
+          <span style={{ marginLeft: '0.25rem' }}>
+            {lastSavedAt ? <>{t('common.saved', { time: lastSavedAt.toLocaleTimeString() })}</> : "—"}
+          </span>
         </div>
       </nav>
 
@@ -1218,6 +1236,28 @@ const CharacterEditor = React.memo(function CharacterEditor({
   );
 });
 
+/* Merge extracted fields into profile — skips fields that already have a value */
+function applyExtracted(ext, profile, onChangeProfilePath) {
+  let count = 0;
+  ['basic', 'appearance', 'personality', 'relations'].forEach(section => {
+    Object.entries(ext[section] || {}).forEach(([key, val]) => {
+      if (!val) return;
+      const path = `${section}.${key}`;
+      if (!getPath(profile, path, '')) { onChangeProfilePath(path, val); count++; }
+    });
+  });
+  const newSkills = ext?.skills?.list || [];
+  if (newSkills.length > 0) {
+    const cur = getPath(profile, 'skills.list', []);
+    const merged = Array.from(new Set([...cur, ...newSkills]));
+    if (merged.length > cur.length) {
+      onChangeProfilePath('skills.list', merged);
+      count += merged.length - cur.length;
+    }
+  }
+  return count;
+}
+
 /* ---------------- Seite ---------------- */
 export default function Characters() {
   const { id } = useParams();
@@ -1244,6 +1284,8 @@ export default function Characters() {
   });
   const [notesCount, setNotesCount] = useState(0);
   const [tasksCount, setTasksCount] = useState(0);
+  const [extracting, setExtracting] = useState(false);
+  const [extractMsg, setExtractMsg] = useState(null);
 
   // Save tools panel state to localStorage whenever it changes
   useEffect(() => {
@@ -1460,6 +1502,26 @@ export default function Characters() {
     return () => clearTimeout(saveTimer.current);
   }, [activeId, profile, saveNow]);
 
+  const handleExtractFromText = useCallback(async () => {
+    if (!activeId || extracting) return;
+    setExtracting(true);
+    setExtractMsg(null);
+    try {
+      const r = await axios.post(`/api/projects/${pid}/characters/${activeId}/extract-from-text`);
+      if (r.data?.error) {
+        setExtractMsg({ error: r.data.error });
+        return;
+      }
+      const ext = r.data?.extracted || {};
+      const count = applyExtracted(ext, profile, onChangeProfilePath);
+      setExtractMsg({ count });
+    } catch (e) {
+      setExtractMsg({ error: 'request_failed' });
+    } finally {
+      setExtracting(false);
+    }
+  }, [activeId, extracting, pid, profile, onChangeProfilePath]);
+
   const addCharacter = async () => {
     try {
       const r = await axios.post(`/api/projects/${pid}/characters`, { name: t('characters.newCharacter') });
@@ -1573,6 +1635,9 @@ export default function Characters() {
               onGalleryUpload={handleGalleryUpload}
               onGalleryRemove={handleGalleryRemove}
               galleryUploading={galleryUploading}
+              onExtractFromText={handleExtractFromText}
+              extracting={extracting}
+              extractMsg={extractMsg}
             />
             <RelationsGraphModal
               open={showGraph}

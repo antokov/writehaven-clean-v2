@@ -1,46 +1,32 @@
-# User Story
+# User Story: KI-Kapitelname-Vorschläge
 
-**Als** Entwickler und Betreiber der WriteHaven-Instanz auf meinem NAS,
-**möchte ich**, dass die App im NAS-Deployment PostgreSQL nutzt (statt SQLite),
-**damit** die Daten persistent, wartbar und produktionsreif auf dem NAS gespeichert werden, während lokal weiterhin SQLite verwendet wird.
+**Story Type:** Business Feature
 
-**Story Type:** Enabler
+---
+
+## User Story
+
+Als Autor möchte ich per Knopfdruck mehrere Titelvorschläge für mein aktuelles Kapitel von der KI erhalten, die auf dem Inhalt der vorhandenen Szenen basieren, damit ich schnell einen passenden Kapitelnamen finden kann ohne selbst lange nachzudenken.
 
 ---
 
 ## Acceptance Criteria
 
-**AC-01**
-Given: Die App läuft lokal im Dev-Modus
-When: `python app.py` gestartet wird (mit `.env` → `DATABASE_URL=sqlite:///app.db`)
-Then: Verbindung zu SQLite — kein Postgres nötig, kein Fehler
+**AC-01** — Given ich befinde mich in der Kapitel-Übersicht (nicht in einer Szene), When ich auf den Vorschlag-Button klicke, Then sendet die App die Szeneninhalte des Kapitels an Claude (Haiku) und zeigt 3–5 Titelvorschläge an.
 
-**AC-02**
-Given: Die App läuft als Docker-Container auf dem NAS
-When: Der Container mit `DATABASE_URL=postgresql+psycopg://user:pass@host:5432/db` gestartet wird
-Then: Verbindung zur PostgreSQL-Instanz auf dem NAS — alle Features funktionieren
+**AC-02** — Given Vorschläge werden generiert, When ich auf den Button geklickt habe, Then sehe ich einen Lade-Indikator und der Button ist deaktiviert.
 
-**AC-03**
-Given: PostgreSQL auf dem NAS ist frisch verbunden (leere DB)
-When: Der Container startet
-Then: `auto_migrate.py` legt alle Tabellen an (initiale Migration via Flask-SQLAlchemy `create_all`)
+**AC-03** — Given die Vorschläge sind erschienen, When ich auf einen Vorschlag klicke, Then wird er in das Kapitel-Titel-Eingabefeld übernommen und gespeichert.
 
-**AC-04**
-Given: NAS-Deployment mit Volumes
-When: Der Container neu gestartet oder ersetzt wird
-Then: Upload-Dateien (Avatars, Gallery) und die PostgreSQL-Daten bleiben erhalten (persistente Volumes)
+**AC-04** — Given das Kapitel hat keine Szenen oder alle Szenen sind leer, When ich auf den Vorschlag-Button klicke, Then erscheint eine sinnvolle Rückmeldung (z.B. „Keine Szeneninhalte vorhanden").
 
-**AC-05**
-Given: NAS-Deployment-Template (docker-compose.nas.yml + .env.nas.example)
-When: Entwickler die Deployment-Dateien nutzen
-Then: Alle erforderlichen Environment-Variablen sind dokumentiert und sinnvoll vorbefüllt
+**AC-05** — Given Vorschläge wurden angezeigt, When ich einen davon anklicke, Then verschwinden die Vorschläge und der gewählte Titel ist im Feld.
 
 ---
 
 ## Out of Scope
 
-- Keine automatische Datenmigration von SQLite → PostgreSQL (kein Datentransfer-Tool)
-- Kein Alembic / kein Schema-Versioning (bleibt auto_migrate.py)
-- Keine Änderung an der lokalen Dev-Konfiguration
-- Kein SSL/TLS für die Postgres-Verbindung (NAS-intern, LAN)
-- Kein Kubernetes / kein Cloud-Deployment
+- Vorschläge für Szenentitel
+- Automatische Übernahme ohne Bestätigung
+- Speichern der abgelehnten Vorschläge
+- Streaming der Antwort

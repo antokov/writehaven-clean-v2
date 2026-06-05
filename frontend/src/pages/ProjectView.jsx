@@ -59,6 +59,8 @@ export default function ProjectView() {
   const [notesCount, setNotesCount] = useState(0);
   const [tasksCount, setTasksCount] = useState(0);
   const [sceneManifest, setSceneManifest] = useState({ character_ids: [], location_ids: [] });
+  const [titleSuggestions, setTitleSuggestions] = useState([]);
+  const [suggestingTitle, setSuggestingTitle]   = useState(false);
 
   // Save tools panel state to localStorage whenever it changes
   useEffect(() => {
@@ -501,6 +503,26 @@ export default function ProjectView() {
     return <div className="page-wrap"><div className="panel"><h3>{t('common.loading')}</h3></div></div>;
   }
 
+  const handleSuggestChapterTitle = async () => {
+    if (!activeChapterId || suggestingTitle) return;
+    setSuggestingTitle(true);
+    setTitleSuggestions([]);
+    const capturedChapterId = activeChapterId;
+    try {
+      const r = await axios.post(`/api/chapters/${activeChapterId}/suggest-title`);
+      if (activeChapterId !== capturedChapterId) return;
+      if (r.data?.error || !r.data?.suggestions?.length) {
+        setTitleSuggestions([]);
+      } else {
+        setTitleSuggestions(r.data.suggestions);
+      }
+    } catch (e) {
+      setTitleSuggestions([]);
+    } finally {
+      setSuggestingTitle(false);
+    }
+  };
+
   const scenesOfActive = activeChapterId ? (scenesByChapter[activeChapterId] || []) : [];
 
   return (
@@ -646,6 +668,15 @@ export default function ProjectView() {
                 scenePreviewById={scenePreviewById}
                 openScene={(sceneId) => openScene(activeChapterId, sceneId)}
                 deleteScene={(sceneId) => deleteScene(sceneId, activeChapterId)}
+                onSuggestTitle={handleSuggestChapterTitle}
+                suggestingTitle={suggestingTitle}
+                titleSuggestions={titleSuggestions}
+                onApplySuggestion={(title) => {
+                  setChapterTitle(title);
+                  patchChapterInList(activeChapterId, { title });
+                  setTitleSuggestions([]);
+                  saveChapterNow(activeChapterId, title);
+                }}
                 addScene={() => addSceneForChapter(activeChapterId)}
               />
               {scenesOfActive.length > 0 && <ChapterStats scenes={scenesOfActive} />}
@@ -690,6 +721,7 @@ export default function ProjectView() {
           <SchreibgeistPanel
             projectId={pid}
             currentScene={activeSceneId ? { id: activeSceneId, title: sceneTitle, content: sceneContent } : null}
+            onApplyToScene={content => setSceneContent(content)}
           />
         )}
 
@@ -700,6 +732,7 @@ export default function ProjectView() {
                 sceneId={activeSceneId}
                 manifest={sceneManifest}
                 projectId={pid}
+                sceneContent={sceneContent}
                 onSave={async (newManifest) => {
                   setSceneManifest(newManifest);
                   await axios.put(`/api/scenes/${activeSceneId}`, { context_manifest: newManifest });
@@ -918,7 +951,8 @@ function ChapterStats({ scenes }) {
 /* Ausgelagerter Überblicks-Block für bessere Lesbarkeit */
 function ChapterOverview({
   chapterTitle, setChapterTitle, lastChapterSavedAt, saveChapter,
-  scenesOfActive, scenePreviewById, openScene, deleteScene, addScene
+  scenesOfActive, scenePreviewById, openScene, deleteScene, addScene,
+  onSuggestTitle, suggestingTitle, titleSuggestions, onApplySuggestion
 }) {
   const { t } = useTranslation();
   return (
@@ -932,10 +966,25 @@ function ChapterOverview({
           placeholder={t('writing.chapterTitlePlaceholder')}
           data-testid="chapter-title-input"
         />
+        <button
+          className="btn small"
+          onClick={onSuggestTitle}
+          disabled={suggestingTitle}
+          title="Kapiteltitel von KI vorschlagen lassen"
+        >
+          {suggestingTitle ? '…' : '✦'}
+        </button>
         <div className="chapter-meta">
           {lastChapterSavedAt ? <>{t('writing.savedAt', { time: lastChapterSavedAt.toLocaleTimeString() })}</> : ' '}
         </div>
       </div>
+      {titleSuggestions.length > 0 && (
+        <div className="chapter-suggestions">
+          {titleSuggestions.map((s, i) => (
+            <button key={i} className="btn small" onClick={() => onApplySuggestion(s)}>{s}</button>
+          ))}
+        </div>
+      )}
 
       {scenesOfActive.length ? (
         <div className="scene-grid">
